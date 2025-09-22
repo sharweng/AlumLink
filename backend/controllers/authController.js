@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { sendWelcomeEmail } from "../emails/emailHandlers.js";
 
 export const signup = async (req, res) => {
     try {
@@ -50,7 +51,14 @@ export const signup = async (req, res) => {
             email: newUser.email
         }});
 
-        // todo: send verification email
+        // todo: send welcome email
+        const profileUrl = process.env.CLIENT_URL + "/profile/" + newUser.username;
+
+        try {
+            await sendWelcomeEmail(newUser.email, newUser.name, profileUrl);
+        } catch (emailError) {
+            console.error("Error sending welcome email:", emailError);
+        }
 
     } catch (error) {
         console.log("Error in signup:", error.message);
