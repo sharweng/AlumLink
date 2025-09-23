@@ -79,8 +79,8 @@ export const getPostById = async (req, res) => {
     try {
         const postId = req.params.id;
         const post = await Post.findById(postId)
-            .populate("author", "name username profilePicture headline")
-            .populate("comments.user", "name username profilePicture headline")
+        .populate("author", "name username profilePicture headline")
+        .populate("comments.user", "name username profilePicture headline")
 
         res.status(200).json(post);
     } catch (error) {
