@@ -1,7 +1,8 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { sendWelcomeEmail } from "../emails/emailHandlers.js";
+// import { sendWelcomeEmail } from "../emails/emailHandlers.js"; // for production
+import { sendWelcomeEmail } from "../emails/nodemailerHandlers.js"; // for sandbox
 
 export const signup = async (req, res) => {
     try {
