@@ -1,5 +1,6 @@
 import express from "express";
-import { protectRoute } from "../middleware/authMiddleware";
+import { protectRoute } from "../middleware/authMiddleware.js";
+import { sendLinkRequest, acceptLinkRequest, rejectLinkRequest, getLinkRequests, getUserLinks, removeLink, getLinkStatus } from "../controllers/linkController.js";
 
 const router = express.Router();
 

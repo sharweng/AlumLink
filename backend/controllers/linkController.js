@@ -91,3 +91,104 @@ export const acceptLinkRequest = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 }
+
+export const rejectLinkRequest = async (req, res) => {
+    try {
+        const { requestId } = req.params;
+        const userId = req.user._id;
+
+        const request = await LinkRequest.findById(requestId);
+
+        if (request.recipient.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "You are not authorized to reject this link request" });
+        }
+
+        if (request.status !== "pending") {
+            return res.status(400).json({ message: `This link request has already been ${request.status}` });
+        }
+
+        request.status = "rejected";
+        await request.save();
+
+        res.json({ message: "Link request rejected successfully" });
+    } catch (error) {
+        console.log("Error in rejectLinkRequest linkController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export const getLinkRequests = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const requests = await LinkRequest.find({ recipient: userId, status: "pending" })
+        .populate("sender", "name username profilePicture headline links")
+
+        res.json(requests);
+    } catch (error) {
+        console.log("Error in getLinkRequests linkController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export const getUserLinks = async (req, res) => {
+    try {
+        const userId = req.user._id;   
+
+        const user = await User.findById(userId)
+        .populate("links", "name username profilePicture headline links");
+
+        res.json(user.links);
+    } catch (error) {
+        console.log("Error in getUserLinks linkController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export const removeLink = async (req, res) => {
+    try {
+        const myId = req.user._id;
+        const { userId } = req.params;
+
+        await User.findByIdAndUpdate(myId, { $pull: { links: userId } });
+        await User.findByIdAndUpdate(userId, { $pull: { links: myId } });
+
+        res.json({ message: "Link removed successfully" });
+    } catch (error) {
+        console.log("Error in removeLink linkController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export const getLinkStatus = async (req, res) => {
+    try {
+        const targetUserId = req.params.userId;
+        const currentUserId = req.user._id;
+
+        const currentUser = req.user
+        if (currentUser.links.includes(targetUserId)) {
+            return res.json({ status: "linked" });
+        }
+
+        const pendingRequest = await LinkRequest.findOne({
+            $or: [
+                { sender: currentUserId, recipient: targetUserId },
+                { sender: targetUserId, recipient: currentUserId }
+            ], status: "pending"
+        });
+
+        if (pendingRequest) {
+            if (pendingRequest.sender.toString() === currentUserId.toString()) {
+                return res.json({ status: "pending" });
+            } else {
+                return res.json({ status: "received", requestId: pendingRequest._id});
+            }
+        }
+
+        // if no link or pending request exists
+        res.json({ status: "not_linked" });
+    } catch (error) {
+        console.log("Error in getLinkStatus linkController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
