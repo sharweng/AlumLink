@@ -1,0 +1,71 @@
+import User from "../models/User.js"
+
+export const getSuggestedLinks = async (req, res) => {
+    try {
+        const currentUser = await User.findById(req.user._id).select("links")
+
+        // find users who are not already linked, and also not suggest the current user
+        const suggestedUsers = await User.find({
+            _id: { $ne: req.user._id, $nin: currentUser.links }
+        }).select("name username profilePicture headline").limit(5) // 5 is the current limit for suggestion (can be changed later)
+
+        res.json(suggestedUsers)
+    } catch (error) {
+        console.log("Error in getSuggestedLinks userController:", error.message)
+        res.status(500).json({ message: "Internal server error" })
+    }
+}
+
+export const getPublicProfile = async (req, res) => {
+    try {
+        const { username } = req.params;
+        const user = await User.findOne({ username }).select("-password");
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.json(user);
+    } catch (error) {
+        console.log("Error in getPublicProfile userController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }   
+}
+
+export const updateProfile = async (req, res) => {
+    try {
+        const allowedFields = [
+            "name", 
+            "username",
+            "headline", 
+            "about", 
+            "location", 
+            "profilePicture", 
+            "bannerImg", 
+            "skills", 
+            "experience", 
+            "education"
+        ];
+
+        const updatedData = {};
+
+        for (const field of allowedFields) {
+            if(req.body[field]){
+                updatedData[field] = req.body[field];
+            }
+        }
+
+        // todo check for the profileImg and bannerImg 
+
+        const user = await User.findByIdAndUpdate(
+            req.user._id, 
+            { $set: updatedData }, 
+            { new: true }
+        ).select("-password");
+
+        res.json(user);
+    } catch (error) {
+        console.log("Error in updateProfile userController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
