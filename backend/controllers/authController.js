@@ -62,8 +62,8 @@ export const signup = async (req, res) => {
         }
 
     } catch (error) {
-        console.log("Error in signup:", error.message);
-        res.status(500).json({ message: "Internal server error" });
+        console.log("Error in signup authController:", error.message)
+        res.status(500).json({ message: "Internal server error" })
     }
 }
 
@@ -99,11 +99,21 @@ export const login = async (req, res) => {
             email: user.email
         }});
     } catch (error) {
-        
+        console.log("Error in login authController:", error.message)
+        res.status(500).json({ message: "Internal server error" })
     }
 }
 
 export const logout = (req, res) => {
     res.clearCookie("jwt-alumnilink")
     res.json({ message: "Logged out successfully" })
+}
+
+export const getCurrentUser = async (req, res) => {
+    try { 
+        res.json(req.user);
+    } catch (error) {
+        console.log("Error in getCurrentUser authController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
 }
