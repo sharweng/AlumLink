@@ -67,10 +67,43 @@ export const signup = async (req, res) => {
     }
 }
 
-export const login = (req, res) => {
-    res.send("login");
+export const login = async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        if(!username || !password) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
+
+        const user = await User.findOne({ username });
+        if (!user) {
+            return res.status(400).json({ message: "Invalid credentials" });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Invalid credentials" });
+        }
+
+        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "3d" });
+        await res.cookie("jwt-alumnilink", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 3 * 24 * 60 * 60 * 1000,
+        });
+
+        res.json({ message: "Logged in successfully", user: {
+            _id: user._id,
+            name: user.name,
+            email: user.email
+        }});
+    } catch (error) {
+        
+    }
 }
 
 export const logout = (req, res) => {
-    res.send("logout");
+    res.clearCookie("jwt-alumnilink")
+    res.json({ message: "Logged out successfully" })
 }
