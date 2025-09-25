@@ -21,7 +21,7 @@ function App() {
         }
         toast.error(error.response.data.message || "Something went wrong")
       }
-    }
+    },
   })
 
   if (isLoading) return null
