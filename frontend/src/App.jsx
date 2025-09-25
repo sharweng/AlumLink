@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom"
 import Layout from "./components/layout/Layout"
 
-import HomePage from "./pages/auth/HomePage"
+import HomePage from "./pages/HomePage"
 import SignUpPage from "./pages/auth/SignUpPage"
 import LoginPage from "./pages/auth/LoginPage"
 import toast, { Toaster } from "react-hot-toast"
