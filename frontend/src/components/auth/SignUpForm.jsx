@@ -22,7 +22,7 @@ const SignUpForm = () => {
         queryClient.invalidateQueries({ queryKey: ["authUser"] })
       },
       onError:(error) => {
-        toast.error(error.response.data.message || "Something went wrong")
+        toast.error(error.response.data.message || "Failed to create an account")
       },
     })
 
