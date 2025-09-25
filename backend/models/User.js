@@ -39,28 +39,26 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: "This is my bio",
     },
-    skills: {
-        type: [String],
-        experience: [{
-                type: String,
-                company: String,
-                startDate: Date,
-                endDate: Date,
-                description: String,
-            },
-        ],
-        education: [{
-                school: String,
-                fieldOfStudy: String,
-                startYear: Number,
-                endYear: Number,
-            },
-        ],
-        links: [{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-        }]
-    },
+    skills: [String],
+    experience: [{
+            type: String,
+            company: String,
+            startDate: Date,
+            endDate: Date,
+            description: String,
+        },
+    ],
+    education: [{
+            school: String,
+            fieldOfStudy: String,
+            startYear: Number,
+            endYear: Number,
+        },
+    ],
+    links: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+    }],
 }, { timestamps: true });
 
 const User = mongoose.model("User", userSchema);

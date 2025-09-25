@@ -1,6 +1,7 @@
 import LinkRequest from "../models/LinkRequest.js";
 import Notification from "../models/Notification.js";
 import { sendLinkAcceptedEmail } from "../emails/nodemailerHandlers.js";
+import User from "../models/User.js";
 
 export const sendLinkRequest = async (req, res) => {
     try {
@@ -11,7 +12,7 @@ export const sendLinkRequest = async (req, res) => {
             return res.status(400).json({ message: "You cannot send a link request to yourself" });
         }
 
-        if (req.user.links.includes(userId)) {
+        if (req.user.links && req.user.links.includes(userId)) {
             return res.status(400).json({ message: "You are already linked with this user" });
         }
 
@@ -64,8 +65,8 @@ export const acceptLinkRequest = async (req, res) => {
         await request.save();
 
         // add each other to links array
-        await User.findByIdAndUpdate(request.sender._id, { $addToSet: { links: userId} });
-        await User.findByIdAndUpdate(userId, { $addToSet: { links: request.sender._id} });
+        await User.findByIdAndUpdate(request.sender._id, { $addToSet: { links: userId } });
+		await User.findByIdAndUpdate(userId, { $addToSet: { links: request.sender._id } });
 
         const notification = new Notification({
             recipient: request.sender._id,
@@ -166,7 +167,7 @@ export const getLinkStatus = async (req, res) => {
         const currentUserId = req.user._id;
 
         const currentUser = req.user
-        if (currentUser.links.includes(targetUserId)) {
+        if (currentUser.links && currentUser.links.includes(targetUserId)) {
             return res.json({ status: "linked" });
         }
 

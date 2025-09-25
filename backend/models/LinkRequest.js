@@ -15,11 +15,7 @@ const linkRequestSchema = new mongoose.Schema({
         type: String,
         enum: ["pending", "accepted", "rejected"],
         default: "pending",
-    },
-    createdAt: { 
-        type: Date, 
-        default: Date.now 
-    },
+    }, 
 }, { timestamps: true });
 
 const LinkRequest = mongoose.model("LinkRequest", linkRequestSchema);
