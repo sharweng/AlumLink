@@ -47,7 +47,7 @@ const Navbar = () => {
 								</Link>
 								<Link to='/network' className='text-neutral flex flex-col items-center relative'>
 									<Users size={20} />
-									<span className='text-xs hidden md:block'>My Links</span>
+									<span className='text-xs hidden md:block'>My Network</span>
 									{unreadLinkRequestsCount > 0 && (
 										<span
 											className='absolute -top-1 -right-1 md:right-4 bg-red-500 text-white text-xs 
