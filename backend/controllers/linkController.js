@@ -85,7 +85,7 @@ export const acceptLinkRequest = async (req, res) => {
         try {
             await sendLinkAcceptedEmail(senderEmail, senderName, recipientName, profileUrl);
         } catch (error) {
-            
+            console.log("Error sending link accepted email:", error.message);
         }
     } catch (error) {
         console.log("Error in acceptLinkRequest linkController:", error.message);

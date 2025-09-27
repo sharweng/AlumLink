@@ -99,7 +99,7 @@ export const createComment = async (req, res) => {
         const post = await Post.findByIdAndUpdate(postId, {
             $push: { comments: { user: req.user._id, content } }
         }, { new: true })
-        .populate("author", "name username profilePicture headline")
+        .populate("author", "name email username profilePicture headline")
 
         // notification logic
         if (post.author._id.toString() !== req.user._id.toString()) {
@@ -113,7 +113,7 @@ export const createComment = async (req, res) => {
             await newNotification.save();
 
             try {
-                const postUrl = process.env.CLIENT_URL + `/posts/${post._id}`;
+                const postUrl = process.env.CLIENT_URL + `/posts/${postId}`;
                 await sendCommentNotificationEmail(post.author.email, post.author.name, req.user.name, postUrl, content);
             } catch (error) {
                 console.log("Error sending comment notification email:", error.message);

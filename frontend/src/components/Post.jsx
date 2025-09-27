@@ -2,12 +2,13 @@ import { useQueryClient, useMutation, mutationOptions } from "@tanstack/react-qu
 import { useState } from "react"
 import { axiosInstance } from "../lib/axios"
 import toast from "react-hot-toast"
-import { Link } from "react-router-dom"
+import { Link, useParams } from "react-router-dom"
 import { Heart, Loader, MessageCircle, Send, Share2, Trash2 } from "lucide-react"
 import PostAction from "./PostAction"
 import { formatDistanceToNow } from "date-fns"
 
 const Post = ({ post }) => {
+  const { postId } = useParams()
   const queryClient = useQueryClient()
   const authUser = queryClient.getQueryData(["authUser"])
   const [showComments, setShowComments] = useState(false)
@@ -22,6 +23,7 @@ const Post = ({ post }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] })
+      queryClient.invalidateQueries({ queryKey: ["post", postId] })
       toast.success("Post deleted successfully")
     },
     onError: (error) => {
@@ -48,6 +50,7 @@ const Post = ({ post }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] })
+      queryClient.invalidateQueries({ queryKey: ["post", postId] })
     },
     onError: (error) => {
       toast.error(error.response.data.message || "Failed to like a post")

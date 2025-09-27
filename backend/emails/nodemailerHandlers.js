@@ -27,6 +27,9 @@ export const sendWelcomeEmail = async (email, userName, profileUrl) => {
 }
 
 export const sendCommentNotificationEmail = async (recipientEmail, recipientName, commenterName, postUrl, commentContent) => {
+    if (!recipientEmail) {
+        throw new Error("Recipient email is required for comment notification email.");
+    }
     try {
         const mailOptions = {
             from: process.env.NODEMAILER_EMAIL_FROM,
