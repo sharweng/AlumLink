@@ -87,7 +87,7 @@ const PostCreation = ({ user }) => {
             <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
           </label>
         </div>
-        <button className="bg-primary text-white rounded-lg px-4 py-2 hover:bg-primary-dark transition-colors duration-200"
+        <button className="bg-primary text-white rounded-lg px-4 py-2 hover:bg-red-700 transition-colors duration-200"
         onClick={handlePostCreation} 
         disabled={isPending}>
           { isPending ? <Loader className="size-5 animate-spin" /> : "Upload"}
