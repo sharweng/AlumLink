@@ -127,6 +127,44 @@ export const createComment = async (req, res) => {
     }
 }
 
+export const removeComment = async (req, res) => {
+    try {
+        const postId = req.params.id;
+        const commentId = req.params.commentId;
+        const userId = req.user._id;
+
+        // Find the post and the comment
+        const post = await Post.findById(postId).populate("comments.user", "_id");
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        // Find the comment
+        const comment = post.comments.id(commentId);
+        if (!comment) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        // Only the comment author can delete (handle both ObjectId and populated user)
+        const commentUserId = (comment.user && comment.user._id) ? comment.user._id : comment.user;
+        if (commentUserId.toString() !== userId.toString()) {
+            console.log("DEBUG: commentUserId", commentUserId, "userId", userId);
+            return res.status(403).json({ message: "You are not authorized to delete this comment" });
+        }
+
+        // Remove the comment using $pull for robustness
+        await Post.findByIdAndUpdate(
+            postId,
+            { $pull: { comments: { _id: commentId } } }
+        );
+
+        res.status(200).json({ message: "Comment deleted successfully" });
+    } catch (error) {
+        console.log("Error in removeComment postController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
 export const likePost = async (req, res) => {
     try {
         const postId = req.params.id;

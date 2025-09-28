@@ -1,6 +1,6 @@
 import express from "express";
 import { protectRoute } from "../middleware/authMiddleware.js";
-import { createPost, getFeedPosts, deletePost, getPostById, createComment, likePost } from "../controllers/postController.js";
+import { createPost, getFeedPosts, deletePost, getPostById, createComment, likePost, removeComment } from "../controllers/postController.js";
 
 const router = express.Router();
 
@@ -10,5 +10,6 @@ router.delete("/delete/:id", protectRoute, deletePost);
 router.get("/:id", protectRoute, getPostById);
 router.post("/:id/comment", protectRoute, createComment);
 router.post("/:id/like", protectRoute, likePost);
+router.delete("/:id/comment/:commentId", protectRoute, removeComment);
 
 export default router;
