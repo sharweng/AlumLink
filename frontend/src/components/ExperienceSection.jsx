@@ -120,7 +120,7 @@ const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
 					/>
 					<button
 						onClick={handleAddExperience}
-						className='bg-primary text-white py-2 px-4 rounded hover:bg-primary-dark transition duration-300'
+						className='bg-primary text-white py-2 px-4 rounded hover:bg-red-700 transition duration-300'
 					>
 						Add Experience
 					</button>
@@ -132,14 +132,14 @@ const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
 					{isEditing ? (
 						<button
 							onClick={handleSave}
-							className='mt-4 bg-primary text-white py-2 px-4 rounded hover:bg-primary-dark transition duration-300'
+							className='mt-4 bg-primary text-white py-2 px-4 rounded hover:bg-red-700 transition duration-300'
 						>
 							Save Changes
 						</button>
 					) : (
 						<button
 							onClick={() => setIsEditing(true)}
-							className='mt-4 text-primary hover:text-primary-dark transition duration-300'
+							className='mt-4 text-primary hover:text-red-700 transition duration-300'
 						>
 							Edit Experiences
 						</button>
