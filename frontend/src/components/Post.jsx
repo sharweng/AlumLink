@@ -110,12 +110,14 @@ const Post = ({ post }) => {
             <Link to={ `/profile/${post?.author?.username}` }>
               <img src={ post.author.profilePicture || "/avatar.png" } alt={ post.author.name } className="size-10 rounded-full mr-3" />
             </Link>
-            <div >
+            <div>
               <Link to={`/profile/${ post?.author?.username }`}>
                 <h3 className="font-semibold">{ post.author.name }</h3>
               </Link>
               <p className="text-xs text-info">{ post.author.headline }</p>
-              <p className="text-xs text-info">{ formatDistanceToNow(new Date(post.createdAt), { addSuffix: true }) }</p>
+              <Link to={`/post/${post._id}`}>
+                <p className="text-xs text-info">{ formatDistanceToNow(new Date(post.createdAt), { addSuffix: true }) }</p>
+              </Link>
             </div>
           </div>
           {isOwner && (

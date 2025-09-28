@@ -3,6 +3,7 @@ import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 
+
 const FriendRequest = ({ request }) => {
 	const queryClient = useQueryClient();
 
@@ -11,6 +12,7 @@ const FriendRequest = ({ request }) => {
 		onSuccess: () => {
 			toast.success("Link request accepted");
 			queryClient.invalidateQueries({ queryKey: ["linkRequests"] });
+			queryClient.invalidateQueries({ queryKey: ["links"] });
 		},
 		onError: (error) => {
 			toast.error(error.response.data.error);
