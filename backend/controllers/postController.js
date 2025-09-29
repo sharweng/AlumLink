@@ -7,9 +7,10 @@ export const getFeedPosts = async (req, res) => {
     try {
         const userLinks = Array.isArray(req.user.links) ? req.user.links : [];
 
+
         const posts = await Post.find({ author:{$in: [...userLinks, req.user._id]} })
             .populate("author", "name username profilePicture headline")
-            .populate("comments.user", "name profilePicture")
+            .populate("comments.user", "name username profilePicture")
             .sort({ createdAt: -1 });
 
             res.status(200).json(posts);

@@ -94,6 +94,7 @@ const Post = ({ post }) => {
           user: {
             _id: authUser._id,
             name: authUser.name,
+            username: authUser.username,
             profilePicture: authUser.profilePicture
           },
           createdAt: new Date()
@@ -149,14 +150,18 @@ const Post = ({ post }) => {
         <div className="px-4 pb-4">
           <div className="mb-4 max-h-60 overflow-y-auto">
             { comments.map((comment) => {
-              const isCommentOwner = comment.user._id === authUser._id
+              const isCommentOwner = comment.user._id === authUser._id       
               return (
                 <div key={ comment._id } className="mb-2 bg-base-100 p-2 rounded flex items-start relative">
-                  <img src={ comment.user.profilePicture || "/avatar.png" } alt={ comment.user.name }
-                    className="w-8 h-8 rounded-full mr-2 flex-shrink-0" />
+                  <Link to={`/profile/${comment.user.username}`}>
+                    <img src={ comment.user.profilePicture || "/avatar.png" } alt={ comment.user.name }
+                      className="w-8 h-8 rounded-full mr-2 flex-shrink-0" />
+                  </Link>
                   <div className="flex-grow">
                     <div className="flex items-center mb-1">
-                      <span className="font-semibold mr-2">{ comment.user.name }</span>
+                      <Link to={`/profile/${comment.user.username}`} className="font-semibold mr-2">
+                        { comment.user.name }
+                      </Link>
                       <span className="text-xs text-info">{ formatDistanceToNow(new Date(comment.createdAt)) }</span>
                     </div>
                     <p>{ comment.content }</p>

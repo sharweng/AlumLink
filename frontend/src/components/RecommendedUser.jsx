@@ -52,7 +52,6 @@ const RecommendedUser = ({ user }) => {
         <button className='px-3 py-1 rounded-full text-sm bg-gray-200 text-gray-500' disabled>Loading...</button>
       )
     }
-    console.log(linkStatus.data.requestId)
     switch(linkStatus?.data?.status){
       case "pending":
         return (

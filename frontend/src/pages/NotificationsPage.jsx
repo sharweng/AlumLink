@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { axiosInstance } from '../lib/axios'
 import toast from 'react-hot-toast'
-import { ExternalLink, Eye, Heart, MessageSquare, Trash2, UserPlus } from 'lucide-react'
+import { ExternalLink, Eye, Heart, MessageSquare, Trash2, UserPlus, CheckCircle2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import Sidebar from '../components/Sidebar'
@@ -21,6 +21,14 @@ const NotificationsPage = () => {
       queryClient.invalidateQueries(["notifications"])
     }
   })
+
+	const handleMarkAllAsRead = () => {
+		if (!notifications || !notifications.data) return;
+		const unread = notifications.data.filter(n => !n.read);
+		if (unread.length === 0) return;
+		unread.forEach(n => markAsReadMutation(n._id));
+		toast.success("All notifications marked as read");
+	};
 
   const { mutate: deleteNotificationMutation } = useMutation({
     mutationFn: (id) => axiosInstance.delete(`/notifications/${id}`),
@@ -100,7 +108,19 @@ const NotificationsPage = () => {
 			</div>
 			<div className='col-span-1 lg:col-span-3'>
 				<div className='bg-white rounded-lg shadow p-6'>
-					<h1 className='text-2xl font-bold mb-6'>Notifications</h1>
+
+								<div className='flex items-center justify-between mb-6'>
+									<h1 className='text-2xl font-bold'>Notifications</h1>
+									{notifications && notifications.data.some(n => !n.read) && (
+										<button
+											onClick={handleMarkAllAsRead}
+											className='flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition duration-300 text-sm'
+										>
+											<CheckCircle2 size={16} />
+											Mark all as read
+										</button>
+									)}
+								</div>
 
 					{isLoading ? (
 						<p>Loading notifications...</p>
