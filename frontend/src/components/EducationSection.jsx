@@ -1,5 +1,6 @@
 import { School, X } from "lucide-react"
 import { useState } from "react"
+import toast from "react-hot-toast"
 
 const EducationSection = ({ userData, isOwnProfile, onSave }) => {
   const [ isEditing, setIsEditing ] = useState(false)
@@ -11,18 +12,19 @@ const EducationSection = ({ userData, isOwnProfile, onSave }) => {
     endYear: "",
   })
 
-  const handleAddEducation = () => {
-    if(newEducation.school && newEducation.fieldOfStudy && newEducation.startYear){
-      setEducations([...educations, newEducation])
-
-      setNewEducation({
-        school: "",
-        fieldOfStudy: "",
-        startYear: "",
-        endYear: "",
-      })
-    }
-  }
+	const handleAddEducation = () => {
+		if(!newEducation.school || !newEducation.fieldOfStudy || !newEducation.startYear){
+			toast.error("Please fill in all required fields: School, Field of Study, and Start Year.");
+			return;
+		}
+		setEducations([...educations, newEducation])
+		setNewEducation({
+			school: "",
+			fieldOfStudy: "",
+			startYear: "",
+			endYear: "",
+		})
+	}
 
   const handleDeleteEducation = (id) => {
     setEducations(educations.filter((edu) => edu._id !== id))
@@ -55,56 +57,54 @@ const EducationSection = ({ userData, isOwnProfile, onSave }) => {
 					)}
 				</div>
 			))}
-			{isEditing && (
-				<div className='mt-4'>
-					<input
-						type='text'
-						placeholder='School'
-						value={newEducation.school}
-						onChange={(e) => setNewEducation({ ...newEducation, school: e.target.value })}
-						className='w-full p-2 border rounded mb-2'
-					/>
-					<input
-						type='text'
-						placeholder='Field of Study'
-						value={newEducation.fieldOfStudy}
-						onChange={(e) => setNewEducation({ ...newEducation, fieldOfStudy: e.target.value })}
-						className='w-full p-2 border rounded mb-2'
-					/>
-					<input
-						type='number'
-						placeholder='Start Year'
-						value={newEducation.startYear}
-						onChange={(e) => setNewEducation({ ...newEducation, startYear: e.target.value })}
-						className='w-full p-2 border rounded mb-2'
-					/>
-					<input
-						type='number'
-						placeholder='End Year'
-						value={newEducation.endYear}
-						onChange={(e) => setNewEducation({ ...newEducation, endYear: e.target.value })}
-						className='w-full p-2 border rounded mb-2'
-					/>
-					<button
-						onClick={handleAddEducation}
-						className='bg-primary text-white py-2 px-4 rounded hover:bg-red-700 transition duration-300'
-					>
-						Add Education
-					</button>
-				</div>
-			)}
+					{isEditing && (
+						<div className='mt-4'>
+							<input
+								type='text'
+								placeholder='School*'
+								value={newEducation.school}
+								onChange={(e) => setNewEducation({ ...newEducation, school: e.target.value })}
+								className='w-full p-2 border rounded mb-2'
+							/>
+							<input
+								type='text'
+								placeholder='Field of Study*'
+								value={newEducation.fieldOfStudy}
+								onChange={(e) => setNewEducation({ ...newEducation, fieldOfStudy: e.target.value })}
+								className='w-full p-2 border rounded mb-2'
+							/>
+							<input
+								type='number'
+								placeholder='Start Year*'
+								value={newEducation.startYear}
+								onChange={(e) => setNewEducation({ ...newEducation, startYear: e.target.value })}
+								className='w-full p-2 border rounded mb-2'
+							/>
+							<input
+								type='number'
+								placeholder='End Year'
+								value={newEducation.endYear}
+								onChange={(e) => setNewEducation({ ...newEducation, endYear: e.target.value })}
+								className='w-full p-2 border rounded mb-2'
+							/>
+							<div className="flex gap-2 mt-2">
+								<button
+									onClick={handleAddEducation}
+									className='bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700 transition duration-300'
+								>
+									Add Education
+								</button>
+								<button
+									onClick={handleSave}
+									className='bg-primary text-white py-2 px-4 rounded hover:bg-red-700 transition duration-300'
+								>
+									Save Changes
+								</button>
+							</div>
+						</div>
+					)}
 
-			{isOwnProfile && (
-				<>
-					{isEditing ? (
-						<button
-							onClick={handleSave}
-							className='mt-4 bg-primary text-white py-2 px-4 rounded hover:bg-red-700
-							 transition duration-300'
-						>
-							Save Changes
-						</button>
-					) : (
+					{isOwnProfile && !isEditing && (
 						<button
 							onClick={() => setIsEditing(true)}
 							className='mt-4 text-primary hover:text-red-700 transition duration-300'
@@ -112,8 +112,6 @@ const EducationSection = ({ userData, isOwnProfile, onSave }) => {
 							Edit Education
 						</button>
 					)}
-				</>
-			)}
 		</div>
   )
 }

@@ -1,6 +1,7 @@
 import { Briefcase, X } from "lucide-react";
 import { useState } from "react";
 import { formatDate } from "../utils/dateUtils";
+import toast from "react-hot-toast";
 
 const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
 	const [isEditing, setIsEditing] = useState(false);
@@ -15,18 +16,25 @@ const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
 	});
 
 	const handleAddExperience = () => {
-		if (newExperience.title && newExperience.company && newExperience.startDate) {
-			setExperiences([...experiences, newExperience]);
-
-			setNewExperience({
-				title: "",
-				company: "",
-				startDate: "",
-				endDate: "",
-				description: "",
-				currentlyWorking: false,
-			});
+		// Required fields
+		if (!newExperience.title || !newExperience.company || !newExperience.startDate || (!newExperience.currentlyWorking && !newExperience.endDate)) {
+			toast.error("Please fill in all required fields: Title, Company, Start Date, and End Date if not currently working there.");
+			return;
 		}
+		// Date logic
+		if (!newExperience.currentlyWorking && newExperience.endDate < newExperience.startDate) {
+			toast.error("End date cannot be earlier than start date.");
+			return;
+		}
+		setExperiences([...experiences, newExperience]);
+		setNewExperience({
+			title: "",
+			company: "",
+			startDate: "",
+			endDate: "",
+			description: "",
+			currentlyWorking: false,
+		});
 	};
 
 	const handleDeleteExperience = (id) => {
@@ -74,21 +82,21 @@ const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
 				<div className='mt-4'>
 					<input
 						type='text'
-						placeholder='Title'
+						placeholder='Title*'
 						value={newExperience.title}
 						onChange={(e) => setNewExperience({ ...newExperience, title: e.target.value })}
 						className='w-full p-2 border rounded mb-2'
 					/>
 					<input
 						type='text'
-						placeholder='Company'
+						placeholder='Company*'
 						value={newExperience.company}
 						onChange={(e) => setNewExperience({ ...newExperience, company: e.target.value })}
 						className='w-full p-2 border rounded mb-2'
 					/>
 					<input
 						type='date'
-						placeholder='Start Date'
+						placeholder='Start Date*'
 						value={newExperience.startDate}
 						onChange={(e) => setNewExperience({ ...newExperience, startDate: e.target.value })}
 						className='w-full p-2 border rounded mb-2'
@@ -106,7 +114,7 @@ const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
 					{!newExperience.currentlyWorking && (
 						<input
 							type='date'
-							placeholder='End Date'
+							placeholder='End Date*'
 							value={newExperience.endDate}
 							onChange={(e) => setNewExperience({ ...newExperience, endDate: e.target.value })}
 							className='w-full p-2 border rounded mb-2'
@@ -118,33 +126,30 @@ const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
 						onChange={(e) => setNewExperience({ ...newExperience, description: e.target.value })}
 						className='w-full p-2 border rounded mb-2'
 					/>
-					<button
-						onClick={handleAddExperience}
-						className='bg-primary text-white py-2 px-4 rounded hover:bg-red-700 transition duration-300'
-					>
-						Add Experience
-					</button>
-				</div>
-			)}
-
-			{isOwnProfile && (
-				<>
-					{isEditing ? (
+					<div className="flex gap-2 mt-2">
+						<button
+							onClick={handleAddExperience}
+							className='bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700 transition duration-300'
+						>
+							Add Experience
+						</button>
 						<button
 							onClick={handleSave}
-							className='mt-4 bg-primary text-white py-2 px-4 rounded hover:bg-red-700 transition duration-300'
+							className='bg-primary text-white py-2 px-4 rounded hover:bg-red-700 transition duration-300'
 						>
 							Save Changes
 						</button>
-					) : (
-						<button
-							onClick={() => setIsEditing(true)}
-							className='mt-4 text-primary hover:text-red-700 transition duration-300'
-						>
-							Edit Experiences
-						</button>
-					)}
-				</>
+					</div>
+				</div>
+			)}
+
+			{isOwnProfile && !isEditing && (
+				<button
+					onClick={() => setIsEditing(true)}
+					className='mt-4 text-primary hover:text-red-700 transition duration-300'
+				>
+					Edit Experiences
+				</button>
 			)}
 		</div>
 	);
