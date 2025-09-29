@@ -30,10 +30,12 @@ const EducationSection = ({ userData, isOwnProfile, onSave }) => {
     setEducations(educations.filter((edu) => edu._id !== id))
   }
 
-  const handleSave = () => {
-    onSave({ education: educations })
-    setIsEditing(false)
-  }
+	const handleSave = () => {
+		const sorted = [...educations].sort((a, b) => (b.startYear || 0) - (a.startYear || 0));
+		onSave({ education: sorted })
+		setEducations(sorted)
+		setIsEditing(false)
+	}
 
   return (
     <div className='bg-white shadow rounded-lg p-6 mb-6'>

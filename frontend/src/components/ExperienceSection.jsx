@@ -42,7 +42,13 @@ const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
 	};
 
 	const handleSave = () => {
-		onSave({ experience: experiences });
+		const sorted = [...experiences].sort((a, b) => {
+			if (!a.startDate) return 1;
+			if (!b.startDate) return -1;
+			return new Date(b.startDate) - new Date(a.startDate);
+		});
+		onSave({ experience: sorted });
+		setExperiences(sorted);
 		setIsEditing(false);
 	};
 

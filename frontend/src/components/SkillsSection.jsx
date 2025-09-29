@@ -1,26 +1,32 @@
 import { X } from "lucide-react"
 import { useState } from "react"
+import toast from "react-hot-toast"
 
 const SkillsSection = ({ userData, isOwnProfile, onSave }) => {
   const [ isEditing, setIsEditing ] = useState(false)
   const [ skills, setSkills ] = useState(userData.skills || [])
   const [ newSkill, setNewSkill ] = useState("")
 
-  const handleAddSkill = () => {
-    if(newSkill && !skills.includes(newSkill)){
-      setSkills([...skills, newSkill])
-      setNewSkill("")
-    }
-  }
+	const handleAddSkill = () => {
+		if (!newSkill) return;
+		if (skills.map(s => s.toLowerCase()).includes(newSkill.toLowerCase())) {
+			toast.error("Skill already exists.");
+			return;
+		}
+		setSkills([...skills, newSkill])
+		setNewSkill("")
+	}
 
   const handleDeleteSkill = (skillToDelete) => {
     setSkills(skills.filter((skill) => skill !== skillToDelete))
   }
 
-  const handleSave = () => {
-    onSave({ skills })
-    setIsEditing(false)
-  }
+	const handleSave = () => {
+		const sortedSkills = [...skills].sort((a, b) => a.localeCompare(b));
+		onSave({ skills: sortedSkills })
+		setSkills(sortedSkills)
+		setIsEditing(false)
+	}
 
   return (
     <div className='bg-white shadow rounded-lg p-6'>
