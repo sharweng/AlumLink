@@ -3,6 +3,7 @@ import { useState } from "react";
 import { formatDate } from "../utils/dateUtils";
 import toast from "react-hot-toast";
 
+
 const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
 	const [isEditing, setIsEditing] = useState(false);
 	const [experiences, setExperiences] = useState(userData.experience || []);
@@ -14,6 +15,8 @@ const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
 		description: "",
 		currentlyWorking: false,
 	});
+	const [editIdx, setEditIdx] = useState(null);
+	const [editExperience, setEditExperience] = useState(null);
 
 	const handleAddExperience = () => {
 		// Required fields
@@ -39,6 +42,8 @@ const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
 
 	const handleDeleteExperience = (id) => {
 		setExperiences(experiences.filter((exp) => exp._id !== id));
+		setEditIdx(null);
+		setEditExperience(null);
 	};
 
 	const handleSave = () => {
@@ -50,6 +55,8 @@ const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
 		onSave({ experience: sorted });
 		setExperiences(sorted);
 		setIsEditing(false);
+		setEditIdx(null);
+		setEditExperience(null);
 	};
 
 	const handleCurrentlyWorkingChange = (e) => {
@@ -68,18 +75,122 @@ const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
 					<div className='flex items-start'>
 						<Briefcase size={20} className='mr-2 mt-1' />
 						<div>
-							<h3 className='font-semibold'>{exp.title}</h3>
-							<p className='text-gray-600'>{exp.company}</p>
-							<p className='text-gray-500 text-sm'>
-								{formatDate(exp.startDate)} - {exp.endDate ? formatDate(exp.endDate) : "Present"}
-							</p>
-							<p className='text-gray-700'>{exp.description}</p>
+							{editIdx === idx ? (
+								<>
+									<input
+										type='text'
+										placeholder='Title*'
+										value={editExperience.title}
+										onChange={e => setEditExperience({ ...editExperience, title: e.target.value })}
+										className='w-full p-2 border rounded mb-2'
+									/>
+									<input
+										type='text'
+										placeholder='Company*'
+										value={editExperience.company}
+										onChange={e => setEditExperience({ ...editExperience, company: e.target.value })}
+										className='w-full p-2 border rounded mb-2'
+									/>
+									<input
+										type='date'
+										placeholder='Start Date*'
+										value={editExperience.startDate}
+										onChange={e => setEditExperience({ ...editExperience, startDate: e.target.value })}
+										className='w-full p-2 border rounded mb-2'
+									/>
+									<div className='flex items-center mb-2'>
+										<input
+											type='checkbox'
+											id={`currentlyWorking-edit-${idx}`}
+											checked={editExperience.currentlyWorking}
+											onChange={e => setEditExperience({ ...editExperience, currentlyWorking: e.target.checked, endDate: e.target.checked ? "" : editExperience.endDate })}
+											className='mr-2  accent-red-500'
+										/>
+										<label htmlFor={`currentlyWorking-edit-${idx}`}>I currently work here</label>
+									</div>
+									{!editExperience.currentlyWorking && (
+										<input
+											type='date'
+											placeholder='End Date*'
+											value={editExperience.endDate}
+											onChange={e => setEditExperience({ ...editExperience, endDate: e.target.value })}
+											className='w-full p-2 border rounded mb-2'
+										/>
+									)}
+									<textarea
+										placeholder='Description'
+										value={editExperience.description}
+										onChange={e => setEditExperience({ ...editExperience, description: e.target.value })}
+										className='w-full p-2 border rounded mb-2'
+									/>
+									<div className="flex gap-2 mt-2">
+										<button
+											className='bg-red-500 text-white py-1 px-3 rounded hover:bg-red-700 transition duration-300'
+											onClick={() => {
+												// Validation
+												if (!editExperience.title || !editExperience.company || !editExperience.startDate || (!editExperience.currentlyWorking && !editExperience.endDate)) {
+													toast.error("Please fill in all required fields: Title, Company, Start Date, and End Date if not currently working there.");
+													return;
+												}
+												if (!editExperience.currentlyWorking && editExperience.endDate < editExperience.startDate) {
+													toast.error("End date cannot be earlier than start date.");
+													return;
+												}
+												const updated = experiences.map((e, i) => i === idx ? editExperience : e);
+												setExperiences(updated);
+												setEditIdx(null);
+												setEditExperience(null);
+											}}
+										>Save</button>
+										<button
+											className='bg-gray-400 text-white py-1 px-3 rounded hover:bg-gray-600 transition duration-300'
+											onClick={() => { setEditIdx(null); setEditExperience(null); }}
+										>Cancel</button>
+									</div>
+								</>
+							) : (
+								<>
+									<h3 className='font-semibold'>{exp.title}</h3>
+									<p className='text-gray-600'>{exp.company}</p>
+									<p className='text-gray-500 text-sm'>
+										{formatDate(exp.startDate)} - {exp.endDate ? formatDate(exp.endDate) : "Present"}
+									</p>
+									<p className='text-gray-700'>{exp.description}</p>
+								</>
+							)}
 						</div>
 					</div>
 					{isEditing && (
-						<button onClick={() => handleDeleteExperience(exp._id)} className='text-red-500'>
-							<X size={20} />
-						</button>
+						<div className="flex gap-2">
+							<button
+								className='text-gray-500'
+								onClick={() => {
+									// Normalize values for edit form
+									const normalizeDate = (date) => {
+										if (!date) return "";
+										// If already YYYY-MM-DD, return as is
+										if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+										// Try to parse and format
+										const d = new Date(date);
+										if (!isNaN(d)) {
+											return d.toISOString().slice(0, 10);
+										}
+										return "";
+									};
+									setEditIdx(idx);
+									setEditExperience({
+										...exp,
+										startDate: normalizeDate(exp.startDate),
+										endDate: normalizeDate(exp.endDate),
+										currentlyWorking: exp.endDate ? !!exp.currentlyWorking : true
+									});
+								}}
+								disabled={editIdx !== null}
+							>Edit</button>
+							<button onClick={() => handleDeleteExperience(exp._id)} className='text-red-500'>
+								<X size={20} />
+							</button>
+						</div>
 					)}
 				</div>
 			))}
@@ -113,7 +224,7 @@ const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
 							id='currentlyWorking'
 							checked={newExperience.currentlyWorking}
 							onChange={handleCurrentlyWorkingChange}
-							className='mr-2'
+							className='mr-2 accent-red-500'
 						/>
 						<label htmlFor='currentlyWorking'>I currently work here</label>
 					</div>
