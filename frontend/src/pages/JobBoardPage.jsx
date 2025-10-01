@@ -75,19 +75,39 @@ const JobBoardPage = () => {
 
   return (
     <div className='grid grid-cols-1 lg:grid-cols-4 gap-6'>
-      {/* Sidebar */}
+      {/* Sidebar with Stats */}
       <div className='hidden lg:block lg:col-span-1'>
-        <Sidebar user={authUser} />
+        <div className='space-y-6'>
+          <Sidebar user={authUser} />
+          
+          {/* Quick Stats moved under sidebar */}
+          <div className='bg-white rounded-lg shadow p-6'>
+            <h3 className='text-lg font-semibold mb-4'>Quick Stats</h3>
+            <div className='space-y-3'>
+              <div className='flex justify-between'>
+                <span className='text-gray-600'>Total Jobs</span>
+                <span className='font-medium'>{jobPostsData?.total || 0}</span>
+              </div>
+              <div className='flex justify-between'>
+                <span className='text-gray-600'>New This Week</span>
+                <span className='font-medium'>-</span>
+              </div>
+              <div className='flex justify-between'>
+                <span className='text-gray-600'>Companies</span>
+                <span className='font-medium'>-</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div className='col-span-1 lg:col-span-2 order-first lg:order-none'>
+      {/* Main Content - Now takes full remaining width */}
+      <div className='col-span-1 lg:col-span-3 order-first lg:order-none'>
         {/* Header */}
         <div className='bg-white rounded-lg shadow p-6 mb-6'>
           <div className='flex items-center justify-between mb-4'>
             <div className='flex items-center gap-3'>
-              <Briefcase className='text-red-500' size={28} />
-              <h1 className='text-2xl font-bold text-green-800'>Job & Internship Board</h1>
+              <h1 className='text-2xl font-bold'>Job & Internship Board</h1>
             </div>
             <button
               onClick={() => setShowCreateForm(!showCreateForm)}
@@ -143,6 +163,7 @@ const JobBoardPage = () => {
                 >
                   <option value='all'>All Types</option>
                   <option value='job'>Full-time Job</option>
+                  <option value='part-time'>Part-time Job</option>
                   <option value='internship'>Internship</option>
                   <option value='freelance'>Freelance</option>
                 </select>
@@ -217,7 +238,7 @@ const JobBoardPage = () => {
               <div className='mb-6'>
                 <Briefcase size={64} className="mx-auto text-red-500" />
               </div>
-              <h2 className='text-2xl font-bold mb-4 text-green-800'>No Job Posts Found</h2>
+              <h2 className='text-2xl font-bold mb-4 '>No Job Posts Found</h2>
               <p className='text-gray-600 mb-6'>
                 {searchQuery || Object.values(filters).some(v => v && v !== 'all')
                   ? 'Try adjusting your search criteria or filters.'
@@ -233,27 +254,6 @@ const JobBoardPage = () => {
             Showing {jobPostsData.jobPosts.length} of {jobPostsData.total} job posts
           </div>
         )}
-      </div>
-
-      {/* Right Sidebar - Job Statistics or Featured Jobs */}
-      <div className='hidden lg:block lg:col-span-1'>
-        <div className='bg-white rounded-lg shadow p-6'>
-          <h3 className='text-lg font-semibold mb-4 text-green-800'>Quick Stats</h3>
-          <div className='space-y-3'>
-            <div className='flex justify-between'>
-              <span className='text-gray-600'>Total Jobs</span>
-              <span className='font-medium'>{jobPostsData?.total || 0}</span>
-            </div>
-            <div className='flex justify-between'>
-              <span className='text-gray-600'>New This Week</span>
-              <span className='font-medium'>-</span>
-            </div>
-            <div className='flex justify-between'>
-              <span className='text-gray-600'>Companies</span>
-              <span className='font-medium'>-</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

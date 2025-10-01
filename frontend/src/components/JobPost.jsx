@@ -11,14 +11,13 @@ import {
   MapPin, 
   Building, 
   Clock, 
-  DollarSign, 
   Users, 
-  Eye,
   ExternalLink,
   Briefcase,
   Calendar,
   Send,
-  X
+  X,
+  PhilippinePeso
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import JobPostEdit from './JobPostEdit';
@@ -91,6 +90,20 @@ const JobPost = ({ jobPost }) => {
     }
   });
 
+  // Delete comment mutation
+  const { mutate: deleteComment, isPending: isDeletingComment } = useMutation({
+    mutationFn: async (commentId) => {
+      await axiosInstance.delete(`/jobs/${jobPost._id}/comment/${commentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobPosts'] });
+      toast.success('Comment deleted successfully');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to delete comment');
+    }
+  });
+
   const handleComment = (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
@@ -100,6 +113,7 @@ const JobPost = ({ jobPost }) => {
   const getJobTypeStyle = (type) => {
     const styles = {
       job: 'bg-green-100 text-green-800',
+      'part-time': 'bg-yellow-100 text-yellow-800',
       internship: 'bg-blue-100 text-blue-800',
       freelance: 'bg-purple-100 text-purple-800'
     };
@@ -115,9 +129,19 @@ const JobPost = ({ jobPost }) => {
     return styles[workType] || 'bg-gray-100 text-gray-800';
   };
 
+  const formatJobType = (type) => {
+    const labels = {
+      job: 'Full-time',
+      'part-time': 'Part-time',
+      internship: 'Internship',
+      freelance: 'Freelance'
+    };
+    return labels[type] || type.charAt(0).toUpperCase() + type.slice(1);
+  };
+
   const formatSalary = (salary) => {
     if (!salary || (!salary.min && !salary.max)) return null;
-    const currency = salary.currency || 'USD';
+    const currency = salary.currency || 'PHP';
     if (salary.min && salary.max) {
       return `${currency} ${salary.min.toLocaleString()} - ${salary.max.toLocaleString()}`;
     }
@@ -171,7 +195,7 @@ const JobPost = ({ jobPost }) => {
           <h2 className='text-xl font-bold text-gray-900'>{jobPost.title}</h2>
           <div className='flex gap-2'>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getJobTypeStyle(jobPost.type)}`}>
-              {jobPost.type.charAt(0).toUpperCase() + jobPost.type.slice(1)}
+              {formatJobType(jobPost.type)}
             </span>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getWorkTypeStyle(jobPost.workType)}`}>
               {jobPost.workType.charAt(0).toUpperCase() + jobPost.workType.slice(1)}
@@ -196,7 +220,7 @@ const JobPost = ({ jobPost }) => {
           )}
           {formatSalary(jobPost.salary) && (
             <div className='flex items-center gap-1'>
-              <DollarSign size={16} />
+              <PhilippinePeso size={16} />
               <span>{formatSalary(jobPost.salary)}</span>
             </div>
           )}
@@ -237,14 +261,10 @@ const JobPost = ({ jobPost }) => {
 
         {/* Application Info */}
         <div className='flex items-center justify-between p-3 bg-gray-50 rounded-lg'>
-          <div className='flex items-center gap-4 text-sm text-gray-600'>
+          <div className='flex items-center gap-4 text-sm text-gray-600 flex-wrap'>
             <div className='flex items-center gap-1'>
               <Users size={16} />
               <span>{jobPost.applicants?.length || 0} applicants</span>
-            </div>
-            <div className='flex items-center gap-1'>
-              <Eye size={16} />
-              <span>{jobPost.views || 0} views</span>
             </div>
             {jobPost.applicationDeadline && (
               <div className='flex items-center gap-1'>
@@ -359,24 +379,44 @@ const JobPost = ({ jobPost }) => {
 
           {/* Comments List */}
           <div className='space-y-3'>
-            {jobPost.comments?.map((comment, index) => (
-              <div key={index} className='flex gap-3'>
-                <img
-                  src={comment.user.profilePicture || '/avatar.png'}
-                  alt={comment.user.name}
-                  className='w-8 h-8 rounded-full object-cover'
-                />
-                <div className='flex-1 bg-gray-50 rounded-lg p-3'>
-                  <div className='flex items-center justify-between mb-1'>
-                    <h4 className='font-medium text-gray-900'>{comment.user.name}</h4>
-                    <span className='text-xs text-gray-500'>
-                      {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                    </span>
+            {jobPost.comments?.map((comment, index) => {
+              const canDeleteComment = comment.user._id === authUser._id || jobPost.author._id === authUser._id;
+              
+              return (
+                <div key={comment._id || index} className='flex gap-3'>
+                  <img
+                    src={comment.user.profilePicture || '/avatar.png'}
+                    alt={comment.user.name}
+                    className='w-8 h-8 rounded-full object-cover'
+                  />
+                  <div className='flex-1 bg-gray-50 rounded-lg p-3'>
+                    <div className='flex items-center justify-between mb-1'>
+                      <h4 className='font-medium text-gray-900'>{comment.user.name}</h4>
+                      <div className='flex items-center gap-2'>
+                        <span className='text-xs text-gray-500'>
+                          {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                        </span>
+                        {canDeleteComment && (
+                          <button
+                            onClick={() => deleteComment(comment._id)}
+                            disabled={isDeletingComment}
+                            className='p-1 text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50'
+                            title='Delete comment'
+                          >
+                            {isDeletingComment ? (
+                              <div className='w-3 h-3 border border-red-500 border-t-transparent rounded-full animate-spin' />
+                            ) : (
+                              <X size={12} />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <p className='text-gray-700'>{comment.content}</p>
                   </div>
-                  <p className='text-gray-700'>{comment.content}</p>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

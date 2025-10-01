@@ -24,7 +24,7 @@ const jobPostSchema = new mongoose.Schema({
     type: {
         type: String,
         required: true,
-        enum: ["job", "internship", "freelance"],
+        enum: ["job", "part-time", "internship", "freelance"],
         default: "job",
     },
     workType: {
@@ -88,10 +88,7 @@ const jobPostSchema = new mongoose.Schema({
             default: "pending",
         },
     }],
-    views: {
-        type: Number,
-        default: 0,
-    },
+
     likes: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",

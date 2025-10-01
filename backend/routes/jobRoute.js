@@ -10,7 +10,8 @@ import {
     commentOnJobPost,
     applyToJob,
     searchJobPosts,
-    getMyJobPosts
+    getMyJobPosts,
+    deleteCommentFromJobPost
 } from "../controllers/jobController.js";
 
 const router = express.Router();
@@ -29,6 +30,7 @@ router.delete("/:id", protectRoute, deleteJobPost);
 // Interaction routes
 router.post("/:id/like", protectRoute, likeJobPost);
 router.post("/:id/comment", protectRoute, commentOnJobPost);
+router.delete("/:id/comment/:commentId", protectRoute, deleteCommentFromJobPost);
 router.post("/:id/apply", protectRoute, applyToJob);
 
 export default router;

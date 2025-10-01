@@ -149,7 +149,7 @@ const JobPostCreation = ({ onClose }) => {
   return (
     <div className='bg-white rounded-lg shadow-lg border border-gray-200 p-6'>
       <div className='flex items-center justify-between mb-6'>
-        <h2 className='text-xl font-bold text-green-800'>Create Job Post</h2>
+        <h2 className='text-xl font-bold'>Create Job Post</h2>
         <button
           onClick={onClose}
           className='p-2 hover:bg-gray-100 rounded-full transition-colors'
@@ -219,6 +219,7 @@ const JobPostCreation = ({ onClose }) => {
               className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent'
             >
               <option value='job'>Full-time Job</option>
+              <option value='part-time'>Part-time Job</option>
               <option value='internship'>Internship</option>
               <option value='freelance'>Freelance</option>
             </select>
@@ -239,7 +240,7 @@ const JobPostCreation = ({ onClose }) => {
             </select>
           </div>
 
-          {(formData.type === 'internship' || formData.type === 'freelance') && (
+          {(formData.type === 'part-time' || formData.type === 'internship' || formData.type === 'freelance') && (
             <div>
               <label className='block text-sm font-medium text-gray-700 mb-1'>
                 Duration
@@ -341,7 +342,7 @@ const JobPostCreation = ({ onClose }) => {
             <button
               type='button'
               onClick={addSkill}
-              className='px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors'
+              className='px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors'
             >
               <Plus size={18} />
             </button>

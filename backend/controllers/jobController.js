@@ -39,11 +39,7 @@ export const getJobPostById = async (req, res) => {
     try {
         const { id } = req.params;
         
-        const jobPost = await JobPost.findByIdAndUpdate(
-            id,
-            { $inc: { views: 1 } },
-            { new: true }
-        )
+        const jobPost = await JobPost.findById(id)
             .populate("author", "name username profilePicture headline")
             .populate("comments.user", "name username profilePicture")
             .populate("applicants.user", "name username profilePicture headline");
@@ -349,6 +345,42 @@ export const getMyJobPosts = async (req, res) => {
         });
     } catch (error) {
         console.log("Error in getMyJobPosts:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const deleteCommentFromJobPost = async (req, res) => {
+    try {
+        const { id, commentId } = req.params;
+        const userId = req.user._id;
+
+        const jobPost = await JobPost.findById(id);
+        
+        if (!jobPost) {
+            return res.status(404).json({ message: "Job post not found" });
+        }
+
+        const comment = jobPost.comments.id(commentId);
+        
+        if (!comment) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        // Check if user is the comment author or job post author
+        if (comment.user.toString() !== userId.toString() && jobPost.author.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "You can only delete your own comments or comments on your job posts" });
+        }
+
+        jobPost.comments.pull(commentId);
+        await jobPost.save();
+
+        const populatedJobPost = await JobPost.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture");
+
+        res.status(200).json(populatedJobPost);
+    } catch (error) {
+        console.log("Error in deleteCommentFromJobPost:", error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 };

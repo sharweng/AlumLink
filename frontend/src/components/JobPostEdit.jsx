@@ -174,7 +174,7 @@ const JobPostEdit = ({ jobPost, onClose }) => {
       <div className='bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto'>
         <div className='sticky top-0 bg-white border-b p-6'>
           <div className='flex items-center justify-between'>
-            <h2 className='text-xl font-bold text-green-800'>Edit Job Post</h2>
+            <h2 className='text-xl font-bold '>Edit Job Post</h2>
             <button
               onClick={onClose}
               className='p-2 hover:bg-gray-100 rounded-full transition-colors'
@@ -192,7 +192,7 @@ const JobPostEdit = ({ jobPost, onClose }) => {
                 type='checkbox'
                 checked={formData.isActive}
                 onChange={(e) => handleInputChange('isActive', e.target.checked)}
-                className='w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500'
+                className='w-4 h-4 border-gray-300 rounded '
               />
               <span className='text-sm font-medium text-gray-700'>Job post is active</span>
             </label>
@@ -258,6 +258,7 @@ const JobPostEdit = ({ jobPost, onClose }) => {
                 className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent'
               >
                 <option value='job'>Full-time Job</option>
+                <option value='part-time'>Part-time Job</option>
                 <option value='internship'>Internship</option>
                 <option value='freelance'>Freelance</option>
               </select>
@@ -278,7 +279,7 @@ const JobPostEdit = ({ jobPost, onClose }) => {
               </select>
             </div>
 
-            {(formData.type === 'internship' || formData.type === 'freelance') && (
+            {(formData.type === 'part-time' || formData.type === 'internship' || formData.type === 'freelance') && (
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>
                   Duration
@@ -380,7 +381,7 @@ const JobPostEdit = ({ jobPost, onClose }) => {
               <button
                 type='button'
                 onClick={addSkill}
-                className='px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors'
+                className='px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors'
               >
                 <Plus size={18} />
               </button>
