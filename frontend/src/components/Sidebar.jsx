@@ -1,4 +1,4 @@
-import { Bell, Home, UserPlus } from "lucide-react"
+import { Bell, Home, UserPlus, Briefcase } from "lucide-react"
 import { Link } from "react-router-dom"
 
 const Sidebar = ({ user }) => {
@@ -31,6 +31,14 @@ const Sidebar = ({ user }) => {
                             className='flex items-center py-2 px-4 rounded-md hover:bg-primary hover:text-white transition-colors'
                         >
                             <Home className='mr-2' size={20} /> Home
+                        </Link>
+                    </li>
+                    <li>
+                        <Link
+                            to='/jobs'
+                            className='flex items-center py-2 px-4 rounded-md hover:bg-primary hover:text-white transition-colors'
+                        >
+                            <Briefcase className='mr-2' size={20} /> Job Board
                         </Link>
                     </li>
                     <li>

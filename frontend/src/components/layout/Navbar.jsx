@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { axiosInstance } from "../../lib/axios"
-import { Home, User, Users, Bell, LogOut, Search } from "lucide-react"
+import { Home, User, Users, Bell, LogOut, Search, Briefcase } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useState, useRef, useEffect } from "react"
 import SearchResults from "../SearchResults"
@@ -143,6 +143,10 @@ const Navbar = () => {
 								<Link to={"/"} className='text-neutral flex flex-col items-center'>
 									<Home size={20} />
 									<span className='text-xs hidden md:block'>Home</span>
+								</Link>
+								<Link to='/jobs' className='text-neutral flex flex-col items-center'>
+									<Briefcase size={20} />
+									<span className='text-xs hidden md:block'>Jobs</span>
 								</Link>
 								<Link to='/network' className='text-neutral flex flex-col items-center relative'>
 									<Users size={20} />
