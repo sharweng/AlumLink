@@ -4,7 +4,7 @@ import { axiosInstance } from "../lib/axios";
 import ProfileHeader from "../components/ProfileHeader";
 import AboutSection from "../components/AboutSection";
 import ExperienceSection from "../components/ExperienceSection";
-import EducationSection from "../components/EducationSection";
+import BatchCourseSection from "../components/BatchCourseSection";
 import SkillsSection from "../components/SkillsSection";
 import toast from "react-hot-toast";
 
@@ -50,7 +50,7 @@ const ProfilePage = () => {
       <ProfileHeader userData={ userData } isOwnProfile={ isOwnProfile } onSave={ handleSaveHeader } isSaving={isSaving} />
       <AboutSection userData={ userData } isOwnProfile={ isOwnProfile } onSave={ handleSave } />
       <ExperienceSection userData={ userData } isOwnProfile={ isOwnProfile } onSave={ handleSave } />
-      <EducationSection userData={ userData } isOwnProfile={ isOwnProfile } onSave={ handleSave } />
+      <BatchCourseSection userData={ userData } />
       <SkillsSection userData={ userData } isOwnProfile={ isOwnProfile } onSave={ handleSave } /> 
     </div>
   )

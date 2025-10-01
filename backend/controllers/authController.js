@@ -6,9 +6,9 @@ import { sendWelcomeEmail } from "../emails/nodemailerHandlers.js"; // for sandb
 
 export const signup = async (req, res) => {
     try {
-        const { name, username, email, password } = req.body;
+        const { name, username, email, password, batch, course } = req.body;
 
-        if(!name || !username || !email || !password) {
+        if(!name || !username || !email || !password || !batch || !course) {
             return res.status(400).json({ message: "All fields are required" });
         }
 
@@ -28,11 +28,20 @@ export const signup = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
+        // Generate headline from batch and course
+        let headline = "AlumniLink User";
+        if (batch && course) {
+            headline = `${batch} Graduate, ${course}`;
+        }
+
         const newUser = new User({
             name,
             username,
             email,
             password: hashedPassword,
+            batch,
+            course,
+            headline,
         });
 
         await newUser.save();

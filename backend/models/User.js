@@ -48,13 +48,14 @@ const userSchema = new mongoose.Schema({
             description: String,
         },
     ],
-    education: [{
-            school: String,
-            fieldOfStudy: String,
-            startYear: Number,
-            endYear: Number,
-        },
-    ],
+    batch: {
+        type: Number,
+        required: true,
+    },
+    course: {
+        type: String,
+        required: true,
+    },
     links: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",

@@ -8,7 +8,7 @@ export const getSuggestedLinks = async (req, res) => {
         // find users who are not already linked, and also not suggest the current user
         const suggestedUsers = await User.find({
             _id: { $ne: req.user._id, $nin: currentUser.links }
-        }).select("name username profilePicture headline").limit(5) // 5 is the current limit for suggestion (can be changed later)
+        }).select("name username profilePicture headline batch course").limit(5) // 5 is the current limit for suggestion (can be changed later)
 
         res.json(suggestedUsers)
     } catch (error) {
@@ -36,7 +36,6 @@ export const getPublicProfile = async (req, res) => {
 export const updateProfile = async (req, res) => {
     try {
         const allowedFields = [
-            "name", 
             "username",
             "headline", 
             "about", 
@@ -44,8 +43,7 @@ export const updateProfile = async (req, res) => {
             "profilePicture", 
             "bannerImg", 
             "skills", 
-            "experience", 
-            "education"
+            "experience"
         ];
 
         const updatedData = {};
