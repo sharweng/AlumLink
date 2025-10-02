@@ -1,14 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { axiosInstance } from '../lib/axios'
 import toast from 'react-hot-toast'
-import { ExternalLink, Eye, Heart, MessageSquare, Trash2, UserPlus, CheckCircle2 } from 'lucide-react'
+import { ExternalLink, Eye, Heart, MessageSquare, Trash2, UserPlus, CheckCircle2, Briefcase } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import Sidebar from '../components/Sidebar'
+import { useState, useEffect } from 'react'
 
 const NotificationsPage = () => {
   const queryClient = useQueryClient()
   const authUser = queryClient.getQueryData(["authUser"])
+  const [activeTab, setActiveTab] = useState('all')
+  const [filter, setFilter] = useState('all') // all, like, comment, application
+
+  // Reset filter when changing tabs
+  useEffect(() => {
+    setFilter('all')
+  }, [activeTab])
 
   const { data: notifications, isLoading } = useQuery({
     queryKey: ["notifications"],
@@ -38,6 +46,36 @@ const NotificationsPage = () => {
     }
   })
 
+  // Filter notifications based on active tab
+  const filterNotifications = (notifications) => {
+    if (!notifications) return []
+    
+    let filtered = notifications
+    
+    // Filter by tab first
+    if (activeTab === 'posts') {
+      // Posts tab: notifications with relatedPost (regular posts)
+      filtered = notifications.filter(notification => notification.relatedPost)
+    } else if (activeTab === 'jobs') {
+      // Jobs tab: notifications with relatedJobPost (job posts) 
+      filtered = notifications.filter(notification => notification.relatedJobPost)
+    }
+    // 'all' tab shows everything, so no filtering needed
+    
+    // Apply type filter
+    if (filter !== 'all') {
+      if (filter === 'application') {
+        filtered = filtered.filter(n => n.type === 'jobApplication')
+      } else if (filter === 'link') {
+        filtered = filtered.filter(n => n.type === 'linkAccepted')
+      } else {
+        filtered = filtered.filter(n => n.type === filter)
+      }
+    }
+    
+    return filtered
+  }
+
   const renderNotificationIcon = (type) => {
     switch(type) {
       case "like":
@@ -46,17 +84,24 @@ const NotificationsPage = () => {
         return <MessageSquare className='text-green-500' />
       case "linkAccepted":
         return <UserPlus className='text-purple-500' />
+      case "jobApplication":
+        return <Briefcase className='text-blue-500' />
       default:
         return null
     }
   }
 
   const renderNotificationContent = (notification) => {
+		const isJobNotification = !!notification.relatedJobPost;
+		
 		switch (notification.type) {
 			case "like":
 				return (
 					<span>
-						<strong>{notification.relatedUser.name}</strong> liked your post
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						liked your {isJobNotification ? 'job post' : 'post'}
 					</span>
 				);
 			case "comment":
@@ -65,7 +110,7 @@ const NotificationsPage = () => {
 						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
 							{notification.relatedUser.name}
 						</Link>{" "}
-						commented on your post
+						commented on your {isJobNotification ? 'job post' : 'post'}
 					</span>
 				);
 			case "linkAccepted":
@@ -75,6 +120,15 @@ const NotificationsPage = () => {
 							{notification.relatedUser.name}
 						</Link>{" "}
 						accepted your link request
+					</span>
+				);
+			case "jobApplication":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						applied to your job post
 					</span>
 				);
 			default:
@@ -101,6 +155,27 @@ const NotificationsPage = () => {
 		);
 	};
 
+
+
+	const renderRelatedJobPost = (relatedJobPost) => {
+		if (!relatedJobPost) return null;
+
+		return (
+			<Link
+				to={`/job/${relatedJobPost._id}`}
+				className='mt-2 p-2 bg-blue-50 rounded-md flex items-center space-x-2 hover:bg-blue-100 transition-colors'
+			>
+				<div className='flex-1 overflow-hidden'>
+					<p className='text-sm font-medium text-gray-900 truncate'>{relatedJobPost.title}</p>
+					<p className='text-xs text-gray-600 truncate'>{relatedJobPost.company} • {relatedJobPost.location}</p>
+				</div>
+				<ExternalLink size={14} className='text-gray-400' />
+			</Link>
+		);
+	};
+
+
+
   return (
     <div className='grid grid-cols-1 lg:grid-cols-4 gap-6'>
 			<div className='col-span-1 lg:col-span-1'>
@@ -122,11 +197,112 @@ const NotificationsPage = () => {
 									)}
 								</div>
 
+								{/* Notification Tabs */}
+								<div className='flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg'>
+									<button
+										onClick={() => {
+											setActiveTab('all')
+											setJobFilter('all')
+										}}
+										className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+											activeTab === 'all'
+												? 'bg-white text-gray-900 shadow-sm'
+												: 'text-gray-600 hover:text-gray-900'
+										}`}
+									>
+										All
+									</button>
+									<button
+										onClick={() => {
+											setActiveTab('posts')
+											setJobFilter('all')
+										}}
+										className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+											activeTab === 'posts'
+												? 'bg-white text-gray-900 shadow-sm'
+												: 'text-gray-600 hover:text-gray-900'
+										}`}
+									>
+										Posts
+									</button>
+									<button
+										onClick={() => {
+											setActiveTab('jobs')
+											setJobFilter('all')
+										}}
+										className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+											activeTab === 'jobs'
+												? 'bg-white text-gray-900 shadow-sm'
+												: 'text-gray-600 hover:text-gray-900'
+										}`}
+									>
+										Jobs
+									</button>
+								</div>
+
+								{/* Notification Type Filters */}
+								<div className='flex space-x-2 mb-4 flex-wrap'>
+									<button
+										onClick={() => setFilter('all')}
+										className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+											filter === 'all'
+												? 'bg-blue-500 text-white'
+												: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+										}`}
+									>
+										All
+									</button>
+									<button
+										onClick={() => setFilter('like')}
+										className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+											filter === 'like'
+												? 'bg-red-500 text-white'
+												: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+										}`}
+									>
+										Likes
+									</button>
+									<button
+										onClick={() => setFilter('comment')}
+										className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+											filter === 'comment'
+												? 'bg-green-500 text-white'
+												: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+										}`}
+									>
+										Comments
+									</button>
+									{(activeTab === 'all' || activeTab === 'jobs') && (
+										<button
+											onClick={() => setFilter('application')}
+											className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+												filter === 'application'
+													? 'bg-blue-500 text-white'
+													: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+											}`}
+										>
+											Applications
+										</button>
+									)}
+									{(activeTab === 'all') && (
+										<button
+											onClick={() => setFilter('link')}
+											className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+												filter === 'link'
+													? 'bg-purple-500 text-white'
+													: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+											}`}
+										>
+											Links
+										</button>
+									)}
+								</div>
+
 					{isLoading ? (
 						<p>Loading notifications...</p>
 					) : notifications && notifications.data.length > 0 ? (
 						<ul>
-							{notifications.data.map((notification) => (
+							{filterNotifications(notifications.data).map((notification) => (
 								<li
 									key={notification._id}
 									className={`bg-white border rounded-lg p-4 my-4 transition-all hover:shadow-md ${
@@ -156,6 +332,7 @@ const NotificationsPage = () => {
 													})}
 												</p>
 												{renderRelatedPost(notification.relatedPost)}
+												{renderRelatedJobPost(notification.relatedJobPost)}
 											</div>
 										</div>
 
@@ -183,7 +360,13 @@ const NotificationsPage = () => {
 							))}
 						</ul>
 					) : (
-						<p>No notification at the moment.</p>
+						<div className='text-center py-8'>
+							<p className='text-gray-500'>
+								{activeTab === 'all' && 'No notifications at the moment.'}
+								{activeTab === 'posts' && 'No post notifications yet.'}
+								{activeTab === 'jobs' && 'No job notifications yet.'}
+							</p>
+						</div>
 					)}
 				</div>
 			</div>
