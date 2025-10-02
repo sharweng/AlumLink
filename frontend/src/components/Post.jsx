@@ -19,6 +19,7 @@ const Post = ({ post }) => {
   const [editPostContent, setEditPostContent] = useState(post.content || "")
   const [editPostImage, setEditPostImage] = useState(null)
   const [imageMaxHeight, setImageMaxHeight] = useState(null)
+  const [isImageTall, setIsImageTall] = useState(false)
   const fileInputRef = useRef(null)
   const imageContainerRef = useRef(null)
   const isOwner = authUser._id === post.author._id
@@ -32,7 +33,18 @@ const Post = ({ post }) => {
       }
     }
 
+    const checkImageAspectRatio = () => {
+      if (post.image) {
+        const img = new Image()
+        img.onload = () => {
+          setIsImageTall(img.height > img.width)
+        }
+        img.src = post.image
+      }
+    }
+
     updateImageMaxHeight()
+    checkImageAspectRatio()
     window.addEventListener('resize', updateImageMaxHeight)
 
     return () => {
@@ -299,24 +311,22 @@ const Post = ({ post }) => {
 
             {/* Image preview */}
             {editPostImage && editPostImage !== "REMOVE_IMAGE" && (
-              <div className="relative w-full">
+              <div className="relative w-full bg-gray-100 rounded-lg" style={{ height: imageMaxHeight ? `${imageMaxHeight}px` : '400px' }}>
                 <img 
                   src={editPostImage} 
                   alt="Preview" 
-                  className="rounded-lg w-full object-cover"
-                  style={{ maxHeight: imageMaxHeight ? `${imageMaxHeight}px` : 'none' }}
+                  className="rounded-lg w-full h-full object-contain"
                 />
               </div>
             )}
             
             {/* Show current image if no new image is selected and not marked for removal */}
             {!editPostImage && post.image && (
-              <div className="relative w-full">
+              <div className={`relative w-full rounded-lg ${isImageTall ? 'bg-gray-100' : ''}`} style={isImageTall ? { height: imageMaxHeight ? `${imageMaxHeight}px` : '400px' } : {}}>
                 <img 
                   src={post.image} 
                   alt="Current image" 
-                  className="rounded-lg w-full object-cover"
-                  style={{ maxHeight: imageMaxHeight ? `${imageMaxHeight}px` : 'none' }}
+                  className={`rounded-lg w-full ${isImageTall ? 'h-full object-contain' : 'object-cover'}`}
                 />
               </div>
             )}
@@ -348,12 +358,11 @@ const Post = ({ post }) => {
           <>
             <p className="text-gray-700 mb-4">{post.content}</p>
             {post.image && (
-              <div ref={imageContainerRef} className="relative w-full">
+              <div ref={imageContainerRef} className={`relative w-full rounded-lg ${isImageTall ? 'bg-gray-100' : ''}`} style={isImageTall ? { height: imageMaxHeight ? `${imageMaxHeight}px` : '400px' } : {}}>
                 <img 
                   src={post.image} 
                   alt="Post content" 
-                  className="rounded-lg w-full object-cover"
-                  style={{ maxHeight: imageMaxHeight ? `${imageMaxHeight}px` : 'none' }}
+                  className={`rounded-lg w-full ${isImageTall ? 'h-full object-contain' : 'object-cover'}`}
                 />
               </div>
             )}
