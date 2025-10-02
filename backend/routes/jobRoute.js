@@ -9,6 +9,7 @@ import {
     likeJobPost,
     commentOnJobPost,
     applyToJob,
+    cancelApplication,
     searchJobPosts,
     getMyJobPosts,
     deleteCommentFromJobPost,
@@ -34,5 +35,6 @@ router.post("/:id/comment", protectRoute, commentOnJobPost);
 router.put("/:id/comment/:commentId", protectRoute, editCommentOnJobPost);
 router.delete("/:id/comment/:commentId", protectRoute, deleteCommentFromJobPost);
 router.post("/:id/apply", protectRoute, applyToJob);
+router.delete("/:id/apply", protectRoute, cancelApplication);
 
 export default router;

@@ -290,6 +290,48 @@ export const applyToJob = async (req, res) => {
     }
 };
 
+export const cancelApplication = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user._id;
+
+        const jobPost = await JobPost.findById(id);
+        
+        if (!jobPost) {
+            return res.status(404).json({ message: "Job post not found" });
+        }
+
+        // Check if user has applied
+        const applicationIndex = jobPost.applicants.findIndex(
+            applicant => applicant.user.toString() === userId.toString()
+        );
+
+        if (applicationIndex === -1) {
+            return res.status(400).json({ message: "You have not applied to this job" });
+        }
+
+        // Remove the application
+        jobPost.applicants.splice(applicationIndex, 1);
+        await jobPost.save();
+
+        // Create notification for job post author about cancelled application
+        if (jobPost.author.toString() !== userId.toString()) {
+            const newNotification = new Notification({
+                recipient: jobPost.author,
+                type: "jobApplicationCancelled",
+                relatedUser: userId,
+                relatedJobPost: id
+            });
+            await newNotification.save();
+        }
+
+        res.status(200).json({ message: "Application cancelled successfully" });
+    } catch (error) {
+        console.log("Error in cancelApplication:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
 export const searchJobPosts = async (req, res) => {
     try {
         const { query, page = 1, limit = 10 } = req.query;

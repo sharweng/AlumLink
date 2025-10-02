@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { axiosInstance } from '../lib/axios'
 import toast from 'react-hot-toast'
-import { ExternalLink, Eye, Heart, MessageSquare, Trash2, UserPlus, CheckCircle2, Briefcase } from 'lucide-react'
+import { ExternalLink, Eye, Heart, MessageSquare, Trash2, UserPlus, CheckCircle2, Briefcase, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import Sidebar from '../components/Sidebar'
@@ -65,7 +65,7 @@ const NotificationsPage = () => {
     // Apply type filter
     if (filter !== 'all') {
       if (filter === 'application') {
-        filtered = filtered.filter(n => n.type === 'jobApplication')
+        filtered = filtered.filter(n => n.type === 'jobApplication' || n.type === 'jobApplicationCancelled')
       } else if (filter === 'link') {
         filtered = filtered.filter(n => n.type === 'linkAccepted')
       } else {
@@ -86,6 +86,8 @@ const NotificationsPage = () => {
         return <UserPlus className='text-purple-500' />
       case "jobApplication":
         return <Briefcase className='text-blue-500' />
+      case "jobApplicationCancelled":
+        return <X className='text-red-500' />
       default:
         return null
     }
@@ -129,6 +131,15 @@ const NotificationsPage = () => {
 							{notification.relatedUser.name}
 						</Link>{" "}
 						applied to your job post
+					</span>
+				);
+			case "jobApplicationCancelled":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						cancelled their application to your job post
 					</span>
 				);
 			default:

@@ -34,6 +34,7 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
   const [showApplyConfirm, setShowApplyConfirm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   
   const isOwner = authUser._id === jobPost.author._id;
   const isLiked = jobPost.likes?.includes(authUser._id);
@@ -85,6 +86,21 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'Failed to submit application');
+    }
+  });
+
+  // Cancel application mutation
+  const { mutate: cancelApplication, isPending: isCancelling } = useMutation({
+    mutationFn: async () => {
+      await axiosInstance.delete(`/jobs/${jobPost._id}/apply`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobPosts'] });
+      queryClient.invalidateQueries({ queryKey: ['jobPost', jobPost._id] });
+      toast.success('Application cancelled successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to cancel application');
     }
   });
 
@@ -160,6 +176,11 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
   const handleApplyConfirm = () => {
     applyToJob();
     setShowApplyConfirm(false);
+  };
+
+  const handleCancelConfirm = () => {
+    cancelApplication();
+    setShowCancelConfirm(false);
   };
 
   const getJobTypeStyle = (type) => {
@@ -358,9 +379,18 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
                   Apply
                 </button>
               ) : (
-                <span className='px-3 py-1 bg-green-100 text-green-800 rounded text-sm'>
-                  ✓ Applied
-                </span>
+                <div className='flex items-center gap-2'>
+                  <span className='px-3 py-1 bg-green-100 text-green-800 rounded text-sm'>
+                    ✓ Applied
+                  </span>
+                  <button
+                    onClick={() => setShowCancelConfirm(true)}
+                    className='flex items-center gap-1 px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors'
+                  >
+                    <X size={14} />
+                    Cancel
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -554,6 +584,36 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
                   <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
                 )}
                 {isApplying ? 'Applying...' : 'Yes, Apply'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Application Confirmation Modal */}
+      {showCancelConfirm && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+          <div className='bg-white rounded-lg p-6 max-w-md w-full mx-4'>
+            <h3 className='text-lg font-semibold mb-4'>Cancel Application</h3>
+            <p className='text-gray-600 mb-6'>
+              Are you sure you want to cancel your application? The job poster will be notified of the cancellation.
+            </p>
+            <div className='flex gap-3 justify-end'>
+              <button
+                onClick={() => setShowCancelConfirm(false)}
+                className='px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors'
+              >
+                Keep Application
+              </button>
+              <button
+                onClick={handleCancelConfirm}
+                disabled={isCancelling}
+                className='px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2'
+              >
+                {isCancelling && (
+                  <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
+                )}
+                {isCancelling ? 'Cancelling...' : 'Yes, Cancel'}
               </button>
             </div>
           </div>
