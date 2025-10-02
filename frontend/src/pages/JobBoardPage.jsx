@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
 import JobPost from '../components/JobPost';
 import JobPostCreation from '../components/JobPostCreation';
-import { Briefcase, Search, Filter, Plus } from 'lucide-react';
+import { Briefcase, Search, Filter, Plus, Loader } from 'lucide-react';
 
 const JobBoardPage = () => {
   const queryClient = useQueryClient();
@@ -225,9 +225,9 @@ const JobBoardPage = () => {
         {/* Job Posts */}
         <div className='space-y-6'>
           {isLoading ? (
-            <div className='bg-white rounded-lg shadow p-8 text-center'>
-              <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto'></div>
-              <p className='mt-4 text-gray-600'>Loading job posts...</p>
+            <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
+              <Loader className="animate-spin h-10 w-10 text-primary mb-4" />
+              <span className="text-lg text-info font-medium">Loading job posts...</span>
             </div>
           ) : jobPostsData?.jobPosts?.length > 0 ? (
             jobPostsData.jobPosts.map(jobPost => (

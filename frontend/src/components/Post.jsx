@@ -3,7 +3,7 @@ import { useState } from "react"
 import { axiosInstance } from "../lib/axios"
 import toast from "react-hot-toast"
 import { Link, useParams } from "react-router-dom"
-import { Heart, Loader, MessageCircle, Send, Share2, Trash2, X } from "lucide-react"
+import { Heart, Loader, MessageCircle, Send, Share2, Trash2, X, Edit, Check } from "lucide-react"
 import PostAction from "./PostAction"
 import { formatDistanceToNow } from "date-fns"
 
@@ -14,6 +14,8 @@ const Post = ({ post }) => {
   const [showComments, setShowComments] = useState(false)
   const [newComment, setNewComment] = useState("")
   const [comments, setComments] = useState(post.comments || [])
+  const [editingCommentId, setEditingCommentId] = useState(null)
+  const [editingCommentContent, setEditingCommentContent] = useState('')
   const isOwner = authUser._id === post.author._id
   const isLiked = post.likes.includes(authUser._id)
 
@@ -44,18 +46,33 @@ const Post = ({ post }) => {
     }
   })
 
-  // Remove comment mutation
+    // Remove comment mutation
   const { mutate: removeComment, isPending: isRemovingComment } = useMutation({
     mutationFn: async ({ commentId }) => {
       await axiosInstance.delete(`/posts/${post._id}/comment/${commentId}`)
     },
-    onSuccess: (_, { commentId }) => {
-      setComments(comments => comments.filter(c => c._id !== commentId))
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] })
       toast.success("Comment deleted successfully")
     },
     onError: (error) => {
-      toast.error(error?.response?.data?.message || "Failed to delete comment")
+      toast.error(error.response.data.message || "Failed to delete comment")
+    }
+  })
+
+  // Edit comment mutation
+  const { mutate: editComment, isPending: isEditingComment } = useMutation({
+    mutationFn: async ({ commentId, content }) => {
+      await axiosInstance.put(`/posts/${post._id}/comment/${commentId}`, { content });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] })
+      setEditingCommentId(null)
+      setEditingCommentContent('')
+      toast.success("Comment updated successfully")
+    },
+    onError: (error) => {
+      toast.error(error.response.data.message || "Failed to update comment")
     }
   })
 
@@ -82,115 +99,226 @@ const Post = ({ post }) => {
     likePost()
   }
 
-  const handleAddComment = async (e) => {
+    const handleAddComment = (e) => {
     e.preventDefault()
     if(newComment.trim()) {
       createComment(newComment)
       setNewComment("")
-      setComments([
-        ...comments,
-        {
-          content: newComment,
-          user: {
-            _id: authUser._id,
-            name: authUser.name,
-            username: authUser.username,
-            profilePicture: authUser.profilePicture
-          },
-          createdAt: new Date()
-        }
-      ])
     }
   }
 
+  const handleEditComment = (comment) => {
+    setEditingCommentId(comment._id)
+    setEditingCommentContent(comment.content)
+  }
+
+  const handleSaveEdit = (e) => {
+    e.preventDefault()
+    if (!editingCommentContent.trim()) return
+    editComment({ commentId: editingCommentId, content: editingCommentContent })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null)
+    setEditingCommentContent('')
+  }
+
   return (
-    <div className="bg-secondary rounded-lg shadow mb-4">
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center">
-            <Link to={ `/profile/${post?.author?.username}` }>
-              <img src={ post.author.profilePicture || "/avatar.png" } alt={ post.author.name } className="size-10 rounded-full mr-3" />
+    <div className='bg-white rounded-lg shadow border border-gray-200 p-4 mb-4'>
+      {/* Header */}
+      <div className='flex items-start justify-between mb-4'>
+        <div className='flex items-start gap-3'>
+          <Link to={`/profile/${post?.author?.username}`}>
+            <img 
+              src={post.author.profilePicture || "/avatar.png"} 
+              alt={post.author.name} 
+              className="w-12 h-12 rounded-full object-cover" 
+            />
+          </Link>
+          <div>
+            <Link to={`/profile/${post?.author?.username}`}>
+              <h3 className='font-semibold text-gray-900'>{post.author.name}</h3>
             </Link>
-            <div>
-              <Link to={`/profile/${ post?.author?.username }`}>
-                <h3 className="font-semibold">{ post.author.name }</h3>
-              </Link>
-              <p className="text-xs text-info">{ post.author.headline }</p>
-              <Link to={`/post/${post._id}`}>
-                <p className="text-xs text-info">{ formatDistanceToNow(new Date(post.createdAt), { addSuffix: true }) }</p>
-              </Link>
-            </div>
+            <p className='text-sm text-gray-600'>{post.author.headline}</p>
+            <Link to={`/post/${post._id}`}>
+              <p className='text-xs text-gray-500'>{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</p>
+            </Link>
           </div>
+        </div>
+        
+        <div className='flex items-center gap-2'>
           {isOwner && (
-            <button onClick={ handleDeletePost } className="text-red-500 hover:text-red-700">
-              {isDeletingPost ? <Loader size={18} className="animate-spin" /> : <Trash2 size={18} />}
+            <button 
+              onClick={handleDeletePost} 
+              disabled={isDeletingPost}
+              className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
+            >
+              {isDeletingPost ? (
+                <div className='w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin' />
+              ) : (
+                <Trash2 size={18} />
+              )}
             </button>
           )}
         </div>
-        <p className="mb-4">{ post.content }</p>
-        { post.image && <img src={ post.image } alt="Post content" className="rounded-lg w-full mb-4" />}
+      </div>
 
-        <div className="flex justify-between text-info">
-          <PostAction
-            icon={<Heart size={18} className={isLiked ? "text-red-500 fill-red-300" : ""} />}
-            text={`Like (${ post.likes.length })`}
-            onClick={ handleLikePost }
-          />
+      {/* Content */}
+      <div className='mb-4'>
+        <p className="text-gray-700 mb-4">{post.content}</p>
+        {post.image && <img src={post.image} alt="Post content" className="rounded-lg w-full" />}
+      </div>
 
-          <PostAction
-            icon={<MessageCircle size={18} />}
-            text={`Comment (${ comments.length })`}
-            onClick={ () => setShowComments(!showComments) }
-          />
+      {/* Actions */}  
+      <div className='flex items-center justify-between pt-4 border-t border-gray-200'>
+        <div className='flex items-center justify-between gap-4'>
+          <button
+            onClick={handleLikePost}
+            className={`flex items-center gap-2 px-3 py-1 rounded-lg transition-colors ${
+              isLiked 
+                ? 'text-red-500 bg-red-50 hover:bg-red-100' 
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <Heart size={18} className={isLiked ? 'fill-current' : ''} />
+            <span>{post.likes?.length || 0}</span>
+          </button>
 
-          <PostAction icon={<Share2 size={18} />} text='Share' />
+          <button
+            onClick={() => setShowComments(!showComments)}
+            className='flex items-center gap-2 px-3 py-1 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors'
+          >
+            <MessageCircle size={18} />
+            <span>{comments.length || 0}</span>
+          </button>
+
+          <button className='flex items-center gap-2 px-3 py-1 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors'>
+            <Share2 size={18} />
+            <span>Share</span>
+          </button>
         </div>
       </div>
-      { showComments && (
-        <div className="px-4 pb-4">
-          <div className="mb-4 max-h-60 overflow-y-auto">
-            { comments.map((comment) => {
-              const isCommentOwner = comment.user._id === authUser._id       
-              return (
-                <div key={ comment._id } className="mb-2 bg-base-100 p-2 rounded flex items-start relative">
-                  <Link to={`/profile/${comment.user.username}`}>
-                    <img src={ comment.user.profilePicture || "/avatar.png" } alt={ comment.user.name }
-                      className="w-8 h-8 rounded-full mr-2 flex-shrink-0" />
-                  </Link>
-                  <div className="flex-grow">
-                    <div className="flex items-center mb-1">
-                      <Link to={`/profile/${comment.user.username}`} className="font-semibold mr-2">
-                        { comment.user.name }
-                      </Link>
-                      <span className="text-xs text-info">{ formatDistanceToNow(new Date(comment.createdAt)) }</span>
-                    </div>
-                    <p>{ comment.content }</p>
-                  </div>
-                  {isCommentOwner && (
-                    <button
-                      className="absolute right-2 top-2 text-info hover:text-red-500"
-                      title="Delete comment"
-                      disabled={isRemovingComment}
-                      onClick={() => {
-                        if(window.confirm("Delete this comment?")) removeComment({ commentId: comment._id })
-                      }}
-                    >
-                      <X size={16} />
-                    </button>
-                  )}
+      {/* Comments Section */}
+      {showComments && (
+        <div className='mt-4 pt-4 border-t border-gray-200'>
+          {/* Add Comment */}
+          <form onSubmit={handleAddComment} className='mb-4'>
+            <div className='flex gap-3'>
+              <img
+                src={authUser.profilePicture || '/avatar.png'}
+                alt='Your avatar'
+                className='w-8 h-8 rounded-full object-cover'
+              />
+              <div className='flex-1'>
+                <div className='flex gap-2'>
+                  <input
+                    type='text'
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder='Add a comment...'
+                    className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent'
+                  />
+                  <button
+                    type='submit'
+                    disabled={isCreatingComment || !newComment.trim()}
+                    className='px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50'
+                  >
+                    {isCreatingComment ? (
+                      <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
+                    ) : (
+                      <Send size={16} />
+                    )}
+                  </button>
                 </div>
-              )
+              </div>
+            </div>
+          </form>
+
+          {/* Comments List */}
+          <div className='space-y-3'>
+            {comments?.map((comment, index) => {
+              const isCommentOwner = comment.user._id === authUser._id;
+              const isEditing = editingCommentId === comment._id;
+              
+              return (
+                <div key={comment._id || index} className='flex gap-3'>
+                  <img
+                    src={comment.user.profilePicture || '/avatar.png'}
+                    alt={comment.user.name}
+                    className='w-8 h-8 rounded-full object-cover'
+                  />
+                  <div className='flex-1 bg-gray-50 rounded-lg p-3'>
+                    <div className='flex items-center justify-between mb-1'>
+                      <h4 className='font-medium text-gray-900'>{comment.user.name}</h4>
+                      <div className='flex items-center gap-2'>
+                        <span className='text-xs text-gray-500'>
+                          {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                          {comment.editedAt && ' (edited)'}
+                        </span>
+                        {isCommentOwner && !isEditing && (
+                          <>
+                            <button
+                              onClick={() => handleEditComment(comment)}
+                              className='p-1 text-blue-500 hover:bg-blue-50 rounded-full transition-colors'
+                              title='Edit comment'
+                            >
+                              <Edit size={12} />
+                            </button>
+                            <button
+                              onClick={() => removeComment({ commentId: comment._id })}
+                              disabled={isRemovingComment}
+                              className='p-1 text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50'
+                              title='Delete comment'
+                            >
+                              {isRemovingComment ? (
+                                <div className='w-3 h-3 border border-red-500 border-t-transparent rounded-full animate-spin' />
+                              ) : (
+                                <X size={12} />
+                              )}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {isEditing ? (
+                      <form onSubmit={handleSaveEdit} className='space-y-2'>
+                        <textarea
+                          value={editingCommentContent}
+                          onChange={(e) => setEditingCommentContent(e.target.value)}
+                          className='w-full p-2 border border-gray-300 rounded resize-none text-sm'
+                          rows={2}
+                          autoFocus
+                        />
+                        <div className='flex gap-2 justify-end'>
+                          <button
+                            type='button'
+                            onClick={handleCancelEdit}
+                            className='px-2 py-1 text-xs text-gray-600 hover:text-gray-800'
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type='submit'
+                            disabled={isEditingComment || !editingCommentContent.trim()}
+                            className='px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 flex items-center gap-1'
+                          >
+                            {isEditingComment ? (
+                              <div className='w-3 h-3 border border-white border-t-transparent rounded-full animate-spin' />
+                            ) : (
+                              <Check size={12} />
+                            )}
+                            Save
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <p className='text-gray-700'>{comment.content}</p>
+                    )}
+                  </div>
+                </div>
+              );
             })}
           </div>
-          <form onSubmit={ handleAddComment } className="flex items-center">
-            <input type="text" value={ newComment } onChange={(e) => setNewComment(e.target.value)} placeholder="Add a comment..." 
-            className="flex-grow p-2 rounded-l-full bg-base-100 focus:outline-none focus:ring-2 focus:ring-primary"/>
-
-            <button type="submit" className="bg-primary text-white p-2 rounded-r-full hover:bg-primary-dark transition duration-300"
-            disabled={ isCreatingComment }>
-              { isCreatingComment ? <Loader size={18} className="animate-spin" /> : <Send size={18} />}
-            </button>
-          </form>
         </div>
       )}
     </div>

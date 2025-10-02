@@ -4,7 +4,7 @@ import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
 import JobPost from '../components/JobPost';
-import { Briefcase, ArrowLeft } from 'lucide-react';
+import { Briefcase, ArrowLeft, Loader, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const JobPostPage = () => {
@@ -36,9 +36,9 @@ const JobPostPage = () => {
         </div>
         
         <div className='col-span-1 lg:col-span-3 order-first lg:order-none'>
-          <div className='bg-white rounded-lg shadow p-8 text-center'>
-            <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto'></div>
-            <p className='mt-4 text-gray-600'>Loading job post...</p>
+          <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
+            <Loader className="animate-spin h-10 w-10 text-primary mb-4" />
+            <span className="text-lg text-info font-medium">Loading job post...</span>
           </div>
         </div>
       </div>
@@ -55,17 +55,13 @@ const JobPostPage = () => {
         </div>
         
         <div className='col-span-1 lg:col-span-3 order-first lg:order-none'>
-          <div className='bg-white rounded-lg shadow p-8 text-center'>
-            <div className='mb-6'>
-              <Briefcase size={64} className="mx-auto text-red-500" />
-            </div>
-            <h2 className='text-2xl font-bold mb-4 text-green-800'>Job Post Not Found</h2>
-            <p className='text-gray-600 mb-6'>
-              The job post you're looking for doesn't exist or has been removed.
-            </p>
+          <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
+            <XCircle className="h-12 w-12 text-gray-400 mb-3" />
+            <span className="text-xl font-semibold text-gray-500">Job post not found</span>
+            <span className="text-info mt-1">The job post you are looking for does not exist or was removed.</span>
             <Link
               to='/jobs'
-              className='inline-flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors'
+              className='inline-flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors mt-4'
             >
               <ArrowLeft size={16} />
               Back to Job Board
