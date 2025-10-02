@@ -22,8 +22,9 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import JobPostEdit from './JobPostEdit';
+import { Link } from 'react-router-dom';
 
-const JobPost = ({ jobPost }) => {
+const JobPost = ({ jobPost, isDetailPage = false }) => {
   const queryClient = useQueryClient();
   const authUser = queryClient.getQueryData(['authUser']);
   const [showComments, setShowComments] = useState(false);
@@ -36,7 +37,11 @@ const JobPost = ({ jobPost }) => {
   
   const isOwner = authUser._id === jobPost.author._id;
   const isLiked = jobPost.likes?.includes(authUser._id);
-  const hasApplied = jobPost.applicants?.some(applicant => applicant.user === authUser._id);
+  const hasApplied = jobPost.applicants?.some(applicant => {
+    // Handle both populated and non-populated user references
+    const applicantUserId = typeof applicant.user === 'object' ? applicant.user._id : applicant.user;
+    return applicantUserId === authUser._id;
+  });
 
   // Like mutation
   const { mutate: likeJobPost, isPending: isLiking } = useMutation({
@@ -45,6 +50,7 @@ const JobPost = ({ jobPost }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobPosts'] });
+      queryClient.invalidateQueries({ queryKey: ['jobPost', jobPost._id] });
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'Failed to like job post');
@@ -58,6 +64,7 @@ const JobPost = ({ jobPost }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobPosts'] });
+      queryClient.invalidateQueries({ queryKey: ['jobPost', jobPost._id] });
       setNewComment('');
       toast.success('Comment added successfully');
     },
@@ -73,6 +80,7 @@ const JobPost = ({ jobPost }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobPosts'] });
+      queryClient.invalidateQueries({ queryKey: ['jobPost', jobPost._id] });
       toast.success('Application submitted successfully!');
     },
     onError: (error) => {
@@ -87,6 +95,7 @@ const JobPost = ({ jobPost }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobPosts'] });
+      queryClient.invalidateQueries({ queryKey: ['jobPost', jobPost._id] });
       toast.success('Job post deleted successfully');
     },
     onError: (error) => {
@@ -101,6 +110,7 @@ const JobPost = ({ jobPost }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobPosts'] });
+      queryClient.invalidateQueries({ queryKey: ['jobPost', jobPost._id] });
       toast.success('Comment deleted successfully');
     },
     onError: (error) => {
@@ -115,6 +125,7 @@ const JobPost = ({ jobPost }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobPosts'] });
+      queryClient.invalidateQueries({ queryKey: ['jobPost', jobPost._id] });
       setEditingCommentId(null);
       setEditingCommentContent('');
       toast.success('Comment updated successfully');
@@ -203,9 +214,19 @@ const JobPost = ({ jobPost }) => {
           <div>
             <h3 className='font-semibold text-gray-900'>{jobPost.author.name}</h3>
             <p className='text-sm text-gray-600'>{jobPost.author.headline}</p>
-            <p className='text-xs text-gray-500'>
-              {formatDistanceToNow(new Date(jobPost.createdAt), { addSuffix: true })}
-            </p>
+            {!isDetailPage ? (
+              < p className='text-xs text-gray-500 hover:cursor-pointer'>
+              <Link 
+                to={`/job/${jobPost._id}`}
+              >
+                {formatDistanceToNow(new Date(jobPost.createdAt), { addSuffix: true })}
+              </Link>
+              </p>
+            ) : (
+              <p className='text-xs text-gray-500'>
+                {formatDistanceToNow(new Date(jobPost.createdAt), { addSuffix: true })}
+              </p>
+            )}
           </div>
         </div>
         

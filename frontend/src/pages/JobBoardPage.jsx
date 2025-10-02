@@ -231,7 +231,7 @@ const JobBoardPage = () => {
             </div>
           ) : jobPostsData?.jobPosts?.length > 0 ? (
             jobPostsData.jobPosts.map(jobPost => (
-              <JobPost key={jobPost._id} jobPost={jobPost} />
+              <JobPost key={jobPost._id} jobPost={jobPost} isDetailPage={false} />
             ))
           ) : (
             <div className='bg-white rounded-lg shadow p-8 text-center'>
@@ -247,13 +247,6 @@ const JobBoardPage = () => {
             </div>
           )}
         </div>
-
-        {/* Results Summary */}
-        {jobPostsData?.total && (
-          <div className='mt-6 text-center text-gray-600'>
-            Showing {jobPostsData.jobPosts.length} of {jobPostsData.total} job posts
-          </div>
-        )}
       </div>
     </div>
   );
