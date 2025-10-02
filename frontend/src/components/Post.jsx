@@ -13,7 +13,6 @@ const Post = ({ post }) => {
   const authUser = queryClient.getQueryData(["authUser"])
   const [showComments, setShowComments] = useState(false)
   const [newComment, setNewComment] = useState("")
-  const [comments, setComments] = useState(post.comments || [])
   const [editingCommentId, setEditingCommentId] = useState(null)
   const [editingCommentContent, setEditingCommentContent] = useState('')
   const isOwner = authUser._id === post.author._id
@@ -39,6 +38,8 @@ const Post = ({ post }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] })
+      queryClient.invalidateQueries({ queryKey: ["post", post._id] })
+      setNewComment('')
       toast.success("Comment created successfully")
     },
     onError: (error) => {
@@ -46,13 +47,14 @@ const Post = ({ post }) => {
     }
   })
 
-    // Remove comment mutation
+  // Remove comment mutation
   const { mutate: removeComment, isPending: isRemovingComment } = useMutation({
-    mutationFn: async ({ commentId }) => {
+    mutationFn: async (commentId) => {
       await axiosInstance.delete(`/posts/${post._id}/comment/${commentId}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] })
+      queryClient.invalidateQueries({ queryKey: ["post", post._id] })
       toast.success("Comment deleted successfully")
     },
     onError: (error) => {
@@ -67,6 +69,7 @@ const Post = ({ post }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] })
+      queryClient.invalidateQueries({ queryKey: ["post", post._id] })
       setEditingCommentId(null)
       setEditingCommentContent('')
       toast.success("Comment updated successfully")
@@ -99,11 +102,10 @@ const Post = ({ post }) => {
     likePost()
   }
 
-    const handleAddComment = (e) => {
+  const handleAddComment = (e) => {
     e.preventDefault()
     if(newComment.trim()) {
       createComment(newComment)
-      setNewComment("")
     }
   }
 
@@ -154,7 +156,7 @@ const Post = ({ post }) => {
               className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
             >
               {isDeletingPost ? (
-                <div className='w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin' />
+                <Loader className="animate-spin" size={16} />
               ) : (
                 <Trash2 size={18} />
               )}
@@ -189,7 +191,7 @@ const Post = ({ post }) => {
             className='flex items-center gap-2 px-3 py-1 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors'
           >
             <MessageCircle size={18} />
-            <span>{comments.length || 0}</span>
+            <span>{post.comments?.length || 0}</span>
           </button>
 
           <button className='flex items-center gap-2 px-3 py-1 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors'>
@@ -224,7 +226,7 @@ const Post = ({ post }) => {
                     className='px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50'
                   >
                     {isCreatingComment ? (
-                      <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
+                      <Loader className="animate-spin" size={16} />
                     ) : (
                       <Send size={16} />
                     )}
@@ -236,7 +238,7 @@ const Post = ({ post }) => {
 
           {/* Comments List */}
           <div className='space-y-3'>
-            {comments?.map((comment, index) => {
+            {post.comments?.map((comment, index) => {
               const isCommentOwner = comment.user._id === authUser._id;
               const isEditing = editingCommentId === comment._id;
               
@@ -259,21 +261,21 @@ const Post = ({ post }) => {
                           <>
                             <button
                               onClick={() => handleEditComment(comment)}
-                              className='p-1 text-blue-500 hover:bg-blue-50 rounded-full transition-colors'
+                              className='p-1 text-green-500 hover:bg-green-50 rounded-full transition-colors'
                               title='Edit comment'
                             >
                               <Edit size={12} />
                             </button>
                             <button
-                              onClick={() => removeComment({ commentId: comment._id })}
+                              onClick={() => removeComment(comment._id)}
                               disabled={isRemovingComment}
                               className='p-1 text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50'
                               title='Delete comment'
                             >
                               {isRemovingComment ? (
-                                <div className='w-3 h-3 border border-red-500 border-t-transparent rounded-full animate-spin' />
+                                <Loader className="animate-spin" size={12} />
                               ) : (
-                                <X size={12} />
+                                <Trash2 size={12} />
                               )}
                             </button>
                           </>
@@ -300,10 +302,10 @@ const Post = ({ post }) => {
                           <button
                             type='submit'
                             disabled={isEditingComment || !editingCommentContent.trim()}
-                            className='px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 flex items-center gap-1'
+                            className='px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 flex items-center gap-1'
                           >
                             {isEditingComment ? (
-                              <div className='w-3 h-3 border border-white border-t-transparent rounded-full animate-spin' />
+                              <Loader className="animate-spin" size={12} />
                             ) : (
                               <Check size={12} />
                             )}

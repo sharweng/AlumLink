@@ -166,6 +166,48 @@ export const removeComment = async (req, res) => {
     }
 }
 
+export const editCommentOnPost = async (req, res) => {
+    try {
+        const { id, commentId } = req.params;
+        const { content } = req.body;
+        const userId = req.user._id;
+
+        if (!content || !content.trim()) {
+            return res.status(400).json({ message: "Comment content is required" });
+        }
+
+        const post = await Post.findById(id);
+        
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        const comment = post.comments.id(commentId);
+        
+        if (!comment) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        // Only comment author can edit their own comment
+        if (comment.user.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "You can only edit your own comments" });
+        }
+
+        comment.content = content.trim();
+        comment.editedAt = new Date();
+        await post.save();
+
+        const populatedPost = await Post.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture");
+
+        res.status(200).json(populatedPost);
+    } catch (error) {
+        console.log("Error in editCommentOnPost:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
 export const likePost = async (req, res) => {
     try {
         const postId = req.params.id;

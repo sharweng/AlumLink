@@ -235,7 +235,7 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
             <>
               <button 
                 onClick={() => setShowEditModal(true)}
-                className='p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors'
+                className='p-2 text-green-600 hover:bg-green-50 rounded-full transition-colors'
               >
                 <Edit size={18} />
               </button>
@@ -459,7 +459,7 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
                           <>
                             <button
                               onClick={() => handleEditComment(comment)}
-                              className='p-1 text-blue-500 hover:bg-blue-50 rounded-full transition-colors'
+                              className='p-1 text-green-500 hover:bg-green-50 rounded-full transition-colors'
                               title='Edit comment'
                             >
                               <Edit size={12} />
@@ -500,7 +500,7 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
                           <button
                             type='submit'
                             disabled={isEditingComment || !editingCommentContent.trim()}
-                            className='px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 flex items-center gap-1'
+                            className='px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 flex items-center gap-1'
                           >
                             {isEditingComment ? (
                               <div className='w-3 h-3 border border-white border-t-transparent rounded-full animate-spin' />
