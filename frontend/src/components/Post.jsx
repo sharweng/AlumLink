@@ -1,9 +1,9 @@
 import { useQueryClient, useMutation, mutationOptions } from "@tanstack/react-query"
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { axiosInstance } from "../lib/axios"
 import toast from "react-hot-toast"
 import { Link, useParams } from "react-router-dom"
-import { Heart, Loader, MessageCircle, Send, Share2, Trash2, X, Edit, Check } from "lucide-react"
+import { Heart, Loader, MessageCircle, Send, Share2, Trash2, X, Edit, Check, Image as ImageIcon } from "lucide-react"
 import PostAction from "./PostAction"
 import { formatDistanceToNow } from "date-fns"
 
@@ -15,8 +15,30 @@ const Post = ({ post }) => {
   const [newComment, setNewComment] = useState("")
   const [editingCommentId, setEditingCommentId] = useState(null)
   const [editingCommentContent, setEditingCommentContent] = useState('')
+  const [isEditingPost, setIsEditingPost] = useState(false)
+  const [editPostContent, setEditPostContent] = useState(post.content || "")
+  const [editPostImage, setEditPostImage] = useState(null)
+  const [imageMaxHeight, setImageMaxHeight] = useState(null)
+  const fileInputRef = useRef(null)
+  const imageContainerRef = useRef(null)
   const isOwner = authUser._id === post.author._id
   const isLiked = post.likes.includes(authUser._id)
+
+  useEffect(() => {
+    const updateImageMaxHeight = () => {
+      if (imageContainerRef.current) {
+        const containerWidth = imageContainerRef.current.offsetWidth
+        setImageMaxHeight(containerWidth)
+      }
+    }
+
+    updateImageMaxHeight()
+    window.addEventListener('resize', updateImageMaxHeight)
+
+    return () => {
+      window.removeEventListener('resize', updateImageMaxHeight)
+    }
+  }, [post.image])
 
   const { mutate: deletePost, isPending:isDeletingPost } = useMutation({
     mutationFn: async () => {
@@ -29,6 +51,29 @@ const Post = ({ post }) => {
     },
     onError: (error) => {
       toast.error(error.response.data.message || "Failed to delete a post")
+    }
+  })
+
+  const { mutate: editPost, isPending: isEditingPostMutation } = useMutation({
+    mutationFn: async ({ content, image }) => {
+      const payload = { content }
+      if (image === "REMOVE_IMAGE") {
+        payload.image = null // Explicitly remove image
+      } else if (image) {
+        payload.image = image // Update with new image
+      }
+      await axiosInstance.put(`/posts/edit/${post._id}`, payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] })
+      queryClient.invalidateQueries({ queryKey: ["post", postId] })
+      setIsEditingPost(false)
+      setEditPostContent("")
+      setEditPostImage(null)
+      toast.success("Post updated successfully")
+    },
+    onError: (error) => {
+      toast.error(error.response.data.message || "Failed to update post")
     }
   })
 
@@ -97,6 +142,40 @@ const Post = ({ post }) => {
     deletePost()
   }
 
+  const handleEditPost = () => {
+    setIsEditingPost(true)
+    setEditPostContent(post.content || "")
+  }
+
+  const handleCancelPostEdit = () => {
+    setIsEditingPost(false)
+    setEditPostContent(post.content || "")
+    setEditPostImage(null)
+  }
+
+  const handleSavePostEdit = (e) => {
+    e.preventDefault()
+    editPost({ content: editPostContent, image: editPostImage })
+  }
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = () => {
+        setEditPostImage(reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const removeImage = () => {
+    setEditPostImage("REMOVE_IMAGE") // Special flag to indicate image removal
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
   const handleLikePost = async () => {
     if (isLikingPost) return
     likePost()
@@ -143,37 +222,148 @@ const Post = ({ post }) => {
             </Link>
             <p className='text-sm text-gray-600'>{post.author.headline}</p>
             <Link to={`/post/${post._id}`}>
-              <p className='text-xs text-gray-500'>{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</p>
+              <p className='text-xs text-gray-500'>
+                {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+                {post.editedAt && <span className="ml-1">(edited)</span>}
+              </p>
             </Link>
           </div>
         </div>
         
         <div className='flex items-center gap-2'>
           {isOwner && (
-            <button 
-              onClick={handleDeletePost} 
-              disabled={isDeletingPost}
-              className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
-            >
-              {isDeletingPost ? (
-                <Loader className="animate-spin" size={16} />
-              ) : (
-                <Trash2 size={18} />
-              )}
-            </button>
+            <>
+              <button 
+                onClick={handleEditPost} 
+                disabled={isEditingPost}
+                className="p-2 text-green-600 hover:bg-green-50 rounded-full transition-colors disabled:opacity-50"
+              >
+                <Edit size={18} />
+              </button>
+              <button 
+                onClick={handleDeletePost} 
+                disabled={isDeletingPost}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
+              >
+                {isDeletingPost ? (
+                  <Loader className="animate-spin" size={16} />
+                ) : (
+                  <Trash2 size={18} />
+                )}
+              </button>
+            </>
           )}
         </div>
       </div>
 
       {/* Content */}
       <div className='mb-4'>
-        <p className="text-gray-700 mb-4">{post.content}</p>
-        {post.image && <img src={post.image} alt="Post content" className="rounded-lg w-full" />}
+        {isEditingPost ? (
+          <form onSubmit={handleSavePostEdit} className="space-y-4">
+            <textarea
+              value={editPostContent}
+              onChange={(e) => setEditPostContent(e.target.value)}
+              className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none'
+              rows={3}
+              placeholder="What's on your mind?"
+            />
+            
+            {/* Image upload */}
+            <div className="flex items-center gap-3">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageChange}
+                accept="image/*"
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ImageIcon size={18} />
+                <span>Photo</span>
+              </button>
+              
+              {(editPostImage !== "REMOVE_IMAGE" && (editPostImage || post.image)) && (
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="text-red-500 hover:text-red-700 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            {/* Image preview */}
+            {editPostImage && editPostImage !== "REMOVE_IMAGE" && (
+              <div className="relative w-full">
+                <img 
+                  src={editPostImage} 
+                  alt="Preview" 
+                  className="rounded-lg w-full object-cover"
+                  style={{ maxHeight: imageMaxHeight ? `${imageMaxHeight}px` : 'none' }}
+                />
+              </div>
+            )}
+            
+            {/* Show current image if no new image is selected and not marked for removal */}
+            {!editPostImage && post.image && (
+              <div className="relative w-full">
+                <img 
+                  src={post.image} 
+                  alt="Current image" 
+                  className="rounded-lg w-full object-cover"
+                  style={{ maxHeight: imageMaxHeight ? `${imageMaxHeight}px` : 'none' }}
+                />
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleCancelPostEdit}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isEditingPostMutation || (!editPostContent.trim() && !editPostImage && !post.image)}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isEditingPostMutation ? (
+                  <Loader className="animate-spin" size={16} />
+                ) : (
+                  <Check size={16} />
+                )}
+                Save
+              </button>
+            </div>
+          </form>
+        ) : (
+          <>
+            <p className="text-gray-700 mb-4">{post.content}</p>
+            {post.image && (
+              <div ref={imageContainerRef} className="relative w-full">
+                <img 
+                  src={post.image} 
+                  alt="Post content" 
+                  className="rounded-lg w-full object-cover"
+                  style={{ maxHeight: imageMaxHeight ? `${imageMaxHeight}px` : 'none' }}
+                />
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Actions */}  
       <div className='flex items-center justify-between pt-4 border-t border-gray-200'>
-        <div className='flex items-center justify-between gap-4'>
+        <div className='flex w-full items-center justify-between gap-4'>
           <button
             onClick={handleLikePost}
             className={`flex items-center gap-2 px-3 py-1 rounded-lg transition-colors ${
@@ -196,7 +386,7 @@ const Post = ({ post }) => {
 
           <button className='flex items-center gap-2 px-3 py-1 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors'>
             <Share2 size={18} />
-            <span>Share</span>
+            <span>0</span>
           </button>
         </div>
       </div>

@@ -78,6 +78,62 @@ export const deletePost = async (req, res) => {
     }
 }
 
+export const editPost = async (req, res) => {
+    try {
+        const postId = req.params.id;
+        const userId = req.user._id;
+        const { content, image } = req.body;
+
+        const post = await Post.findById(postId);
+
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        // checks if the current user is the author of the post
+        if (post.author.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "You are not authorized to edit this post" });
+        }
+
+        // Handle image update
+        if (image === null) {
+            // Remove existing image
+            if (post.image) {
+                const publicId = post.image.split("/").pop().split(".")[0];
+                await cloudinary.uploader.destroy(publicId);
+            }
+            post.image = undefined;
+        } else if (image) {
+            // Delete old image from cloudinary if exists and new image is provided
+            if (post.image) {
+                const publicId = post.image.split("/").pop().split(".")[0];
+                await cloudinary.uploader.destroy(publicId);
+            }
+            // Upload new image
+            const imgResult = await cloudinary.uploader.upload(image);
+            post.image = imgResult.secure_url;
+        }
+
+        // Update content
+        if (content !== undefined) {
+            post.content = content;
+        }
+
+        post.editedAt = new Date();
+        await post.save();
+
+        // Return populated post
+        const updatedPost = await Post.findById(postId)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture");
+
+        res.status(200).json(updatedPost);
+    } catch (error) {
+        console.log("Error in editPost postController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
 export const getPostById = async (req, res) => {
     try {
         const postId = req.params.id;

@@ -22,6 +22,9 @@ const postSchema = new mongoose.Schema({
         createdAt: { type: Date, default: Date.now },
         editedAt: { type: Date },
     }],
+    editedAt: { 
+        type: Date 
+    },
 }, { timestamps: true });
 
 const Post = mongoose.model("Post", postSchema);
