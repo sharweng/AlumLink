@@ -17,7 +17,8 @@ import {
   Calendar,
   Send,
   X,
-  PhilippinePeso
+  PhilippinePeso,
+  Check,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import JobPostEdit from './JobPostEdit';
@@ -29,6 +30,9 @@ const JobPost = ({ jobPost }) => {
   const [newComment, setNewComment] = useState('');
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingCommentContent, setEditingCommentContent] = useState('');
+  const [showApplyConfirm, setShowApplyConfirm] = useState(false);
   
   const isOwner = authUser._id === jobPost.author._id;
   const isLiked = jobPost.likes?.includes(authUser._id);
@@ -104,10 +108,47 @@ const JobPost = ({ jobPost }) => {
     }
   });
 
+  // Edit comment mutation
+  const { mutate: editComment, isPending: isEditingComment } = useMutation({
+    mutationFn: async ({ commentId, content }) => {
+      await axiosInstance.put(`/jobs/${jobPost._id}/comment/${commentId}`, { content });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobPosts'] });
+      setEditingCommentId(null);
+      setEditingCommentContent('');
+      toast.success('Comment updated successfully');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to update comment');
+    }
+  });
+
   const handleComment = (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
     commentOnJobPost(newComment);
+  };
+
+  const handleEditComment = (comment) => {
+    setEditingCommentId(comment._id);
+    setEditingCommentContent(comment.content);
+  };
+
+  const handleSaveEdit = (e) => {
+    e.preventDefault();
+    if (!editingCommentContent.trim()) return;
+    editComment({ commentId: editingCommentId, content: editingCommentContent });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditingCommentContent('');
+  };
+
+  const handleApplyConfirm = () => {
+    applyToJob();
+    setShowApplyConfirm(false);
   };
 
   const getJobTypeStyle = (type) => {
@@ -173,7 +214,7 @@ const JobPost = ({ jobPost }) => {
             <>
               <button 
                 onClick={() => setShowEditModal(true)}
-                className='p-2 text-green-600 hover:bg-green-50 rounded-full transition-colors'
+                className='p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors'
               >
                 <Edit size={18} />
               </button>
@@ -281,24 +322,19 @@ const JobPost = ({ jobPost }) => {
                   href={jobPost.applicationUrl}
                   target='_blank'
                   rel='noopener noreferrer'
-                  className='flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors'
+                  className='flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors'
                 >
                   <ExternalLink size={14} />
-                  Apply
+                  Visit Website
                 </a>
               )}
               {!hasApplied ? (
                 <button
-                  onClick={() => applyToJob()}
-                  disabled={isApplying}
-                  className='flex items-center gap-1 px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors disabled:opacity-50'
+                  onClick={() => setShowApplyConfirm(true)}
+                  className='flex items-center gap-1 px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors'
                 >
-                  {isApplying ? (
-                    <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
-                  ) : (
-                    <Briefcase size={14} />
-                  )}
-                  {isApplying ? 'Applying...' : 'Quick Apply'}
+                  <Briefcase size={14} />
+                  Apply
                 </button>
               ) : (
                 <span className='px-3 py-1 bg-green-100 text-green-800 rounded text-sm'>
@@ -380,7 +416,8 @@ const JobPost = ({ jobPost }) => {
           {/* Comments List */}
           <div className='space-y-3'>
             {jobPost.comments?.map((comment, index) => {
-              const canDeleteComment = comment.user._id === authUser._id || jobPost.author._id === authUser._id;
+              const isCommentOwner = comment.user._id === authUser._id;
+              const isEditing = editingCommentId === comment._id;
               
               return (
                 <div key={comment._id || index} className='flex gap-3'>
@@ -395,24 +432,67 @@ const JobPost = ({ jobPost }) => {
                       <div className='flex items-center gap-2'>
                         <span className='text-xs text-gray-500'>
                           {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                          {comment.editedAt && ' (edited)'}
                         </span>
-                        {canDeleteComment && (
-                          <button
-                            onClick={() => deleteComment(comment._id)}
-                            disabled={isDeletingComment}
-                            className='p-1 text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50'
-                            title='Delete comment'
-                          >
-                            {isDeletingComment ? (
-                              <div className='w-3 h-3 border border-red-500 border-t-transparent rounded-full animate-spin' />
-                            ) : (
-                              <X size={12} />
-                            )}
-                          </button>
+                        {isCommentOwner && !isEditing && (
+                          <>
+                            <button
+                              onClick={() => handleEditComment(comment)}
+                              className='p-1 text-blue-500 hover:bg-blue-50 rounded-full transition-colors'
+                              title='Edit comment'
+                            >
+                              <Edit size={12} />
+                            </button>
+                            <button
+                              onClick={() => deleteComment(comment._id)}
+                              disabled={isDeletingComment}
+                              className='p-1 text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50'
+                              title='Delete comment'
+                            >
+                              {isDeletingComment ? (
+                                <div className='w-3 h-3 border border-red-500 border-t-transparent rounded-full animate-spin' />
+                              ) : (
+                                <X size={12} />
+                              )}
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
-                    <p className='text-gray-700'>{comment.content}</p>
+                    {isEditing ? (
+                      <form onSubmit={handleSaveEdit} className='space-y-2'>
+                        <textarea
+                          value={editingCommentContent}
+                          onChange={(e) => setEditingCommentContent(e.target.value)}
+                          className='w-full p-2 border border-gray-300 rounded resize-none text-sm'
+                          rows={2}
+                          autoFocus
+                        />
+                        <div className='flex gap-2 justify-end'>
+                          <button
+                            type='button'
+                            onClick={handleCancelEdit}
+                            className='px-2 py-1 text-xs text-gray-600 hover:text-gray-800'
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type='submit'
+                            disabled={isEditingComment || !editingCommentContent.trim()}
+                            className='px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 flex items-center gap-1'
+                          >
+                            {isEditingComment ? (
+                              <div className='w-3 h-3 border border-white border-t-transparent rounded-full animate-spin' />
+                            ) : (
+                              <Check size={12} />
+                            )}
+                            Save
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <p className='text-gray-700'>{comment.content}</p>
+                    )}
                   </div>
                 </div>
               );
@@ -427,6 +507,36 @@ const JobPost = ({ jobPost }) => {
           jobPost={jobPost} 
           onClose={() => setShowEditModal(false)} 
         />
+      )}
+
+      {/* Apply Confirmation Modal */}
+      {showApplyConfirm && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+          <div className='bg-white rounded-lg p-6 max-w-md w-full mx-4'>
+            <h3 className='text-lg font-semibold mb-4'>Confirm Application</h3>
+            <p className='text-gray-600 mb-6'>
+              Are you sure you want to apply for this position? This will add you to the applicants list.
+            </p>
+            <div className='flex gap-3 justify-end'>
+              <button
+                onClick={() => setShowApplyConfirm(false)}
+                className='px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors'
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApplyConfirm}
+                disabled={isApplying}
+                className='px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2'
+              >
+                {isApplying && (
+                  <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
+                )}
+                {isApplying ? 'Applying...' : 'Yes, Apply'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
