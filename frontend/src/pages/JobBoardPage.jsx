@@ -75,30 +75,9 @@ const JobBoardPage = () => {
 
   return (
     <div className='grid grid-cols-1 lg:grid-cols-4 gap-6'>
-      {/* Sidebar with Stats */}
+      {/* Sidebar */}
       <div className='hidden lg:block lg:col-span-1'>
-        <div className='space-y-6'>
-          <Sidebar user={authUser} />
-          
-          {/* Quick Stats moved under sidebar */}
-          <div className='bg-white rounded-lg shadow p-6'>
-            <h3 className='text-lg font-semibold mb-4'>Quick Stats</h3>
-            <div className='space-y-3'>
-              <div className='flex justify-between'>
-                <span className='text-gray-600'>Total Jobs</span>
-                <span className='font-medium'>{jobPostsData?.total || 0}</span>
-              </div>
-              <div className='flex justify-between'>
-                <span className='text-gray-600'>New This Week</span>
-                <span className='font-medium'>-</span>
-              </div>
-              <div className='flex justify-between'>
-                <span className='text-gray-600'>Companies</span>
-                <span className='font-medium'>-</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Sidebar user={authUser} />
       </div>
 
       {/* Main Content - Now takes full remaining width */}
