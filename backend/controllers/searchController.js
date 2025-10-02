@@ -1,17 +1,19 @@
 import User from "../models/User.js";
 import Post from "../models/Post.js";
+import JobPost from "../models/JobPost.js";
 
 export const globalSearch = async (req, res) => {
     try {
         const { query, filter } = req.query;
         
         if (!query || query.trim().length === 0) {
-            return res.json({ users: [], posts: [] });
+            return res.json({ users: [], posts: [], jobPosts: [] });
         }
 
         const searchQuery = query.trim();
         let userSearchResults = [];
         let postSearchResults = [];
+        let jobPostSearchResults = [];
 
         // Search Users
         if (!filter || filter === 'users' || filter === 'all') {
@@ -51,9 +53,37 @@ export const globalSearch = async (req, res) => {
             .limit(10);
         }
 
+        // Search Job Posts
+        if (!filter || filter === 'jobs' || filter === 'all') {
+            const jobSearchConditions = [
+                { title: { $regex: searchQuery, $options: 'i' } },
+                { company: { $regex: searchQuery, $options: 'i' } },
+                { location: { $regex: searchQuery, $options: 'i' } },
+                { description: { $regex: searchQuery, $options: 'i' } },
+                { skills: { $regex: searchQuery, $options: 'i' } },
+                { type: { $regex: searchQuery, $options: 'i' } },
+                { workType: { $regex: searchQuery, $options: 'i' } }
+            ];
+
+            jobPostSearchResults = await JobPost.find({
+                $and: [
+                    { isActive: true },
+                    { $or: jobSearchConditions }
+                ]
+            })
+            .populate({
+                path: 'author',
+                select: 'name username profilePicture headline'
+            })
+            .select("title company location type workType salary createdAt skills")
+            .sort({ createdAt: -1 })
+            .limit(10);
+        }
+
         res.json({
             users: userSearchResults,
             posts: postSearchResults,
+            jobPosts: jobPostSearchResults,
             query: searchQuery
         });
 

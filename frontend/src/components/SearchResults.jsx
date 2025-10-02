@@ -11,7 +11,7 @@ const SearchResults = ({ results, isLoading, query, onClose }) => {
     );
   }
 
-  if (!results || (!results.users?.length && !results.posts?.length)) {
+  if (!results || (!results.users?.length && !results.posts?.length && !results.jobPosts?.length)) {
     if (query) {
       return (
         <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 p-4 z-50">
@@ -114,6 +114,76 @@ const SearchResults = ({ results, isLoading, query, onClose }) => {
                       alt="Post content"
                       className="w-full max-w-xs h-20 object-cover rounded"
                     />
+                  </div>
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* Job Posts Section */}
+      {results.jobPosts?.length > 0 && (
+        <div className="p-2 border-t border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-700 px-2 py-1 border-b border-gray-100">
+            <Briefcase size={16} className="inline mr-2" />
+            Jobs ({results.jobPosts.length})
+          </h3>
+          {results.jobPosts.map((jobPost) => (
+            <Link
+              key={jobPost._id}
+              to={`/job/${jobPost._id}`}
+              onClick={onClose}
+              className="flex items-start p-2 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <img
+                src={jobPost.author.profilePicture || "/avatar.png"}
+                alt={jobPost.author.name}
+                className="w-10 h-10 rounded-full object-cover mr-3 mt-1"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center space-x-2">
+                  <p className="text-sm font-medium text-gray-900">
+                    {jobPost.title}
+                  </p>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    jobPost.type === 'job' ? 'bg-green-100 text-green-800' :
+                    jobPost.type === 'part-time' ? 'bg-yellow-100 text-yellow-800' :
+                    jobPost.type === 'internship' ? 'bg-blue-100 text-blue-800' :
+                    'bg-purple-100 text-purple-800'
+                  }`}>
+                    {jobPost.type === 'job' ? 'Full-time' : 
+                     jobPost.type === 'part-time' ? 'Part-time' :
+                     jobPost.type.charAt(0).toUpperCase() + jobPost.type.slice(1)}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mb-1">
+                  {jobPost.company} • {jobPost.location}
+                </p>
+                <div className="flex items-center space-x-2 text-xs text-gray-400">
+                  <span className="flex items-center">
+                    <MapPin size={12} className="mr-1" />
+                    {jobPost.workType.charAt(0).toUpperCase() + jobPost.workType.slice(1)}
+                  </span>
+                  <span>
+                    {formatDate(jobPost.createdAt)}
+                  </span>
+                </div>
+                {jobPost.skills && jobPost.skills.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {jobPost.skills.slice(0, 3).map((skill, index) => (
+                      <span
+                        key={index}
+                        className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-xs"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                    {jobPost.skills.length > 3 && (
+                      <span className="text-xs text-gray-400">
+                        +{jobPost.skills.length - 3} more
+                      </span>
+                    )}
                   </div>
                 )}
               </div>

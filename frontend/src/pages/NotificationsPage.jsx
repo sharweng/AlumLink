@@ -163,7 +163,7 @@ const NotificationsPage = () => {
 		return (
 			<Link
 				to={`/job/${relatedJobPost._id}`}
-				className='mt-2 p-2 bg-blue-50 rounded-md flex items-center space-x-2 hover:bg-blue-100 transition-colors'
+				className='mt-2 p-2 bg-gray-50 rounded-md flex items-center space-x-2 hover:bg-gray-100 transition-colors'
 			>
 				<div className='flex-1 overflow-hidden'>
 					<p className='text-sm font-medium text-gray-900 truncate'>{relatedJobPost.title}</p>

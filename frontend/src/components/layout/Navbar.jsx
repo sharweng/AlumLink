@@ -12,7 +12,7 @@ const Navbar = () => {
   // Search state
   const [searchQuery, setSearchQuery] = useState("")
   const [showResults, setShowResults] = useState(false)
-  const [searchResults, setSearchResults] = useState({ users: [], posts: [] })
+  const [searchResults, setSearchResults] = useState({ users: [], posts: [], jobPosts: [] })
   const [isSearching, setIsSearching] = useState(false)
   const searchRef = useRef(null)
   const searchTimeoutRef = useRef(null)
@@ -39,7 +39,7 @@ const Navbar = () => {
   // Search functionality
   const performSearch = async (query) => {
     if (!query.trim()) {
-      setSearchResults({ users: [], posts: [] })
+      setSearchResults({ users: [], posts: [], jobPosts: [] })
       setShowResults(false)
       return
     }
@@ -51,7 +51,7 @@ const Navbar = () => {
       setShowResults(true)
     } catch (error) {
       console.error("Search error:", error)
-      setSearchResults({ users: [], posts: [] })
+      setSearchResults({ users: [], posts: [], jobPosts: [] })
     } finally {
       setIsSearching(false)
     }
