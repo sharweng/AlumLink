@@ -1,0 +1,24 @@
+PORT = 
+MONGO_URI = 
+
+JWT_SECRET = 
+NODE_ENV = development
+
+# MAILTRAP_TOKEN = YOUR_MAILTRAP_TOKEN
+# EMAIL_FROM = YOUR_EMAIL_FROM
+# alumnilink.management@gmail.com
+EMAIL_FROM_NAME = AlumniLink
+
+CLIENT_URL = http://localhost:5173
+
+NODEMAILER_HOST = 
+NODEMAILER_PORT = 
+NODEMAILER_USER = 
+NODEMAILER_PASS = 
+NODEMAILER_EMAIL_FROM = alumnilink.management@gmail.com
+
+CLOUDINARY_LOGO_URL = https://res.cloudinary.com/dcug5cq7c/image/upload/v1758611178/alumniLink6_hdyfju.png # AlumniLink Logo Online
+
+CLOUDINARY_API_KEY = 
+CLOUDINARY_CLOUD_NAME = 
+CLOUDINARY_API_SECRET = 
