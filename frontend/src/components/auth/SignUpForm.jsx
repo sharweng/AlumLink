@@ -9,6 +9,7 @@ const SignUpForm = () => {
     const [email, setEmail] = useState("")
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
+    const [confirmPassword, setConfirmPassword] = useState("")
     const [batch, setBatch] = useState("")
     const [course, setCourse] = useState("")
 
@@ -31,7 +32,18 @@ const SignUpForm = () => {
     const handleSignUp = (e) => {
       e.preventDefault();
 
-      signUpMutation({ name, username, email, password, batch, course })
+      // Client-side validation
+      if (password.length < 6) {
+        toast.error("Password must be at least 6 characters");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        toast.error("Passwords do not match");
+        return;
+      }
+
+      signUpMutation({ name, username, email, password, confirmPassword, batch, course })
     }
     return (
       <form onSubmit={handleSignUp} className="flex flex-col gap-4">
@@ -62,6 +74,15 @@ const SignUpForm = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="input input-bordered w-full"
+            minLength="6"
+            required />
+          <input 
+            type="password"
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="input input-bordered w-full"
+            minLength="6"
             required />
           <input 
             type="number"

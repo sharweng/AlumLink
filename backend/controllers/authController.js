@@ -6,10 +6,18 @@ import { sendWelcomeEmail } from "../emails/nodemailerHandlers.js"; // for sandb
 
 export const signup = async (req, res) => {
     try {
-        const { name, username, email, password, batch, course } = req.body;
+        const { name, username, email, password, confirmPassword, batch, course } = req.body;
 
-        if(!name || !username || !email || !password || !batch || !course) {
+        if(!name || !username || !email || !password || !confirmPassword || !batch || !course) {
             return res.status(400).json({ message: "All fields are required" });
+        }
+
+        if(password.length < 6) {
+            return res.status(400).json({ message: "Password must be at least 6 characters" });
+        }
+
+        if(password !== confirmPassword) {
+            return res.status(400).json({ message: "Passwords do not match" });
         }
 
         const existingEmail = await User.findOne({ email });
@@ -20,10 +28,6 @@ export const signup = async (req, res) => {
         const existingUsername = await User.findOne({ username });
         if (existingUsername) {
             return res.status(400).json({ message: "Username already in use" });
-        }
-
-        if(password.length < 6) {
-            return res.status(400).json({ message: "Password must be at least 6 characters" });
         }
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);

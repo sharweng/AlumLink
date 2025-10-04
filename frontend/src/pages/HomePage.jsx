@@ -46,7 +46,7 @@ const HomePage = () => {
             <div className='mb-6'>
               <Users size={64} className="mx-auto text-red-500" />
             </div>
-            <h2 className='text-2xl font-bold mb-4 text-green-800'>No Posts Yet</h2>
+            <h2 className='text-2xl font-bold mb-4 '>No Posts Yet</h2>
             <p className='text-gray-600 mb-6'>Link with others to start seeing posts in your feed!</p>
           </div>
         )}
