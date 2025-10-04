@@ -83,7 +83,7 @@ const SearchResults = ({ results, isLoading, query, onClose }) => {
           {results.posts.map((post) => (
             <Link
               key={post._id}
-              to={`/profile/${post.author.username}`}
+              to={`/post/${post._id}`}
               onClick={onClose}
               className="flex items-start p-2 hover:bg-gray-50 rounded-lg transition-colors"
             >
