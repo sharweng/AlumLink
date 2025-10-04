@@ -168,13 +168,14 @@ export const createComment = async (req, res) => {
             });
 
             await newNotification.save();
-
-            try {
-                const postUrl = process.env.CLIENT_URL + `/posts/${postId}`;
-                await sendCommentNotificationEmail(post.author.email, post.author.name, req.user.name, postUrl, content);
-            } catch (error) {
-                console.log("Error sending comment notification email:", error.message);
-            }
+            
+            // removed email if commented because it takes up too much sandbox email
+            // try {
+            //     const postUrl = process.env.CLIENT_URL + `/posts/${postId}`;
+            //     await sendCommentNotificationEmail(post.author.email, post.author.name, req.user.name, postUrl, content);
+            // } catch (error) {
+            //     console.log("Error sending comment notification email:", error.message);
+            // }
         }
 
         res.status(200).json(post);
