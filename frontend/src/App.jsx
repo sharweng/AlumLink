@@ -13,6 +13,7 @@ import PostPage from "./pages/PostPage"
 import ProfilePage from "./pages/ProfilePage"
 import JobBoardPage from "./pages/JobBoardPage"
 import JobPostPage from "./pages/JobPostPage"
+import DiscussionForumsPage from "./pages/DiscussionForumsPage"
 
 function App() {
   const { data: authUser, isLoading } = useQuery({
@@ -40,6 +41,7 @@ function App() {
         <Route path="/login" element={ !authUser ? <LoginPage /> : <Navigate to={"/"} /> } />
         <Route path="/jobs" element={ authUser ? <JobBoardPage /> : <Navigate to={"/login"} /> } />
         <Route path="/job/:jobId" element={ authUser ? <JobPostPage /> : <Navigate to={"/login"} /> } />
+        <Route path="/forums" element={ authUser ? <DiscussionForumsPage /> : <Navigate to={"/login"} /> } />
         <Route path="/notifications" element={ authUser ? <NotificationsPage /> : <Navigate to={"/login"} /> } />
         <Route path="/network" element={ authUser ? <NetworkPage /> : <Navigate to={"/login"} /> } />
         <Route path="/post/:postId" element={ authUser ? <PostPage /> : <Navigate to={"/login"} /> } />
