@@ -52,6 +52,19 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
     });
   };
 
+  // Calculate total comment count including replies
+  const getTotalCommentCount = () => {
+    if (!discussion.comments) return 0;
+    
+    let total = discussion.comments.length;
+    discussion.comments.forEach(comment => {
+      if (comment.replies && comment.replies.length > 0) {
+        total += comment.replies.length;
+      }
+    });
+    return total;
+  };
+
   const { mutate: deleteDiscussion, isPending: isDeletingDiscussion } = useMutation({
     mutationFn: async () => {
       await axiosInstance.delete(`/discussions/${discussion._id}`);
@@ -385,7 +398,7 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
           className="flex items-center gap-2 text-gray-600 hover:text-primary transition-colors"
         >
           <MessageCircle size={20} />
-          <span className="text-sm">{discussion.comments?.length || 0}</span>
+          <span className="text-sm">{getTotalCommentCount()}</span>
         </button>
         
         <div className="flex items-center gap-2 text-gray-600">
