@@ -39,6 +39,7 @@ export const getAllDiscussions = async (req, res) => {
         const discussions = await Discussion.find(query)
             .populate("author", "name username profilePicture headline")
             .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture")
             .sort(sortOption);
 
         res.status(200).json(discussions);
@@ -59,7 +60,8 @@ export const getDiscussionById = async (req, res) => {
             { new: true }
         )
         .populate("author", "name username profilePicture headline")
-        .populate("comments.user", "name username profilePicture headline");
+        .populate("comments.user", "name username profilePicture headline")
+        .populate("comments.replies.user", "name username profilePicture");
 
         if (!discussion) {
             return res.status(404).json({ message: "Discussion not found" });
@@ -203,7 +205,8 @@ export const updateDiscussion = async (req, res) => {
 
         const updatedDiscussion = await Discussion.findById(discussionId)
             .populate("author", "name username profilePicture headline")
-            .populate("comments.user", "name username profilePicture");
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
 
         res.status(200).json(updatedDiscussion);
     } catch (error) {
@@ -300,7 +303,8 @@ export const createComment = async (req, res) => {
             { new: true }
         )
         .populate("author", "name email username profilePicture headline")
-        .populate("comments.user", "name username profilePicture");
+        .populate("comments.user", "name username profilePicture")
+        .populate("comments.replies.user", "name username profilePicture");
 
         if (!discussion) {
             return res.status(404).json({ message: "Discussion not found" });
@@ -394,11 +398,139 @@ export const updateComment = async (req, res) => {
 
         const populatedDiscussion = await Discussion.findById(id)
             .populate("author", "name username profilePicture headline")
-            .populate("comments.user", "name username profilePicture");
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
 
         res.status(200).json(populatedDiscussion);
     } catch (error) {
         console.log("Error in updateComment:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const createReply = async (req, res) => {
+    try {
+        const { id, commentId } = req.params;
+        const { content } = req.body;
+
+        if (!content || !content.trim()) {
+            return res.status(400).json({ message: "Reply content is required" });
+        }
+
+        const discussion = await Discussion.findById(id);
+
+        if (!discussion) {
+            return res.status(404).json({ message: "Discussion not found" });
+        }
+
+        const comment = discussion.comments.id(commentId);
+
+        if (!comment) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        comment.replies.push({
+            user: req.user._id,
+            content: content.trim(),
+        });
+
+        await discussion.save();
+
+        const populatedDiscussion = await Discussion.findById(id)
+            .populate("author", "name email username profilePicture headline")
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
+
+        res.status(200).json(populatedDiscussion);
+    } catch (error) {
+        console.log("Error in createReply:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const deleteReply = async (req, res) => {
+    try {
+        const { id, commentId, replyId } = req.params;
+        const userId = req.user._id;
+
+        const discussion = await Discussion.findById(id);
+
+        if (!discussion) {
+            return res.status(404).json({ message: "Discussion not found" });
+        }
+
+        const comment = discussion.comments.id(commentId);
+
+        if (!comment) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        const reply = comment.replies.id(replyId);
+
+        if (!reply) {
+            return res.status(404).json({ message: "Reply not found" });
+        }
+
+        // Only reply author can delete
+        if (reply.user.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "You are not authorized to delete this reply" });
+        }
+
+        comment.replies.pull(replyId);
+        await discussion.save();
+
+        res.status(200).json({ message: "Reply deleted successfully" });
+    } catch (error) {
+        console.log("Error in deleteReply:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const updateReply = async (req, res) => {
+    try {
+        const { id, commentId, replyId } = req.params;
+        const { content } = req.body;
+        const userId = req.user._id;
+
+        if (!content || !content.trim()) {
+            return res.status(400).json({ message: "Reply content is required" });
+        }
+
+        const discussion = await Discussion.findById(id);
+
+        if (!discussion) {
+            return res.status(404).json({ message: "Discussion not found" });
+        }
+
+        const comment = discussion.comments.id(commentId);
+
+        if (!comment) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        const reply = comment.replies.id(replyId);
+
+        if (!reply) {
+            return res.status(404).json({ message: "Reply not found" });
+        }
+
+        // Only reply author can edit
+        if (reply.user.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "You can only edit your own replies" });
+        }
+
+        reply.content = content.trim();
+        reply.editedAt = new Date();
+        await discussion.save();
+
+        const populatedDiscussion = await Discussion.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
+
+        res.status(200).json(populatedDiscussion);
+    } catch (error) {
+        console.log("Error in updateReply:", error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 };

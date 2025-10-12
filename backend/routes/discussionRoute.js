@@ -9,7 +9,10 @@ import {
     likeDiscussion, 
     createComment, 
     deleteComment, 
-    updateComment 
+    updateComment,
+    createReply,
+    deleteReply,
+    updateReply
 } from "../controllers/discussionController.js";
 
 const router = express.Router();
@@ -23,5 +26,8 @@ router.post("/:id/like", protectRoute, likeDiscussion);
 router.post("/:id/comment", protectRoute, createComment);
 router.delete("/:id/comment/:commentId", protectRoute, deleteComment);
 router.put("/:id/comment/:commentId", protectRoute, updateComment);
+router.post("/:id/comment/:commentId/reply", protectRoute, createReply);
+router.delete("/:id/comment/:commentId/reply/:replyId", protectRoute, deleteReply);
+router.put("/:id/comment/:commentId/reply/:replyId", protectRoute, updateReply);
 
 export default router;

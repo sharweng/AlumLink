@@ -12,7 +12,10 @@ import {
   FileText,
   Download,
   Tag,
-  Calendar
+  Loader,
+  Send,
+  Check,
+  Reply as ReplyIcon
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -22,9 +25,32 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
   const authUser = queryClient.getQueryData(["authUser"]);
   const [showComments, setShowComments] = useState(isDetailView);
   const [newComment, setNewComment] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingCommentContent, setEditingCommentContent] = useState("");
+  const [replyingToCommentId, setReplyingToCommentId] = useState(null);
+  const [newReply, setNewReply] = useState("");
+  const [editingReplyId, setEditingReplyId] = useState(null);
+  const [editingReplyContent, setEditingReplyContent] = useState("");
   
   const isOwner = authUser?._id === discussion.author._id;
   const isLiked = discussion.likes?.includes(authUser?._id);
+
+  // Helper function to render text with @mentions highlighted
+  const renderTextWithMentions = (text) => {
+    if (!text) return null;
+    
+    const parts = text.split(/(@\w+)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('@')) {
+        return (
+          <span key={index} className="text-primary font-medium">
+            {part}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
 
   const { mutate: deleteDiscussion, isPending: isDeletingDiscussion } = useMutation({
     mutationFn: async () => {
@@ -70,10 +96,138 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
     },
   });
 
-  const handleAddComment = () => {
+  const { mutate: deleteComment, isPending: isDeletingComment } = useMutation({
+    mutationFn: async (commentId) => {
+      await axiosInstance.delete(`/discussions/${discussion._id}/comment/${commentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["discussions"] });
+      queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
+      toast.success("Comment deleted successfully");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to delete comment");
+    },
+  });
+
+  const { mutate: updateComment, isPending: isUpdatingComment } = useMutation({
+    mutationFn: async ({ commentId, content }) => {
+      await axiosInstance.put(`/discussions/${discussion._id}/comment/${commentId}`, { content });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["discussions"] });
+      queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
+      setEditingCommentId(null);
+      setEditingCommentContent("");
+      toast.success("Comment updated successfully");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to update comment");
+    },
+  });
+
+  const { mutate: createReply, isPending: isCreatingReply } = useMutation({
+    mutationFn: async ({ commentId, content }) => {
+      await axiosInstance.post(`/discussions/${discussion._id}/comment/${commentId}/reply`, { content });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["discussions"] });
+      queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
+      setReplyingToCommentId(null);
+      setNewReply("");
+      toast.success("Reply added successfully");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to add reply");
+    },
+  });
+
+  const { mutate: deleteReply, isPending: isDeletingReply } = useMutation({
+    mutationFn: async ({ commentId, replyId }) => {
+      await axiosInstance.delete(`/discussions/${discussion._id}/comment/${commentId}/reply/${replyId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["discussions"] });
+      queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
+      toast.success("Reply deleted successfully");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to delete reply");
+    },
+  });
+
+  const { mutate: updateReply, isPending: isUpdatingReply } = useMutation({
+    mutationFn: async ({ commentId, replyId, content }) => {
+      await axiosInstance.put(`/discussions/${discussion._id}/comment/${commentId}/reply/${replyId}`, { content });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["discussions"] });
+      queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
+      setEditingReplyId(null);
+      setEditingReplyContent("");
+      toast.success("Reply updated successfully");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to update reply");
+    },
+  });
+
+  const handleAddComment = (e) => {
+    e.preventDefault();
     if (newComment.trim()) {
       createComment(newComment);
     }
+  };
+
+  const handleEditComment = (comment) => {
+    setEditingCommentId(comment._id);
+    setEditingCommentContent(comment.content);
+  };
+
+  const handleSaveCommentEdit = (e, commentId) => {
+    e.preventDefault();
+    if (editingCommentContent.trim()) {
+      updateComment({ commentId, content: editingCommentContent });
+    }
+  };
+
+  const handleCancelCommentEdit = () => {
+    setEditingCommentId(null);
+    setEditingCommentContent("");
+  };
+
+  const handleReplyToComment = (commentId, username) => {
+    setReplyingToCommentId(commentId);
+    setNewReply(`@${username} `);
+  };
+
+  const handleReplyToReply = (commentId, username) => {
+    setReplyingToCommentId(commentId);
+    setNewReply(`@${username} `);
+  };
+
+  const handleAddReply = (e, commentId) => {
+    e.preventDefault();
+    if (newReply.trim()) {
+      createReply({ commentId, content: newReply });
+    }
+  };
+
+  const handleEditReply = (reply) => {
+    setEditingReplyId(reply._id);
+    setEditingReplyContent(reply.content);
+  };
+
+  const handleSaveReplyEdit = (e, commentId, replyId) => {
+    e.preventDefault();
+    if (editingReplyContent.trim()) {
+      updateReply({ commentId, replyId, content: editingReplyContent });
+    }
+  };
+
+  const handleCancelReplyEdit = () => {
+    setEditingReplyId(null);
+    setEditingReplyContent("");
   };
 
   const getCategoryColor = (category) => {
@@ -103,7 +257,10 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
             </Link>
             <div className="flex-1">
               <Link to={`/profile/${discussion.author?.username}`}>
-                <h3 className="font-semibold hover:underline">{discussion.author?.name}</h3>
+                <h3 className="font-semibold hover:underline">
+                  {discussion.author?.name}
+                  <span className="text-gray-500 font-normal ml-1">@{discussion.author?.username}</span>
+                </h3>
               </Link>
               <p className="text-sm text-gray-500">{discussion.author?.headline}</p>
               <div className="flex items-center gap-2 mt-1">
@@ -239,54 +396,291 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
 
       {/* Comments Section */}
       {showComments && (
-        <div className="border-t p-4 bg-gray-50">
-          {/* Comment Input */}
-          <div className="mb-4">
-            <textarea
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Write a comment..."
-              className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-              rows={3}
-            />
-            <button
-              onClick={handleAddComment}
-              disabled={isCreatingComment || !newComment.trim()}
-              className="mt-2 btn btn-primary btn-sm"
-            >
-              {isCreatingComment ? "Posting..." : "Post Comment"}
-            </button>
-          </div>
+        <div className="mt-4 pt-4 border-t border-gray-200 px-4 pb-4">
+          {/* Add Comment */}
+          <form onSubmit={handleAddComment} className="mb-4">
+            <div className="flex gap-3">
+              <img
+                src={authUser?.profilePicture || "/avatar.png"}
+                alt="Your avatar"
+                className="w-8 h-8 rounded-full object-cover"
+              />
+              <div className="flex-1">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Add a comment..."
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isCreatingComment || !newComment.trim()}
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                  >
+                    {isCreatingComment ? (
+                      <Loader className="animate-spin" size={16} />
+                    ) : (
+                      <Send size={16} />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
 
           {/* Comments List */}
-          {discussion.comments && discussion.comments.length > 0 && (
-            <div className="space-y-3">
-              {discussion.comments.map((comment) => (
-                <div key={comment._id} className="bg-white p-3 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <Link to={`/profile/${comment.user?.username}`}>
-                      <img
-                        src={comment.user?.profilePicture || "/avatar.png"}
-                        alt={comment.user?.name}
-                        className="w-8 h-8 rounded-full"
-                      />
-                    </Link>
-                    <div className="flex-1">
-                      <Link to={`/profile/${comment.user?.username}`}>
-                        <p className="font-semibold text-sm hover:underline">
-                          {comment.user?.name}
-                        </p>
-                      </Link>
-                      <p className="text-sm text-gray-700 mt-1">{comment.content}</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                      </p>
+          <div className="space-y-3">
+            {discussion.comments?.map((comment) => {
+              const isCommentOwner = comment.user?._id === authUser?._id;
+              const isEditingThisComment = editingCommentId === comment._id;
+              
+              return (
+                <div key={comment._id} className="flex gap-3">
+                  <Link to={`/profile/${comment.user?.username}`}>
+                    <img
+                      src={comment.user?.profilePicture || "/avatar.png"}
+                      alt={comment.user?.name}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                  </Link>
+                  <div className="flex-1">
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <Link to={`/profile/${comment.user?.username}`}>
+                          <h4 className="font-medium text-gray-900 hover:underline">
+                            {comment.user?.name}
+                            <span className="text-gray-500 font-normal text-sm ml-1">@{comment.user?.username}</span>
+                          </h4>
+                        </Link>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">
+                            {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                            {comment.editedAt && ' (edited)'}
+                          </span>
+                          {isCommentOwner && !isEditingThisComment && (
+                            <>
+                              <button
+                                onClick={() => handleEditComment(comment)}
+                                className="p-1 text-green-500 hover:bg-green-50 rounded-full transition-colors"
+                                title="Edit comment"
+                              >
+                                <Edit size={12} />
+                              </button>
+                              <button
+                                onClick={() => deleteComment(comment._id)}
+                                disabled={isDeletingComment}
+                                className="p-1 text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
+                                title="Delete comment"
+                              >
+                                {isDeletingComment ? (
+                                  <Loader className="animate-spin" size={12} />
+                                ) : (
+                                  <Trash2 size={12} />
+                                )}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      {isEditingThisComment ? (
+                        <form onSubmit={(e) => handleSaveCommentEdit(e, comment._id)} className="space-y-2">
+                          <textarea
+                            value={editingCommentContent}
+                            onChange={(e) => setEditingCommentContent(e.target.value)}
+                            className="w-full p-2 border border-gray-300 rounded resize-none text-sm"
+                            rows={2}
+                            autoFocus
+                          />
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              type="button"
+                              onClick={handleCancelCommentEdit}
+                              className="px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={isUpdatingComment || !editingCommentContent.trim()}
+                              className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 flex items-center gap-1"
+                            >
+                              {isUpdatingComment ? (
+                                <Loader className="animate-spin" size={12} />
+                              ) : (
+                                <Check size={12} />
+                              )}
+                              Save
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          <p className="text-gray-700 text-sm">{renderTextWithMentions(comment.content)}</p>
+                          <button
+                            onClick={() => handleReplyToComment(comment._id, comment.user?.username)}
+                            className="mt-2 text-xs text-primary hover:text-red-700 flex items-center gap-1"
+                          >
+                            <ReplyIcon size={12} />
+                            Reply
+                          </button>
+                        </>
+                      )}
                     </div>
+
+                    {/* Replies */}
+                    {comment.replies && comment.replies.length > 0 && (
+                      <div className="mt-2 ml-4 space-y-2">
+                        {comment.replies.map((reply) => {
+                          const isReplyOwner = reply.user?._id === authUser?._id;
+                          const isEditingThisReply = editingReplyId === reply._id;
+                          
+                          return (
+                            <div key={reply._id} className="flex gap-2">
+                              <Link to={`/profile/${reply.user?.username}`}>
+                                <img
+                                  src={reply.user?.profilePicture || "/avatar.png"}
+                                  alt={reply.user?.name}
+                                  className="w-6 h-6 rounded-full object-cover"
+                                />
+                              </Link>
+                              <div className="flex-1 bg-gray-100 rounded-lg p-2">
+                                <div className="flex items-center justify-between mb-1">
+                                  <Link to={`/profile/${reply.user?.username}`}>
+                                    <h5 className="font-medium text-sm text-gray-900 hover:underline">
+                                      {reply.user?.name}
+                                      <span className="text-gray-500 font-normal text-xs ml-1">@{reply.user?.username}</span>
+                                    </h5>
+                                  </Link>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500">
+                                      {formatDistanceToNow(new Date(reply.createdAt), { addSuffix: true })}
+                                      {reply.editedAt && ' (edited)'}
+                                    </span>
+                                    {isReplyOwner && !isEditingThisReply && (
+                                      <>
+                                        <button
+                                          onClick={() => handleEditReply(reply)}
+                                          className="p-1 text-green-500 hover:bg-green-50 rounded-full transition-colors"
+                                          title="Edit reply"
+                                        >
+                                          <Edit size={10} />
+                                        </button>
+                                        <button
+                                          onClick={() => deleteReply({ commentId: comment._id, replyId: reply._id })}
+                                          disabled={isDeletingReply}
+                                          className="p-1 text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
+                                          title="Delete reply"
+                                        >
+                                          {isDeletingReply ? (
+                                            <Loader className="animate-spin" size={10} />
+                                          ) : (
+                                            <Trash2 size={10} />
+                                          )}
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                                {isEditingThisReply ? (
+                                  <form onSubmit={(e) => handleSaveReplyEdit(e, comment._id, reply._id)} className="space-y-2">
+                                    <textarea
+                                      value={editingReplyContent}
+                                      onChange={(e) => setEditingReplyContent(e.target.value)}
+                                      className="w-full p-2 border border-gray-300 rounded resize-none text-xs"
+                                      rows={2}
+                                      autoFocus
+                                    />
+                                    <div className="flex gap-2 justify-end">
+                                      <button
+                                        type="button"
+                                        onClick={handleCancelReplyEdit}
+                                        className="px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
+                                      >
+                                        Cancel
+                                      </button>
+                                      <button
+                                        type="submit"
+                                        disabled={isUpdatingReply || !editingReplyContent.trim()}
+                                        className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 flex items-center gap-1"
+                                      >
+                                        {isUpdatingReply ? (
+                                          <Loader className="animate-spin" size={10} />
+                                        ) : (
+                                          <Check size={10} />
+                                        )}
+                                        Save
+                                      </button>
+                                    </div>
+                                  </form>
+                                ) : (
+                                  <p className="text-gray-700 text-xs">{renderTextWithMentions(reply.content)}</p>
+                                )}
+                                {/* Reply to Reply button */}
+                                {!isEditingThisReply && (
+                                  <button
+                                    onClick={() => handleReplyToReply(comment._id, reply.user?.username)}
+                                    className="mt-1 text-xs text-primary hover:text-red-700 flex items-center gap-1"
+                                  >
+                                    <ReplyIcon size={10} />
+                                    Reply
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Reply Input */}
+                    {replyingToCommentId === comment._id && (
+                      <form onSubmit={(e) => handleAddReply(e, comment._id)} className="mt-2 ml-4">
+                        <div className="flex gap-2">
+                          <img
+                            src={authUser?.profilePicture || "/avatar.png"}
+                            alt="Your avatar"
+                            className="w-6 h-6 rounded-full object-cover"
+                          />
+                          <div className="flex-1">
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={newReply}
+                                onChange={(e) => setNewReply(e.target.value)}
+                                placeholder="Write a reply..."
+                                className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                autoFocus
+                              />
+                              <button
+                                type="submit"
+                                disabled={isCreatingReply || !newReply.trim()}
+                                className="px-3 py-1 bg-primary text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 text-sm"
+                              >
+                                {isCreatingReply ? (
+                                  <Loader className="animate-spin" size={14} />
+                                ) : (
+                                  <Send size={14} />
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setReplyingToCommentId(null)}
+                                className="px-2 py-1 text-sm text-gray-600 hover:text-gray-800"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </form>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
