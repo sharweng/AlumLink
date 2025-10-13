@@ -13,7 +13,7 @@ const DiscussionCreation = ({ onClose }) => {
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState("");
   const [category, setCategory] = useState("General");
-  const [errors, setErrors] = useState({ title: "", content: "" });
+  const [errors, setErrors] = useState({ title: "", content: "", files: "" });
 
   const queryClient = useQueryClient();
 
@@ -39,7 +39,7 @@ const DiscussionCreation = ({ onClose }) => {
 
   const handleDiscussionCreation = async () => {
     // Reset errors
-    const newErrors = { title: "", content: "" };
+    const newErrors = { title: "", content: "", files: "" };
     let hasError = false;
 
     // Validate title
@@ -51,6 +51,14 @@ const DiscussionCreation = ({ onClose }) => {
     // Validate content
     if (!content.trim()) {
       newErrors.content = "Content is required";
+      hasError = true;
+    }
+
+    // Validate file sizes (25MB limit = 25 * 1024 * 1024 bytes)
+    const maxFileSize = 25 * 1024 * 1024;
+    const oversizedFiles = files.filter(file => file.size > maxFileSize);
+    if (oversizedFiles.length > 0) {
+      newErrors.files = `File "${oversizedFiles[0].name}" is larger than 25MB`;
       hasError = true;
     }
 
@@ -105,7 +113,7 @@ const DiscussionCreation = ({ onClose }) => {
     setTags([]);
     setTagInput("");
     setCategory("General");
-    setErrors({ title: "", content: "" });
+    setErrors({ title: "", content: "", files: "" });
   };
 
   const handleImageChange = (e) => {
@@ -122,6 +130,10 @@ const DiscussionCreation = ({ onClose }) => {
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
     setFiles([...files, ...selectedFiles]);
+    // Clear file error when new files are selected
+    if (errors.files) {
+      setErrors({ ...errors, files: "" });
+    }
   };
 
   const removeImage = (index) => {
@@ -130,7 +142,15 @@ const DiscussionCreation = ({ onClose }) => {
   };
 
   const removeFile = (index) => {
-    setFiles(files.filter((_, i) => i !== index));
+    const updatedFiles = files.filter((_, i) => i !== index);
+    setFiles(updatedFiles);
+    
+    // Clear error if all oversized files are removed
+    const maxFileSize = 25 * 1024 * 1024;
+    const hasOversizedFiles = updatedFiles.some(file => file.size > maxFileSize);
+    if (!hasOversizedFiles) {
+      setErrors({ ...errors, files: "" });
+    }
   };
 
   const addTag = () => {
@@ -288,25 +308,44 @@ const DiscussionCreation = ({ onClose }) => {
       {files.length > 0 && (
         <div className="mb-4">
           <label className="block text-sm font-semibold mb-2">Attachments</label>
-          <div className="space-y-2">
-            {files.map((file, index) => (
-              <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <FileText size={20} className="text-primary" />
-                  <div>
-                    <p className="text-sm font-medium">{file.name}</p>
-                    <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(2)} KB</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => removeFile(index)}
-                  className="text-red-500 hover:text-red-600"
+          <div className={`space-y-2 ${errors.files ? 'border-2 border-red-500 rounded-lg p-2' : ''}`}>
+            {files.map((file, index) => {
+              const fileSizeMB = file.size / (1024 * 1024);
+              const isOversized = fileSizeMB > 25;
+              return (
+                <div 
+                  key={index} 
+                  className={`flex items-center justify-between p-2 rounded-lg ${
+                    isOversized ? 'bg-red-50 border border-red-300' : 'bg-gray-50'
+                  }`}
                 >
-                  <X size={18} />
-                </button>
-              </div>
-            ))}
+                  <div className="flex items-center gap-2">
+                    <FileText size={20} className={isOversized ? "text-red-500" : "text-primary"} />
+                    <div>
+                      <p className={`text-sm font-medium ${isOversized ? 'text-red-600' : ''}`}>
+                        {file.name}
+                      </p>
+                      <p className={`text-xs ${isOversized ? 'text-red-500 font-semibold' : 'text-gray-500'}`}>
+                        {fileSizeMB >= 1 
+                          ? `${fileSizeMB.toFixed(2)} MB` 
+                          : `${(file.size / 1024).toFixed(2)} KB`}
+                        {isOversized && ' - Too large!'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeFile(index)}
+                    className="text-red-500 hover:text-red-600"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              );
+            })}
           </div>
+          {errors.files && (
+            <p className="text-red-500 text-sm mt-1">{errors.files}</p>
+          )}
         </div>
       )}
 

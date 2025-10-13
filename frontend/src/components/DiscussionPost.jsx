@@ -48,6 +48,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   const [editFiles, setEditFiles] = useState([]);
   const [removedImages, setRemovedImages] = useState([]);
   const [removedFiles, setRemovedFiles] = useState([]);
+  const [editFileError, setEditFileError] = useState("");
   
   const isOwner = authUser?._id === discussion.author._id;
   const isLiked = discussion.likes?.includes(authUser?._id);
@@ -120,6 +121,13 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
 
   const { mutate: updateDiscussion, isPending: isUpdatingDiscussion } = useMutation({
     mutationFn: async () => {
+      // Validate file sizes before uploading (25MB limit)
+      const maxFileSize = 25 * 1024 * 1024;
+      const oversizedFiles = editFiles.filter(file => file.size > maxFileSize);
+      if (oversizedFiles.length > 0) {
+        throw new Error(`File "${oversizedFiles[0].name}" is larger than 25MB`);
+      }
+
       const updateData = {
         title: editTitle,
         content: editContent,
@@ -162,10 +170,17 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
       setEditFiles([]);
       setRemovedImages([]);
       setRemovedFiles([]);
+      setEditFileError("");
       toast.success("Discussion updated successfully");
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || "Failed to update discussion");
+      const errorMessage = error.message || error.response?.data?.message || "Failed to update discussion";
+      setEditFileError(errorMessage);
+      
+      // Only show toast for non-file-size errors (file size errors already have visual indicators)
+      if (!errorMessage.includes("larger than 25MB")) {
+        toast.error(errorMessage);
+      }
     },
   });
 
@@ -360,6 +375,10 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   const handleEditFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
     setEditFiles([...editFiles, ...selectedFiles]);
+    // Clear error when new files are selected
+    if (editFileError) {
+      setEditFileError("");
+    }
   };
 
   // Remove new image from edit
@@ -370,7 +389,15 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
 
   // Remove new file from edit
   const removeEditFile = (index) => {
-    setEditFiles(editFiles.filter((_, i) => i !== index));
+    const updatedFiles = editFiles.filter((_, i) => i !== index);
+    setEditFiles(updatedFiles);
+    
+    // Clear error if all oversized files are removed
+    const maxFileSize = 25 * 1024 * 1024;
+    const hasOversizedFiles = updatedFiles.some(file => file.size > maxFileSize);
+    if (!hasOversizedFiles) {
+      setEditFileError("");
+    }
   };
 
   // Mark existing image for removal
@@ -758,24 +785,43 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                 </label>
               </div>
               {editFiles.length > 0 && (
-                <div className="space-y-2 mt-2">
-                  {editFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg group">
-                      <div className="flex items-center gap-2 flex-1">
-                        <FileText size={16} className="text-gray-500" />
-                        <span className="text-sm text-gray-700 truncate">{file.name}</span>
-                        <span className="text-xs text-gray-400">({(file.size / 1024).toFixed(1)} KB)</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeEditFile(index)}
-                        className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                <div className={`space-y-2 mt-2 ${editFileError ? 'border-2 border-red-500 rounded-lg p-2' : ''}`}>
+                  {editFiles.map((file, index) => {
+                    const fileSizeMB = file.size / (1024 * 1024);
+                    const isOversized = fileSizeMB > 25;
+                    return (
+                      <div 
+                        key={index} 
+                        className={`flex items-center justify-between p-2 rounded-lg group ${
+                          isOversized ? 'bg-red-50 border border-red-300' : 'bg-gray-50'
+                        }`}
                       >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-2 flex-1">
+                          <FileText size={16} className={isOversized ? "text-red-500" : "text-gray-500"} />
+                          <span className={`text-sm truncate ${isOversized ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
+                            {file.name}
+                          </span>
+                          <span className={`text-xs ${isOversized ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
+                            ({fileSizeMB >= 1 
+                              ? `${fileSizeMB.toFixed(2)} MB` 
+                              : `${(file.size / 1024).toFixed(1)} KB`}
+                            {isOversized && ' - Too large!'})
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeEditFile(index)}
+                          className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
+              )}
+              {editFileError && (
+                <p className="text-red-500 text-sm mt-1">{editFileError}</p>
               )}
             </div>
 
@@ -800,6 +846,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                   setEditFiles([]);
                   setRemovedImages([]);
                   setRemovedFiles([]);
+                  setEditFileError("");
                 }}
                 disabled={isUpdatingDiscussion}
                 className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300"
