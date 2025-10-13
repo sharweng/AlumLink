@@ -6,7 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { 
   Heart, 
   MessageCircle, 
-  Eye, 
+  Share2, 
   Trash2, 
   Edit, 
   FileText,
@@ -943,10 +943,17 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
           <span className="text-sm min-w-[20px] text-left">{getTotalCommentCount()}</span>
         </button>
         
-        <div className="flex items-center gap-2 text-gray-600">
-          <Eye size={20} />
-          <span className="text-sm min-w-[20px] text-left">{discussion.views || 0}</span>
-        </div>
+        <button
+          onClick={() => {
+            // Share functionality will be implemented later
+            console.log("Share clicked");
+          }}
+          className="flex items-center gap-2 text-gray-600 hover:text-primary transition-colors"
+          title="Share discussion"
+        >
+          <Share2 size={20} />
+          <span className="text-sm">Share</span>
+        </button>
       </div>
 
       {/* Comments Section */}

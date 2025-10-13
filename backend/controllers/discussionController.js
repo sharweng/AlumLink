@@ -30,11 +30,11 @@ export const getAllDiscussions = async (req, res) => {
         }
         
         // Determine sort order
-        let sortOption = { createdAt: -1 }; // default: most recent
-        if (sort === 'popular') {
-            sortOption = { views: -1 };
+        let sortOption = { createdAt: -1 }; // default: most recent (newest first)
+        if (sort === 'oldest') {
+            sortOption = { createdAt: 1 }; // oldest first
         } else if (sort === 'mostLiked') {
-            // This creates a virtual field for likes count
+            // Sort by number of likes (descending)
             sortOption = { 'likes': -1 };
         }
         
@@ -55,15 +55,10 @@ export const getDiscussionById = async (req, res) => {
     try {
         const discussionId = req.params.id;
         
-        // Increment view count
-        const discussion = await Discussion.findByIdAndUpdate(
-            discussionId,
-            { $inc: { views: 1 } },
-            { new: true }
-        )
-        .populate("author", "name username profilePicture headline")
-        .populate("comments.user", "name username profilePicture headline")
-        .populate("comments.replies.user", "name username profilePicture");
+        const discussion = await Discussion.findById(discussionId)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture headline")
+            .populate("comments.replies.user", "name username profilePicture");
 
         if (!discussion) {
             return res.status(404).json({ message: "Discussion not found" });

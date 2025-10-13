@@ -58,10 +58,6 @@ const discussionSchema = new mongoose.Schema({
             editedAt: { type: Date },
         }]
     }],
-    views: {
-        type: Number,
-        default: 0,
-    },
     isPinned: {
         type: Boolean,
         default: false,
