@@ -15,7 +15,8 @@ import {
   Loader,
   Send,
   Check,
-  Reply as ReplyIcon
+  Reply as ReplyIcon,
+  HeartOff
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -31,6 +32,8 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
   const [newReply, setNewReply] = useState("");
   const [editingReplyId, setEditingReplyId] = useState(null);
   const [editingReplyContent, setEditingReplyContent] = useState("");
+  const [expandedComments, setExpandedComments] = useState(new Set());
+  const [commentSortOrder, setCommentSortOrder] = useState("newest"); // newest, oldest, topLiked
   
   const isOwner = authUser?._id === discussion.author._id;
   const isLiked = discussion.likes?.includes(authUser?._id);
@@ -63,6 +66,34 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
       }
     });
     return total;
+  };
+
+  // Sort comments based on selected order
+  const getSortedComments = () => {
+    if (!discussion.comments) return [];
+    
+    const comments = [...discussion.comments];
+    
+    switch (commentSortOrder) {
+      case "newest":
+        return comments.reverse(); // Newest first (reverse chronological)
+      case "oldest":
+        return comments; // Oldest first (chronological)
+      case "topLiked":
+        return comments.sort((a, b) => {
+          const aLikes = (a.likes?.length || 0) - (a.dislikes?.length || 0);
+          const bLikes = (b.likes?.length || 0) - (b.dislikes?.length || 0);
+          
+          // If net likes are equal, sort by newest first
+          if (bLikes === aLikes) {
+            return new Date(b.createdAt) - new Date(a.createdAt);
+          }
+          
+          return bLikes - aLikes; // Sort by net likes (likes - dislikes)
+        });
+      default:
+        return comments.reverse();
+    }
   };
 
   const { mutate: deleteDiscussion, isPending: isDeletingDiscussion } = useMutation({
@@ -185,6 +216,32 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
     },
   });
 
+  const { mutate: likeComment } = useMutation({
+    mutationFn: async (commentId) => {
+      await axiosInstance.post(`/discussions/${discussion._id}/comment/${commentId}/like`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["discussions"] });
+      queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to like comment");
+    },
+  });
+
+  const { mutate: dislikeComment } = useMutation({
+    mutationFn: async (commentId) => {
+      await axiosInstance.post(`/discussions/${discussion._id}/comment/${commentId}/dislike`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["discussions"] });
+      queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to dislike comment");
+    },
+  });
+
   const handleAddComment = (e) => {
     e.preventDefault();
     if (newComment.trim()) {
@@ -241,6 +298,18 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
   const handleCancelReplyEdit = () => {
     setEditingReplyId(null);
     setEditingReplyContent("");
+  };
+
+  const toggleReplies = (commentId) => {
+    setExpandedComments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(commentId)) {
+        newSet.delete(commentId);
+      } else {
+        newSet.add(commentId);
+      }
+      return newSet;
+    });
   };
 
   const getCategoryColor = (category) => {
@@ -390,7 +459,7 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
           className={`flex items-center gap-2 ${isLiked ? 'text-red-500' : 'text-gray-600'} hover:text-red-500 transition-colors`}
         >
           <Heart size={20} fill={isLiked ? 'currentColor' : 'none'} />
-          <span className="text-sm">{discussion.likes?.length || 0}</span>
+          <span className="text-sm min-w-[20px] text-left">{discussion.likes?.length || 0}</span>
         </button>
         
         <button
@@ -398,18 +467,34 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
           className="flex items-center gap-2 text-gray-600 hover:text-primary transition-colors"
         >
           <MessageCircle size={20} />
-          <span className="text-sm">{getTotalCommentCount()}</span>
+          <span className="text-sm min-w-[20px] text-left">{getTotalCommentCount()}</span>
         </button>
         
         <div className="flex items-center gap-2 text-gray-600">
           <Eye size={20} />
-          <span className="text-sm">{discussion.views || 0}</span>
+          <span className="text-sm min-w-[20px] text-left">{discussion.views || 0}</span>
         </div>
       </div>
 
       {/* Comments Section */}
       {showComments && (
         <div className="mt-4 pt-4 border-t border-gray-200 px-4 pb-4">
+          {/* Sort Options */}
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="font-semibold text-gray-900">
+              {getTotalCommentCount()} {getTotalCommentCount() === 1 ? 'Comment' : 'Comments'}
+            </h3>
+            <select
+              value={commentSortOrder}
+              onChange={(e) => setCommentSortOrder(e.target.value)}
+              className="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="newest">Newest First</option>
+              <option value="topLiked">Top Liked</option>
+              <option value="oldest">Oldest First</option>
+            </select>
+          </div>
+
           {/* Add Comment */}
           <form onSubmit={handleAddComment} className="mb-4">
             <div className="flex gap-3">
@@ -445,7 +530,7 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
 
           {/* Comments List */}
           <div className="space-y-3">
-            {discussion.comments?.map((comment) => {
+            {getSortedComments().map((comment) => {
               const isCommentOwner = comment.user?._id === authUser?._id;
               const isEditingThisComment = editingCommentId === comment._id;
               
@@ -531,19 +616,44 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
                       ) : (
                         <>
                           <p className="text-gray-700 text-sm">{renderTextWithMentions(comment.content)}</p>
-                          <button
-                            onClick={() => handleReplyToComment(comment._id, comment.user?.username)}
-                            className="mt-2 text-xs text-primary hover:text-red-700 flex items-center gap-1"
-                          >
-                            <ReplyIcon size={12} />
-                            Reply
-                          </button>
+                          <div className="flex items-center gap-4 mt-2">
+                            <button
+                              onClick={() => likeComment(comment._id)}
+                              className={`flex items-center gap-1 text-xs ${comment.likes?.includes(authUser?._id) ? 'text-red-500' : 'text-gray-600'} hover:text-red-500 transition-colors`}
+                            >
+                              <Heart size={14} fill={comment.likes?.includes(authUser?._id) ? 'currentColor' : 'none'} />
+                              <span className="min-w-[16px] text-left">{comment.likes?.length || 0}</span>
+                            </button>
+                            <button
+                              onClick={() => dislikeComment(comment._id)}
+                              className={`flex items-center gap-1 text-xs ${comment.dislikes?.includes(authUser?._id) ? 'text-blue-500' : 'text-gray-600'} hover:text-blue-500 transition-colors`}
+                            >
+                              <HeartOff size={14} fill={comment.dislikes?.includes(authUser?._id) ? 'currentColor' : 'none'} />
+                              <span className="min-w-[16px] text-left">{comment.dislikes?.length || 0}</span>
+                            </button>
+                            <button
+                              onClick={() => handleReplyToComment(comment._id, comment.user?.username)}
+                              className="text-xs text-primary hover:text-red-700 flex items-center gap-1"
+                            >
+                              <ReplyIcon size={12} />
+                              Reply
+                            </button>
+                          </div>
+                          {comment.replies && comment.replies.length > 0 && (
+                            <button
+                              onClick={() => toggleReplies(comment._id)}
+                              className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1 mt-1"
+                            >
+                              {expandedComments.has(comment._id) ? '▼ ' : '▶ '} 
+                              {comment.replies.length} {comment.replies.length === 1 ? 'reply' : 'replies'}
+                            </button>
+                          )}
                         </>
                       )}
                     </div>
 
                     {/* Replies */}
-                    {comment.replies && comment.replies.length > 0 && (
+                    {comment.replies && comment.replies.length > 0 && expandedComments.has(comment._id) && (
                       <div className="mt-2 ml-4 space-y-2">
                         {comment.replies.map((reply) => {
                           const isReplyOwner = reply.user?._id === authUser?._id;

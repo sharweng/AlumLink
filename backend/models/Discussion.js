@@ -42,6 +42,14 @@ const discussionSchema = new mongoose.Schema({
         user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         createdAt: { type: Date, default: Date.now },
         editedAt: { type: Date },
+        likes: [{ 
+            type: mongoose.Schema.Types.ObjectId, 
+            ref: "User" 
+        }],
+        dislikes: [{ 
+            type: mongoose.Schema.Types.ObjectId, 
+            ref: "User" 
+        }],
         replies: [{
             content: { type: String },
             user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },

@@ -534,3 +534,101 @@ export const updateReply = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+export const likeComment = async (req, res) => {
+    try {
+        const { id, commentId } = req.params;
+        const userId = req.user._id;
+
+        const discussion = await Discussion.findById(id);
+
+        if (!discussion) {
+            return res.status(404).json({ message: "Discussion not found" });
+        }
+
+        const comment = discussion.comments.id(commentId);
+
+        if (!comment) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        // Initialize likes and dislikes if they don't exist
+        if (!comment.likes) comment.likes = [];
+        if (!comment.dislikes) comment.dislikes = [];
+
+        const hasLiked = comment.likes.includes(userId);
+        const hasDisliked = comment.dislikes.includes(userId);
+
+        if (hasLiked) {
+            // Remove like
+            comment.likes = comment.likes.filter(id => id.toString() !== userId.toString());
+        } else {
+            // Add like and remove dislike if exists
+            comment.likes.push(userId);
+            if (hasDisliked) {
+                comment.dislikes = comment.dislikes.filter(id => id.toString() !== userId.toString());
+            }
+        }
+
+        await discussion.save();
+
+        const populatedDiscussion = await Discussion.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
+
+        res.status(200).json(populatedDiscussion);
+    } catch (error) {
+        console.log("Error in likeComment:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const dislikeComment = async (req, res) => {
+    try {
+        const { id, commentId } = req.params;
+        const userId = req.user._id;
+
+        const discussion = await Discussion.findById(id);
+
+        if (!discussion) {
+            return res.status(404).json({ message: "Discussion not found" });
+        }
+
+        const comment = discussion.comments.id(commentId);
+
+        if (!comment) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        // Initialize likes and dislikes if they don't exist
+        if (!comment.likes) comment.likes = [];
+        if (!comment.dislikes) comment.dislikes = [];
+
+        const hasLiked = comment.likes.includes(userId);
+        const hasDisliked = comment.dislikes.includes(userId);
+
+        if (hasDisliked) {
+            // Remove dislike
+            comment.dislikes = comment.dislikes.filter(id => id.toString() !== userId.toString());
+        } else {
+            // Add dislike and remove like if exists
+            comment.dislikes.push(userId);
+            if (hasLiked) {
+                comment.likes = comment.likes.filter(id => id.toString() !== userId.toString());
+            }
+        }
+
+        await discussion.save();
+
+        const populatedDiscussion = await Discussion.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
+
+        res.status(200).json(populatedDiscussion);
+    } catch (error) {
+        console.log("Error in dislikeComment:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
