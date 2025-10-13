@@ -278,15 +278,28 @@ const NotificationsPage = () => {
 			url += `?comment=${notification.relatedComment}`;
 		}
 
+		// Determine what content to show
+		const isCommentNotification = ['discussionCommentLike', 'discussionCommentDislike', 'discussionReply', 'discussionMention'].includes(notification.type);
+		const showCommentContent = isCommentNotification && notification.commentContent;
+
 		return (
 			<Link
 				to={url}
 				className='mt-2 p-2 bg-gray-50 rounded-md flex items-center space-x-2 hover:bg-gray-100 transition-colors'
 			>
 				<div className='flex-1 overflow-hidden'>
-					<p className='text-sm font-medium text-gray-900 truncate'>{relatedDiscussion.title}</p>
-					{relatedDiscussion.category && (
-						<p className='text-xs text-gray-600'>{relatedDiscussion.category}</p>
+					{showCommentContent ? (
+						<>
+							<p className='text-sm text-gray-700 truncate italic'>"{notification.commentContent}"</p>
+							<p className='text-xs text-gray-500 mt-0.5'>in {relatedDiscussion.title}</p>
+						</>
+					) : (
+						<>
+							<p className='text-sm font-medium text-gray-900 truncate'>{relatedDiscussion.title}</p>
+							{relatedDiscussion.category && (
+								<p className='text-xs text-gray-600'>{relatedDiscussion.category}</p>
+							)}
+						</>
 					)}
 				</div>
 				<ExternalLink size={14} className='text-gray-400' />

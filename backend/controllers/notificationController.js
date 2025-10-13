@@ -1,4 +1,5 @@
 import Notification from "../models/Notification.js"
+import Discussion from "../models/Discussion.js"
 
 export const getUserNotifications = async (req, res) => {
     try {
@@ -8,7 +9,40 @@ export const getUserNotifications = async (req, res) => {
         .populate("relatedJobPost", "title company location")
         .populate("relatedDiscussion", "title category")
 
-        res.status(200).json(notifications)
+        // For discussion notifications with comments, add comment content
+        const notificationsWithComments = await Promise.all(
+            notifications.map(async (notification) => {
+                const notifObj = notification.toObject();
+                
+                // If notification has a related comment, fetch the comment content
+                if (notifObj.relatedDiscussion && notifObj.relatedComment) {
+                    try {
+                        const discussion = await Discussion.findById(notifObj.relatedDiscussion._id);
+                        if (discussion) {
+                            const comment = discussion.comments.id(notifObj.relatedComment);
+                            if (comment) {
+                                notifObj.commentContent = comment.content;
+                                
+                                // If it's a reply notification, get the reply content instead
+                                if (notifObj.relatedReply) {
+                                    const reply = comment.replies.id(notifObj.relatedReply);
+                                    if (reply) {
+                                        notifObj.commentContent = reply.content;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        // If error fetching comment, just continue without it
+                        console.log("Error fetching comment content:", err.message);
+                    }
+                }
+                
+                return notifObj;
+            })
+        );
+
+        res.status(200).json(notificationsWithComments)
     } catch (error) {
         console.log("Error in getUserNotifications notificationController:", error.message)
         res.status(500).json({ message: "Internal server error" })
