@@ -135,13 +135,21 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
 
   const { mutate: createComment, isPending: isCreatingComment } = useMutation({
     mutationFn: async (content) => {
-      await axiosInstance.post(`/discussions/${discussion._id}/comment`, { content });
+      const response = await axiosInstance.post(`/discussions/${discussion._id}/comment`, { content });
+      return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["discussions"] });
       queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
       setNewComment("");
       toast.success("Comment added successfully");
+      
+      // Get the newly created comment (last one in the array)
+      if (data.comments && data.comments.length > 0) {
+        const newComment = data.comments[data.comments.length - 1];
+        // Navigate to the new comment
+        navigate(`/discussion/${discussion._id}?comment=${newComment._id}`);
+      }
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || "Failed to add comment");
@@ -180,14 +188,25 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
 
   const { mutate: createReply, isPending: isCreatingReply } = useMutation({
     mutationFn: async ({ commentId, content }) => {
-      await axiosInstance.post(`/discussions/${discussion._id}/comment/${commentId}/reply`, { content });
+      const response = await axiosInstance.post(`/discussions/${discussion._id}/comment/${commentId}/reply`, { content });
+      return { data: response.data, commentId };
     },
-    onSuccess: () => {
+    onSuccess: ({ data, commentId }) => {
       queryClient.invalidateQueries({ queryKey: ["discussions"] });
       queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
       setReplyingToCommentId(null);
       setNewReply("");
       toast.success("Reply added successfully");
+      
+      // Find the comment and get the newly created reply
+      if (data.comments) {
+        const comment = data.comments.find(c => c._id === commentId);
+        if (comment && comment.replies && comment.replies.length > 0) {
+          const newReply = comment.replies[comment.replies.length - 1];
+          // Navigate to the new reply
+          navigate(`/discussion/${discussion._id}?comment=${commentId}&reply=${newReply._id}`);
+        }
+      }
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || "Failed to add reply");
