@@ -1,4 +1,5 @@
 import cloudinary from "../lib/cloudinary.js";
+import { uploadFileToR2, deleteFileFromR2, extractR2Key } from "../lib/r2.js";
 import Notification from "../models/Notification.js";
 import Discussion from "../models/Discussion.js";
 import User from "../models/User.js";
@@ -94,15 +95,13 @@ export const createDiscussion = async (req, res) => {
             }
         }
 
-        // Upload files to cloudinary (documents, pdfs, etc.)
+        // Upload files to R2 (documents, pdfs, etc.)
         if (files && Array.isArray(files)) {
             for (const file of files) {
-                const fileResult = await cloudinary.uploader.upload(file.data, {
-                    resource_type: 'auto',
-                    folder: 'discussion_files'
-                });
+                const { url, key } = await uploadFileToR2(file.data, file.name, file.type);
                 uploadedFiles.push({
-                    url: fileResult.secure_url,
+                    url: url,
+                    key: key, // Store the R2 key for easier deletion
                     name: file.name,
                     type: file.type,
                     size: file.size
@@ -178,9 +177,16 @@ export const updateDiscussion = async (req, res) => {
         // Handle removed files
         if (removedFiles && Array.isArray(removedFiles) && removedFiles.length > 0) {
             for (const fileUrl of removedFiles) {
-                // Delete from cloudinary
-                const publicId = fileUrl.split("/").pop().split(".")[0];
-                await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
+                // Find the file in the discussion to get its key
+                const fileToRemove = discussion.files.find(file => file.url === fileUrl);
+                if (fileToRemove && fileToRemove.key) {
+                    // Delete from R2 using the stored key
+                    await deleteFileFromR2(fileToRemove.key);
+                } else {
+                    // Fallback: extract key from URL
+                    const key = extractR2Key(fileUrl);
+                    await deleteFileFromR2(key);
+                }
                 
                 // Remove from discussion.files array
                 discussion.files = discussion.files.filter(file => file.url !== fileUrl);
@@ -190,12 +196,10 @@ export const updateDiscussion = async (req, res) => {
         // Handle new files
         if (newFiles && Array.isArray(newFiles) && newFiles.length > 0) {
             for (const file of newFiles) {
-                const fileResult = await cloudinary.uploader.upload(file.data, {
-                    resource_type: 'auto',
-                    folder: 'discussion_files'
-                });
+                const { url, key } = await uploadFileToR2(file.data, file.name, file.type);
                 discussion.files.push({
-                    url: fileResult.secure_url,
+                    url: url,
+                    key: key, // Store the R2 key for easier deletion
                     name: file.name,
                     type: file.type,
                     size: file.size
@@ -240,10 +244,16 @@ export const deleteDiscussion = async (req, res) => {
             await cloudinary.uploader.destroy(publicId);
         }
 
-        // Delete files from cloudinary
+        // Delete files from R2
         for (const file of discussion.files) {
-            const publicId = file.url.split("/").pop().split(".")[0];
-            await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
+            if (file.key) {
+                // Use stored key
+                await deleteFileFromR2(file.key);
+            } else {
+                // Fallback: extract key from URL
+                const key = extractR2Key(file.url);
+                await deleteFileFromR2(key);
+            }
         }
 
         await Discussion.findByIdAndDelete(discussionId);

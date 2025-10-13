@@ -22,3 +22,9 @@ CLOUDINARY_LOGO_URL = https://res.cloudinary.com/dcug5cq7c/image/upload/v1758611
 CLOUDINARY_API_KEY = 
 CLOUDINARY_CLOUD_NAME = 
 CLOUDINARY_API_SECRET = 
+
+R2_ACCOUNT_ID=your_account_id
+R2_ACCESS_KEY_ID=your_access_key_id
+R2_SECRET_ACCESS_KEY=your_secret_access_key
+R2_BUCKET_NAME=alumlink-files
+R2_PUBLIC_URL=your_public_url

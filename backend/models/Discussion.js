@@ -20,6 +20,7 @@ const discussionSchema = new mongoose.Schema({
     }],
     files: [{
         url: { type: String },
+        key: { type: String }, // R2 storage key for deletion
         name: { type: String },
         type: { type: String },
         size: { type: Number },
