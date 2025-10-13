@@ -1,5 +1,5 @@
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-const DiscussionPost = ({ discussion, isDetailView = false }) => {
+const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = null }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const authUser = queryClient.getQueryData(["authUser"]);
@@ -37,6 +37,14 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
   
   const isOwner = authUser?._id === discussion.author._id;
   const isLiked = discussion.likes?.includes(authUser?._id);
+
+  // Auto-expand comment if commentIdToExpand is provided
+  useEffect(() => {
+    if (commentIdToExpand) {
+      setShowComments(true);
+      setExpandedComments(new Set([commentIdToExpand]));
+    }
+  }, [commentIdToExpand]);
 
   // Helper function to render text with @mentions highlighted
   const renderTextWithMentions = (text) => {
@@ -535,7 +543,7 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
               const isEditingThisComment = editingCommentId === comment._id;
               
               return (
-                <div key={comment._id} className="flex gap-3">
+                <div key={comment._id} id={comment._id} className="flex gap-3">
                   <Link to={`/profile/${comment.user?.username}`}>
                     <img
                       src={comment.user?.profilePicture || "/avatar.png"}
@@ -544,7 +552,7 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
                     />
                   </Link>
                   <div className="flex-1">
-                    <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="bg-gray-50 rounded-lg p-3 transition-colors duration-500">
                       <div className="flex items-center justify-between mb-1">
                         <Link to={`/profile/${comment.user?.username}`}>
                           <h4 className="font-medium text-gray-900 hover:underline">
@@ -660,7 +668,7 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
                           const isEditingThisReply = editingReplyId === reply._id;
                           
                           return (
-                            <div key={reply._id} className="flex gap-2">
+                            <div key={reply._id} id={reply._id} className="flex gap-2">
                               <Link to={`/profile/${reply.user?.username}`}>
                                 <img
                                   src={reply.user?.profilePicture || "/avatar.png"}
@@ -668,7 +676,7 @@ const DiscussionPost = ({ discussion, isDetailView = false }) => {
                                   className="w-6 h-6 rounded-full object-cover"
                                 />
                               </Link>
-                              <div className="flex-1 bg-gray-100 rounded-lg p-2">
+                              <div className="flex-1 bg-gray-100 rounded-lg p-2 transition-colors duration-500">
                                 <div className="flex items-center justify-between mb-1">
                                   <Link to={`/profile/${reply.user?.username}`}>
                                     <h5 className="font-medium text-sm text-gray-900 hover:underline">

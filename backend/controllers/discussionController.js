@@ -1,6 +1,7 @@
 import cloudinary from "../lib/cloudinary.js";
 import Notification from "../models/Notification.js";
 import Discussion from "../models/Discussion.js";
+import User from "../models/User.js";
 
 export const getAllDiscussions = async (req, res) => {
     try {
@@ -271,9 +272,9 @@ export const likeDiscussion = async (req, res) => {
             if (discussion.author.toString() !== userId.toString()) {
                 const newNotification = new Notification({
                     recipient: discussion.author,
-                    type: "like",
+                    type: "discussionLike",
                     relatedUser: userId,
-                    relatedPost: discussion._id,
+                    relatedDiscussion: discussion._id,
                 });
 
                 await newNotification.save();
@@ -310,16 +311,47 @@ export const createComment = async (req, res) => {
             return res.status(404).json({ message: "Discussion not found" });
         }
 
+        // Get the newly created comment
+        const newComment = discussion.comments[discussion.comments.length - 1];
+
         // Create notification if commenter is not the author
         if (discussion.author._id.toString() !== req.user._id.toString()) {
             const newNotification = new Notification({
                 recipient: discussion.author._id,
-                type: "comment",
+                type: "discussionComment",
                 relatedUser: req.user._id,
-                relatedPost: discussion._id,
+                relatedDiscussion: discussion._id,
+                relatedComment: newComment._id.toString(),
             });
 
             await newNotification.save();
+        }
+
+        // Check for mentions in the comment and create notifications
+        const mentionRegex = /@(\w+)/g;
+        const mentions = content.match(mentionRegex);
+        
+        if (mentions) {
+            const usernames = mentions.map(m => m.substring(1)); // Remove @ symbol
+            const mentionedUsers = await User.find({ 
+                username: { $in: usernames },
+                _id: { $ne: req.user._id } // Don't notify yourself
+            });
+
+            for (const mentionedUser of mentionedUsers) {
+                // Don't create duplicate notification if already notified as discussion author
+                if (mentionedUser._id.toString() !== discussion.author._id.toString()) {
+                    const mentionNotification = new Notification({
+                        recipient: mentionedUser._id,
+                        type: "discussionMention",
+                        relatedUser: req.user._id,
+                        relatedDiscussion: discussion._id,
+                        relatedComment: newComment._id.toString(),
+                    });
+
+                    await mentionNotification.save();
+                }
+            }
         }
 
         res.status(200).json(discussion);
@@ -440,6 +472,51 @@ export const createReply = async (req, res) => {
             .populate("author", "name email username profilePicture headline")
             .populate("comments.user", "name username profilePicture")
             .populate("comments.replies.user", "name username profilePicture");
+
+        // Get the newly created reply
+        const newReply = comment.replies[comment.replies.length - 1];
+
+        // Create notification for the comment author if replier is not the comment author
+        if (comment.user.toString() !== req.user._id.toString()) {
+            const newNotification = new Notification({
+                recipient: comment.user,
+                type: "discussionReply",
+                relatedUser: req.user._id,
+                relatedDiscussion: discussion._id,
+                relatedComment: comment._id.toString(),
+                relatedReply: newReply._id.toString(),
+            });
+
+            await newNotification.save();
+        }
+
+        // Check for mentions in the reply and create notifications
+        const mentionRegex = /@(\w+)/g;
+        const mentions = content.match(mentionRegex);
+        
+        if (mentions) {
+            const usernames = mentions.map(m => m.substring(1)); // Remove @ symbol
+            const mentionedUsers = await User.find({ 
+                username: { $in: usernames },
+                _id: { $ne: req.user._id } // Don't notify yourself
+            });
+
+            for (const mentionedUser of mentionedUsers) {
+                // Don't create duplicate notification if already notified as comment author
+                if (mentionedUser._id.toString() !== comment.user.toString()) {
+                    const mentionNotification = new Notification({
+                        recipient: mentionedUser._id,
+                        type: "discussionMention",
+                        relatedUser: req.user._id,
+                        relatedDiscussion: discussion._id,
+                        relatedComment: comment._id.toString(),
+                        relatedReply: newReply._id.toString(),
+                    });
+
+                    await mentionNotification.save();
+                }
+            }
+        }
 
         res.status(200).json(populatedDiscussion);
     } catch (error) {
@@ -568,6 +645,19 @@ export const likeComment = async (req, res) => {
             if (hasDisliked) {
                 comment.dislikes = comment.dislikes.filter(id => id.toString() !== userId.toString());
             }
+
+            // Create notification if liker is not the comment author
+            if (comment.user.toString() !== userId.toString()) {
+                const newNotification = new Notification({
+                    recipient: comment.user,
+                    type: "discussionCommentLike",
+                    relatedUser: userId,
+                    relatedDiscussion: discussion._id,
+                    relatedComment: commentId,
+                });
+
+                await newNotification.save();
+            }
         }
 
         await discussion.save();
@@ -616,6 +706,19 @@ export const dislikeComment = async (req, res) => {
             comment.dislikes.push(userId);
             if (hasLiked) {
                 comment.likes = comment.likes.filter(id => id.toString() !== userId.toString());
+            }
+
+            // Create notification if disliker is not the comment author
+            if (comment.user.toString() !== userId.toString()) {
+                const newNotification = new Notification({
+                    recipient: comment.user,
+                    type: "discussionCommentDislike",
+                    relatedUser: userId,
+                    relatedDiscussion: discussion._id,
+                    relatedComment: commentId,
+                });
+
+                await newNotification.save();
             }
         }
 

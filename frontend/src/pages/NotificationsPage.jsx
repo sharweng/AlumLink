@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { axiosInstance } from '../lib/axios'
 import toast from 'react-hot-toast'
-import { ExternalLink, Eye, Heart, MessageSquare, Trash2, UserPlus, CheckCircle2, Briefcase, X } from 'lucide-react'
+import { ExternalLink, Eye, Heart, MessageSquare, Trash2, UserPlus, CheckCircle2, Briefcase, X, AtSign, Reply, HeartOff } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import Sidebar from '../components/Sidebar'
@@ -59,6 +59,9 @@ const NotificationsPage = () => {
     } else if (activeTab === 'jobs') {
       // Jobs tab: notifications with relatedJobPost (job posts) 
       filtered = notifications.filter(notification => notification.relatedJobPost)
+    } else if (activeTab === 'forums') {
+      // Forums tab: notifications with relatedDiscussion
+      filtered = notifications.filter(notification => notification.relatedDiscussion)
     }
     // 'all' tab shows everything, so no filtering needed
     
@@ -68,6 +71,14 @@ const NotificationsPage = () => {
         filtered = filtered.filter(n => n.type === 'jobApplication' || n.type === 'jobApplicationCancelled')
       } else if (filter === 'link') {
         filtered = filtered.filter(n => n.type === 'linkAccepted')
+      } else if (filter === 'discussionLike') {
+        filtered = filtered.filter(n => n.type === 'discussionLike')
+      } else if (filter === 'discussionComment') {
+        filtered = filtered.filter(n => n.type === 'discussionComment')
+      } else if (filter === 'discussionReply') {
+        filtered = filtered.filter(n => n.type === 'discussionReply')
+      } else if (filter === 'discussionMention') {
+        filtered = filtered.filter(n => n.type === 'discussionMention')
       } else {
         filtered = filtered.filter(n => n.type === filter)
       }
@@ -88,6 +99,18 @@ const NotificationsPage = () => {
         return <Briefcase className='text-blue-500' />
       case "jobApplicationCancelled":
         return <X className='text-red-500' />
+      case "discussionLike":
+        return <Heart className='text-red-500' />
+      case "discussionComment":
+        return <MessageSquare className='text-green-500' />
+      case "discussionReply":
+        return <Reply className='text-blue-500' />
+      case "discussionMention":
+        return <AtSign className='text-purple-500' />
+      case "discussionCommentLike":
+        return <Heart className='text-red-500' />
+      case "discussionCommentDislike":
+        return <HeartOff className='text-gray-500' />
       default:
         return null
     }
@@ -95,6 +118,7 @@ const NotificationsPage = () => {
 
   const renderNotificationContent = (notification) => {
 		const isJobNotification = !!notification.relatedJobPost;
+		const isDiscussionNotification = !!notification.relatedDiscussion;
 		
 		switch (notification.type) {
 			case "like":
@@ -142,6 +166,60 @@ const NotificationsPage = () => {
 						cancelled their application to your job post
 					</span>
 				);
+			case "discussionLike":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						liked your discussion
+					</span>
+				);
+			case "discussionComment":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						commented on your discussion
+					</span>
+				);
+			case "discussionReply":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						replied to your comment
+					</span>
+				);
+			case "discussionMention":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						mentioned you in a {isDiscussionNotification ? 'discussion' : 'post'}
+					</span>
+				);
+			case "discussionCommentLike":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						liked your comment
+					</span>
+				);
+			case "discussionCommentDislike":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						disliked your comment
+					</span>
+				);
 			default:
 				return null;
 		}
@@ -185,6 +263,37 @@ const NotificationsPage = () => {
 		);
 	};
 
+	const renderRelatedDiscussion = (relatedDiscussion, notification) => {
+		if (!relatedDiscussion) return null;
+
+		// Build URL with query params for comment/reply navigation
+		let url = `/discussion/${relatedDiscussion._id}`;
+		
+		// Add parameters based on notification type
+		if (notification.relatedReply) {
+			// For replies and mentions in replies - scroll directly to the reply
+			url += `?comment=${notification.relatedComment}&reply=${notification.relatedReply}`;
+		} else if (notification.relatedComment) {
+			// For comments, likes, dislikes, mentions in comments - scroll to the comment itself
+			url += `?comment=${notification.relatedComment}`;
+		}
+
+		return (
+			<Link
+				to={url}
+				className='mt-2 p-2 bg-gray-50 rounded-md flex items-center space-x-2 hover:bg-gray-100 transition-colors'
+			>
+				<div className='flex-1 overflow-hidden'>
+					<p className='text-sm font-medium text-gray-900 truncate'>{relatedDiscussion.title}</p>
+					{relatedDiscussion.category && (
+						<p className='text-xs text-gray-600'>{relatedDiscussion.category}</p>
+					)}
+				</div>
+				<ExternalLink size={14} className='text-gray-400' />
+			</Link>
+		);
+	};
+
 
 
   return (
@@ -213,7 +322,7 @@ const NotificationsPage = () => {
 									<button
 										onClick={() => {
 											setActiveTab('all')
-											setJobFilter('all')
+											setFilter('all')
 										}}
 										className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
 											activeTab === 'all'
@@ -226,7 +335,7 @@ const NotificationsPage = () => {
 									<button
 										onClick={() => {
 											setActiveTab('posts')
-											setJobFilter('all')
+											setFilter('all')
 										}}
 										className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
 											activeTab === 'posts'
@@ -239,7 +348,7 @@ const NotificationsPage = () => {
 									<button
 										onClick={() => {
 											setActiveTab('jobs')
-											setJobFilter('all')
+											setFilter('all')
 										}}
 										className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
 											activeTab === 'jobs'
@@ -248,6 +357,19 @@ const NotificationsPage = () => {
 										}`}
 									>
 										Jobs
+									</button>
+									<button
+										onClick={() => {
+											setActiveTab('forums')
+											setFilter('all')
+										}}
+										className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+											activeTab === 'forums'
+												? 'bg-white text-gray-900 shadow-sm'
+												: 'text-gray-600 hover:text-gray-900'
+										}`}
+									>
+										Forums
 									</button>
 								</div>
 
@@ -263,26 +385,30 @@ const NotificationsPage = () => {
 									>
 										All
 									</button>
-									<button
-										onClick={() => setFilter('like')}
-										className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-											filter === 'like'
-												? 'bg-red-500 text-white'
-												: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-										}`}
-									>
-										Likes
-									</button>
-									<button
-										onClick={() => setFilter('comment')}
-										className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-											filter === 'comment'
-												? 'bg-green-500 text-white'
-												: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-										}`}
-									>
-										Comments
-									</button>
+									{(activeTab === 'all' || activeTab === 'posts' || activeTab === 'jobs') && (
+										<button
+											onClick={() => setFilter('like')}
+											className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+												filter === 'like'
+													? 'bg-red-500 text-white'
+													: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+											}`}
+										>
+											Likes
+										</button>
+									)}
+									{(activeTab === 'all' || activeTab === 'posts' || activeTab === 'jobs') && (
+										<button
+											onClick={() => setFilter('comment')}
+											className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+												filter === 'comment'
+													? 'bg-green-500 text-white'
+													: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+											}`}
+										>
+											Comments
+										</button>
+									)}
 									{(activeTab === 'all' || activeTab === 'jobs') && (
 										<button
 											onClick={() => setFilter('application')}
@@ -306,6 +432,50 @@ const NotificationsPage = () => {
 										>
 											Links
 										</button>
+									)}
+									{(activeTab === 'all' || activeTab === 'forums') && (
+										<>
+											<button
+												onClick={() => setFilter('discussionLike')}
+												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+													filter === 'discussionLike'
+														? 'bg-red-500 text-white'
+														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+												}`}
+											>
+												Likes
+											</button>
+											<button
+												onClick={() => setFilter('discussionComment')}
+												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+													filter === 'discussionComment'
+														? 'bg-green-500 text-white'
+														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+												}`}
+											>
+												Comments
+											</button>
+											<button
+												onClick={() => setFilter('discussionReply')}
+												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+													filter === 'discussionReply'
+														? 'bg-blue-500 text-white'
+														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+												}`}
+											>
+												Replies
+											</button>
+											<button
+												onClick={() => setFilter('discussionMention')}
+												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+													filter === 'discussionMention'
+														? 'bg-purple-500 text-white'
+														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+												}`}
+											>
+												Mentions
+											</button>
+										</>
 									)}
 								</div>
 
@@ -344,6 +514,7 @@ const NotificationsPage = () => {
 												</p>
 												{renderRelatedPost(notification.relatedPost)}
 												{renderRelatedJobPost(notification.relatedJobPost)}
+												{renderRelatedDiscussion(notification.relatedDiscussion, notification)}
 											</div>
 										</div>
 
@@ -376,6 +547,7 @@ const NotificationsPage = () => {
 								{activeTab === 'all' && 'No notifications at the moment.'}
 								{activeTab === 'posts' && 'No post notifications yet.'}
 								{activeTab === 'jobs' && 'No job notifications yet.'}
+								{activeTab === 'forums' && 'No forum notifications yet.'}
 							</p>
 						</div>
 					)}
