@@ -13,6 +13,7 @@ const DiscussionCreation = ({ onClose }) => {
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState("");
   const [category, setCategory] = useState("General");
+  const [errors, setErrors] = useState({ title: "", content: "" });
 
   const queryClient = useQueryClient();
 
@@ -37,12 +38,25 @@ const DiscussionCreation = ({ onClose }) => {
   });
 
   const handleDiscussionCreation = async () => {
+    // Reset errors
+    const newErrors = { title: "", content: "" };
+    let hasError = false;
+
+    // Validate title
     if (!title.trim()) {
-      toast.error("Please enter a title");
-      return;
+      newErrors.title = "Title is required";
+      hasError = true;
     }
+
+    // Validate content
     if (!content.trim()) {
-      toast.error("Please enter content");
+      newErrors.content = "Content is required";
+      hasError = true;
+    }
+
+    setErrors(newErrors);
+
+    if (hasError) {
       return;
     }
 
@@ -91,6 +105,7 @@ const DiscussionCreation = ({ onClose }) => {
     setTags([]);
     setTagInput("");
     setCategory("General");
+    setErrors({ title: "", content: "" });
   };
 
   const handleImageChange = (e) => {
@@ -163,10 +178,20 @@ const DiscussionCreation = ({ onClose }) => {
         <input
           type="text"
           placeholder="Enter discussion title..."
-          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 ${
+            errors.title 
+              ? 'border-red-500 focus:ring-red-500' 
+              : 'border-gray-300 focus:ring-primary'
+          }`}
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            if (errors.title) setErrors({ ...errors, title: "" });
+          }}
         />
+        {errors.title && (
+          <p className="text-red-500 text-sm mt-1">{errors.title}</p>
+        )}
       </div>
 
       {/* Category Selection */}
@@ -188,10 +213,20 @@ const DiscussionCreation = ({ onClose }) => {
         <label className="block text-sm font-semibold mb-2">Content *</label>
         <textarea
           placeholder="Share your thoughts, ask questions, or start a discussion..."
-          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none min-h-[150px]"
+          className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 resize-none min-h-[150px] ${
+            errors.content 
+              ? 'border-red-500 focus:ring-red-500' 
+              : 'border-gray-300 focus:ring-primary'
+          }`}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={(e) => {
+            setContent(e.target.value);
+            if (errors.content) setErrors({ ...errors, content: "" });
+          }}
         />
+        {errors.content && (
+          <p className="text-red-500 text-sm mt-1">{errors.content}</p>
+        )}
       </div>
 
       {/* Tags Input */}

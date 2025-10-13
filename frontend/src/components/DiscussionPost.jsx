@@ -37,6 +37,17 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   const [expandedComments, setExpandedComments] = useState(new Set());
   const [commentSortOrder, setCommentSortOrder] = useState("newest"); // newest, oldest, topLiked
   const [selectedImage, setSelectedImage] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(discussion.title || "");
+  const [editContent, setEditContent] = useState(discussion.content || "");
+  const [editCategory, setEditCategory] = useState(discussion.category || "General");
+  const [editTags, setEditTags] = useState(discussion.tags || []);
+  const [editTagInput, setEditTagInput] = useState("");
+  const [editImages, setEditImages] = useState([]);
+  const [editImagePreviews, setEditImagePreviews] = useState([]);
+  const [editFiles, setEditFiles] = useState([]);
+  const [removedImages, setRemovedImages] = useState([]);
+  const [removedFiles, setRemovedFiles] = useState([]);
   
   const isOwner = authUser?._id === discussion.author._id;
   const isLiked = discussion.likes?.includes(authUser?._id);
@@ -106,6 +117,57 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         return comments.reverse();
     }
   };
+
+  const { mutate: updateDiscussion, isPending: isUpdatingDiscussion } = useMutation({
+    mutationFn: async () => {
+      const updateData = {
+        title: editTitle,
+        content: editContent,
+        category: editCategory,
+        tags: editTags,
+        removedImages,
+        removedFiles,
+      };
+
+      // Convert new images to base64
+      if (editImages.length > 0) {
+        const imageDataURLs = await Promise.all(
+          editImages.map(img => readFileAsDataURL(img))
+        );
+        updateData.newImages = imageDataURLs;
+      }
+
+      // Convert new files to base64 with metadata
+      if (editFiles.length > 0) {
+        const fileData = await Promise.all(
+          editFiles.map(async (file) => ({
+            data: await readFileAsDataURL(file),
+            name: file.name,
+            type: file.type,
+            size: file.size
+          }))
+        );
+        updateData.newFiles = fileData;
+      }
+
+      const response = await axiosInstance.put(`/discussions/${discussion._id}`, updateData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["discussions"] });
+      queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
+      setIsEditing(false);
+      setEditImages([]);
+      setEditImagePreviews([]);
+      setEditFiles([]);
+      setRemovedImages([]);
+      setRemovedFiles([]);
+      toast.success("Discussion updated successfully");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to update discussion");
+    },
+  });
 
   const { mutate: deleteDiscussion, isPending: isDeletingDiscussion } = useMutation({
     mutationFn: async () => {
@@ -272,6 +334,77 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
     },
   });
 
+  // Helper function to read file as data URL
+  const readFileAsDataURL = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handle image upload for edit
+  const handleEditImageChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    setEditImages([...editImages, ...selectedFiles]);
+    
+    selectedFiles.forEach(file => {
+      readFileAsDataURL(file).then(preview => {
+        setEditImagePreviews(prev => [...prev, preview]);
+      });
+    });
+  };
+
+  // Handle file upload for edit
+  const handleEditFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    setEditFiles([...editFiles, ...selectedFiles]);
+  };
+
+  // Remove new image from edit
+  const removeEditImage = (index) => {
+    setEditImages(editImages.filter((_, i) => i !== index));
+    setEditImagePreviews(editImagePreviews.filter((_, i) => i !== index));
+  };
+
+  // Remove new file from edit
+  const removeEditFile = (index) => {
+    setEditFiles(editFiles.filter((_, i) => i !== index));
+  };
+
+  // Mark existing image for removal
+  const removeExistingImage = (imageUrl) => {
+    setRemovedImages([...removedImages, imageUrl]);
+  };
+
+  // Mark existing file for removal
+  const removeExistingFile = (fileUrl) => {
+    setRemovedFiles([...removedFiles, fileUrl]);
+  };
+
+  // Add tag in edit mode
+  const addEditTag = () => {
+    const trimmedTag = editTagInput.trim();
+    if (trimmedTag && !editTags.includes(trimmedTag)) {
+      setEditTags([...editTags, trimmedTag]);
+      setEditTagInput("");
+    }
+  };
+
+  // Remove tag in edit mode
+  const removeEditTag = (tagToRemove) => {
+    setEditTags(editTags.filter(tag => tag !== tagToRemove));
+  };
+
+  // Handle tag input keydown in edit mode
+  const handleEditTagInputKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addEditTag();
+    }
+  };
+
   const handleAddComment = (e) => {
     e.preventDefault();
     if (newComment.trim()) {
@@ -388,8 +521,8 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
           {isOwner && (
             <div className="flex gap-2">
               <button
-                onClick={() => navigate(`/forums/${discussion._id}/edit`)}
-                className="text-blue-600 hover:bg-blue-50 p-2 rounded"
+                onClick={() => setIsEditing(true)}
+                className="text-green-600 hover:bg-green-50 p-2 rounded"
               >
                 <Edit size={18} />
               </button>
@@ -443,9 +576,249 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
           )}
         </div>
 
-        {/* Discussion Content */}
-        <p className="text-gray-700 whitespace-pre-wrap mb-4">{discussion.content}</p>
+        {/* Edit Form or Display Content */}
+        {isEditing ? (
+          <div className="mb-4 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Discussion title"
+              />
+            </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                rows={6}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="What's on your mind?"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <select
+                value={editCategory}
+                onChange={(e) => setEditCategory(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="General">General</option>
+                <option value="Technical">Technical</option>
+                <option value="Career">Career</option>
+                <option value="Events">Events</option>
+                <option value="Help">Help</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  placeholder="Add a tag and press Enter..."
+                  className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={editTagInput}
+                  onChange={(e) => setEditTagInput(e.target.value)}
+                  onKeyDown={handleEditTagInputKeyDown}
+                />
+                <button
+                  type="button"
+                  onClick={addEditTag}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                >
+                  Add
+                </button>
+              </div>
+              {editTags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {editTags.map((tag, index) => (
+                    <span key={index} className="flex items-center gap-1 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm">
+                      <Tag size={14} />
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeEditTag(tag)}
+                        className="ml-1 hover:text-red-600"
+                      >
+                        <X size={14} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Existing Images */}
+            {discussion.images && discussion.images.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Current Images</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {discussion.images.filter(img => !removedImages.includes(img)).map((image, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={image}
+                        alt={`Attachment ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeExistingImage(image)}
+                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* New Images */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Add Images</label>
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 cursor-pointer transition-colors">
+                  <ImageIcon size={20} />
+                  <span className="text-sm">Choose Images</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleEditImageChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              {editImagePreviews.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                  {editImagePreviews.map((preview, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={preview}
+                        alt={`New ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeEditImage(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Existing Files */}
+            {discussion.files && discussion.files.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Current Files</label>
+                <div className="space-y-2">
+                  {discussion.files.filter(file => !removedFiles.includes(file.url)).map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg group">
+                      <div className="flex items-center gap-2 flex-1">
+                        <FileText size={16} className="text-gray-500" />
+                        <span className="text-sm text-gray-700 truncate">{file.name}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeExistingFile(file.url)}
+                        className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* New Files */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Add Files</label>
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                  <FileText size={20} />
+                  <span className="text-sm">Choose Files</span>
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleEditFileChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              {editFiles.length > 0 && (
+                <div className="space-y-2 mt-2">
+                  {editFiles.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg group">
+                      <div className="flex items-center gap-2 flex-1">
+                        <FileText size={16} className="text-gray-500" />
+                        <span className="text-sm text-gray-700 truncate">{file.name}</span>
+                        <span className="text-xs text-gray-400">({(file.size / 1024).toFixed(1)} KB)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeEditFile(index)}
+                        className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => updateDiscussion()}
+                disabled={isUpdatingDiscussion || !editTitle.trim() || !editContent.trim()}
+                className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark disabled:opacity-50"
+              >
+                {isUpdatingDiscussion ? "Saving..." : "Save Changes"}
+              </button>
+              <button
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditTitle(discussion.title);
+                  setEditContent(discussion.content);
+                  setEditCategory(discussion.category);
+                  setEditTags(discussion.tags);
+                  setEditTagInput("");
+                  setEditImages([]);
+                  setEditImagePreviews([]);
+                  setEditFiles([]);
+                  setRemovedImages([]);
+                  setRemovedFiles([]);
+                }}
+                disabled={isUpdatingDiscussion}
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Discussion Content */}
+            <p className="text-gray-700 whitespace-pre-wrap mb-4">{discussion.content}</p>
+
+            {/* Images - Full view in detail, count in list */}
+          </>
+        )}
+
+        {!isEditing && (
+          <>
         {/* Images - Full view in detail, count in list */}
         {discussion.images && discussion.images.length > 0 && (
           isDetailView ? (
@@ -500,6 +873,8 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
               <span>{discussion.files.length} {discussion.files.length === 1 ? 'file' : 'files'} attached</span>
             </div>
           )
+        )}
+          </>
         )}
       </div>
 

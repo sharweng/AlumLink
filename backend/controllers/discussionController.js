@@ -136,7 +136,7 @@ export const updateDiscussion = async (req, res) => {
     try {
         const discussionId = req.params.id;
         const userId = req.user._id;
-        const { title, content, images, files, tags, category } = req.body;
+        const { title, content, tags, category, removedImages, removedFiles, newImages, newFiles } = req.body;
 
         const discussion = await Discussion.findById(discussionId);
 
@@ -155,50 +155,52 @@ export const updateDiscussion = async (req, res) => {
         if (tags !== undefined) discussion.tags = tags;
         if (category !== undefined) discussion.category = category;
 
-        // Handle images update
-        if (images !== undefined) {
-            // Delete old images from cloudinary
-            for (const oldImage of discussion.images) {
-                const publicId = oldImage.split("/").pop().split(".")[0];
+        // Handle removed images
+        if (removedImages && Array.isArray(removedImages) && removedImages.length > 0) {
+            for (const imageUrl of removedImages) {
+                // Delete from cloudinary
+                const publicId = imageUrl.split("/").pop().split(".")[0];
                 await cloudinary.uploader.destroy(publicId);
+                
+                // Remove from discussion.images array
+                discussion.images = discussion.images.filter(img => img !== imageUrl);
             }
-            
-            // Upload new images
-            let uploadedImages = [];
-            if (Array.isArray(images)) {
-                for (const image of images) {
-                    const imgResult = await cloudinary.uploader.upload(image);
-                    uploadedImages.push(imgResult.secure_url);
-                }
-            }
-            discussion.images = uploadedImages;
         }
 
-        // Handle files update
-        if (files !== undefined) {
-            // Delete old files from cloudinary
-            for (const oldFile of discussion.files) {
-                const publicId = oldFile.url.split("/").pop().split(".")[0];
+        // Handle new images
+        if (newImages && Array.isArray(newImages) && newImages.length > 0) {
+            for (const image of newImages) {
+                const imgResult = await cloudinary.uploader.upload(image);
+                discussion.images.push(imgResult.secure_url);
+            }
+        }
+
+        // Handle removed files
+        if (removedFiles && Array.isArray(removedFiles) && removedFiles.length > 0) {
+            for (const fileUrl of removedFiles) {
+                // Delete from cloudinary
+                const publicId = fileUrl.split("/").pop().split(".")[0];
                 await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
+                
+                // Remove from discussion.files array
+                discussion.files = discussion.files.filter(file => file.url !== fileUrl);
             }
-            
-            // Upload new files
-            let uploadedFiles = [];
-            if (Array.isArray(files)) {
-                for (const file of files) {
-                    const fileResult = await cloudinary.uploader.upload(file.data, {
-                        resource_type: 'auto',
-                        folder: 'discussion_files'
-                    });
-                    uploadedFiles.push({
-                        url: fileResult.secure_url,
-                        name: file.name,
-                        type: file.type,
-                        size: file.size
-                    });
-                }
+        }
+
+        // Handle new files
+        if (newFiles && Array.isArray(newFiles) && newFiles.length > 0) {
+            for (const file of newFiles) {
+                const fileResult = await cloudinary.uploader.upload(file.data, {
+                    resource_type: 'auto',
+                    folder: 'discussion_files'
+                });
+                discussion.files.push({
+                    url: fileResult.secure_url,
+                    name: file.name,
+                    type: file.type,
+                    size: file.size
+                });
             }
-            discussion.files = uploadedFiles;
         }
 
         discussion.editedAt = new Date();

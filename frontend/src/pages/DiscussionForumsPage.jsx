@@ -5,9 +5,11 @@ import toast from 'react-hot-toast';
 import { MessageSquare, Plus, Search, Filter } from 'lucide-react';
 import DiscussionPost from '../components/DiscussionPost';
 import DiscussionCreation from '../components/DiscussionCreation';
+import Sidebar from '../components/Sidebar';
 
 const DiscussionForumsPage = () => {
   const queryClient = useQueryClient();
+  const authUser = queryClient.getQueryData(['authUser']);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -34,19 +36,24 @@ const DiscussionForumsPage = () => {
   });
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <MessageSquare className="text-primary" />
-            Discussion Forums
-          </h1>
-          <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            className="btn btn-primary flex items-center gap-2"
-          >
-            <Plus size={20} />
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="col-span-1 lg:col-span-1">
+        <Sidebar user={authUser} />
+      </div>
+      
+      <div className="col-span-1 lg:col-span-3">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              <MessageSquare className="text-primary" />
+              Discussion Forums
+            </h1>
+            <button
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              <Plus size={20} />
             New Discussion
           </button>
         </div>
@@ -132,6 +139,7 @@ const DiscussionForumsPage = () => {
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

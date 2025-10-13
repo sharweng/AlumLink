@@ -1,12 +1,15 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { axiosInstance } from '../lib/axios'
 import { ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import DiscussionPost from '../components/DiscussionPost'
+import Sidebar from '../components/Sidebar'
 import { useEffect } from 'react'
 
 const DiscussionPage = () => {
+  const queryClient = useQueryClient()
+  const authUser = queryClient.getQueryData(['authUser'])
   const { discussionId } = useParams()
   const [searchParams] = useSearchParams()
   const commentId = searchParams.get('comment')
@@ -82,22 +85,28 @@ const DiscussionPage = () => {
   }
 
   return (
-    <div className='max-w-4xl mx-auto'>
-      <div className='mb-4'>
-        <Link
-          to='/forums'
-          className='flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors'
-        >
-          <ArrowLeft size={20} />
-          Back to Forums
-        </Link>
+    <div className='grid grid-cols-1 lg:grid-cols-4 gap-6'>
+      <div className='col-span-1 lg:col-span-1'>
+        <Sidebar user={authUser} />
       </div>
 
-      <DiscussionPost 
-        discussion={discussion.data} 
-        isDetailView={true}
-        commentIdToExpand={commentId}
-      />
+      <div className='col-span-1 lg:col-span-3'>
+        <div className='mb-4'>
+          <Link
+            to='/forums'
+            className='flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors'
+          >
+            <ArrowLeft size={20} />
+            Back to Forums
+          </Link>
+        </div>
+
+        <DiscussionPost 
+          discussion={discussion.data} 
+          isDetailView={true}
+          commentIdToExpand={commentId}
+        />
+      </div>
     </div>
   )
 }
