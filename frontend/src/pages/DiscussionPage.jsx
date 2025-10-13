@@ -95,6 +95,7 @@ const DiscussionPage = () => {
 
       <DiscussionPost 
         discussion={discussion.data} 
+        isDetailView={true}
         commentIdToExpand={commentId}
       />
     </div>

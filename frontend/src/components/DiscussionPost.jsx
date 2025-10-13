@@ -16,7 +16,9 @@ import {
   Send,
   Check,
   Reply as ReplyIcon,
-  HeartOff
+  HeartOff,
+  Image as ImageIcon,
+  X
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -34,6 +36,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   const [editingReplyContent, setEditingReplyContent] = useState("");
   const [expandedComments, setExpandedComments] = useState(new Set());
   const [commentSortOrder, setCommentSortOrder] = useState("newest"); // newest, oldest, topLiked
+  const [selectedImage, setSelectedImage] = useState(null);
   
   const isOwner = authUser?._id === discussion.author._id;
   const isLiked = discussion.likes?.includes(authUser?._id);
@@ -411,11 +414,17 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         {/* Title and Category */}
         <div className="mb-3">
           <div className="flex items-start gap-2 mb-2">
-            <Link to={`/forums/${discussion._id}`} className="flex-1">
-              <h2 className="text-xl font-bold hover:text-primary cursor-pointer">
+            {isDetailView ? (
+              <h2 className="text-xl font-bold flex-1">
                 {discussion.title}
               </h2>
-            </Link>
+            ) : (
+              <Link to={`/discussion/${discussion._id}`} className="flex-1">
+                <h2 className="text-xl font-bold hover:text-primary cursor-pointer">
+                  {discussion.title}
+                </h2>
+              </Link>
+            )}
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(discussion.category)}`}>
               {discussion.category}
             </span>
@@ -437,45 +446,60 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         {/* Discussion Content */}
         <p className="text-gray-700 whitespace-pre-wrap mb-4">{discussion.content}</p>
 
-        {/* Images */}
+        {/* Images - Full view in detail, count in list */}
         {discussion.images && discussion.images.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            {discussion.images.map((image, index) => (
-              <img
-                key={index}
-                src={image}
-                alt={`Discussion image ${index + 1}`}
-                className="w-full h-48 object-cover rounded-lg"
-              />
-            ))}
-          </div>
+          isDetailView ? (
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {discussion.images.map((image, index) => (
+                <img
+                  key={index}
+                  src={image}
+                  alt={`Discussion image ${index + 1}`}
+                  className="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => setSelectedImage(image)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="mb-3 flex items-center gap-2 text-sm text-gray-600">
+              <ImageIcon size={16} />
+              <span>{discussion.images.length} {discussion.images.length === 1 ? 'image' : 'images'} attached</span>
+            </div>
+          )
         )}
 
-        {/* Files */}
+        {/* Files - Full view in detail, count in list */}
         {discussion.files && discussion.files.length > 0 && (
-          <div className="mb-4 space-y-2">
-            <h4 className="text-sm font-semibold text-gray-700">Attachments:</h4>
-            {discussion.files.map((file, index) => (
-              <a
-                key={index}
-                href={file.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <FileText className="text-primary" size={20} />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{file.name}</p>
-                  {file.size && (
-                    <p className="text-xs text-gray-500">
-                      {(file.size / 1024).toFixed(2)} KB
-                    </p>
-                  )}
-                </div>
-                <Download size={18} className="text-gray-400" />
-              </a>
-            ))}
-          </div>
+          isDetailView ? (
+            <div className="mb-4 space-y-2">
+              <h4 className="text-sm font-semibold text-gray-700">Attachments:</h4>
+              {discussion.files.map((file, index) => (
+                <a
+                  key={index}
+                  href={file.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <FileText className="text-primary" size={20} />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{file.name}</p>
+                    {file.size && (
+                      <p className="text-xs text-gray-500">
+                        {(file.size / 1024).toFixed(2)} KB
+                      </p>
+                    )}
+                  </div>
+                  <Download size={18} className="text-gray-400" />
+                </a>
+              ))}
+            </div>
+          ) : (
+            <div className="mb-3 flex items-center gap-2 text-sm text-gray-600">
+              <FileText size={16} />
+              <span>{discussion.files.length} {discussion.files.length === 1 ? 'file' : 'files'} attached</span>
+            </div>
+          )
         )}
       </div>
 
@@ -831,6 +855,28 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Image Lightbox Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <button
+            onClick={() => setSelectedImage(null)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+            aria-label="Close"
+          >
+            <X size={32} />
+          </button>
+          <img
+            src={selectedImage}
+            alt="Full size"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </div>
