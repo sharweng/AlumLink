@@ -8,6 +8,7 @@ export const getUserNotifications = async (req, res) => {
         .populate("relatedPost", "content image")
         .populate("relatedJobPost", "title company location")
         .populate("relatedDiscussion", "title category")
+        .populate("relatedEvent", "title eventDate eventTime location")
 
         // For discussion notifications with comments, add comment content
         const notificationsWithComments = await Promise.all(

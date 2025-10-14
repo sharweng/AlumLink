@@ -21,6 +21,7 @@ const EventsPage = () => {
     { value: 'upcoming', label: 'Upcoming' },
     { value: 'ongoing', label: 'Ongoing' },
     { value: 'completed', label: 'Completed' },
+    { value: 'cancelled', label: 'Cancelled' },
     { value: 'all', label: 'All Events' }
   ];
 

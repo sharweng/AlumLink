@@ -15,6 +15,8 @@ import {
   Edit,
   Trash2,
   Check,
+  CheckCircle2,
+  XCircle,
   X as XIcon,
   Loader,
   ChevronLeft,
@@ -57,11 +59,27 @@ const EventDetailPage = () => {
       await axiosInstance.delete(`/events/${id}`);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       toast.success('Event deleted successfully');
       navigate('/events');
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'Failed to delete event');
+    },
+  });
+
+  const { mutate: cancelEvent, isPending: isCancelling } = useMutation({
+    mutationFn: async () => {
+      const response = await axiosInstance.put(`/events/${id}/cancel`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event', id] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast.success('Event cancelled successfully');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to cancel event');
     },
   });
 
@@ -292,7 +310,7 @@ const EventDetailPage = () => {
           </div>
 
           {/* Action Buttons */}
-          {!isOrganizer && event.status === 'upcoming' && (
+          {!isOrganizer && (event.status === 'upcoming' || event.status === 'ongoing') && (
             <div className="flex gap-3">
               <button
                 onClick={() => rsvpEvent(userStatus === 'going' ? 'not_going' : 'going')}
@@ -321,6 +339,22 @@ const EventDetailPage = () => {
             </div>
           )}
 
+          {/* Completed Event Badge */}
+          {!isOrganizer && event.status === 'completed' && (
+            <div className="w-full py-3 px-6 rounded-lg bg-gray-200 text-gray-600 font-semibold flex items-center justify-center gap-2 cursor-not-allowed">
+              <CheckCircle2 size={20} />
+              Event Completed
+            </div>
+          )}
+
+          {/* Cancelled Event Badge */}
+          {!isOrganizer && event.status === 'cancelled' && (
+            <div className="w-full py-3 px-6 rounded-lg bg-red-100 text-red-600 font-semibold flex items-center justify-center gap-2 cursor-not-allowed">
+              <XCircle size={20} />
+              Event Cancelled
+            </div>
+          )}
+
           {/* View Ticket Button */}
           {userStatus === 'going' && event.requiresTicket && (
             <Link 
@@ -341,9 +375,29 @@ const EventDetailPage = () => {
                   Edit Event
                 </button>
               </Link>
+              {event.status !== 'cancelled' && event.status !== 'completed' && (
+                <button
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to cancel this event? All attendees will be notified.')) {
+                      cancelEvent();
+                    }
+                  }}
+                  disabled={isCancelling}
+                  className="flex-1 py-3 px-6 bg-orange-600 text-white hover:bg-orange-700 rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isCancelling ? (
+                    <Loader className="animate-spin" size={20} />
+                  ) : (
+                    <>
+                      <XCircle size={20} />
+                      Cancel Event
+                    </>
+                  )}
+                </button>
+              )}
               <button
                 onClick={() => {
-                  if (window.confirm('Are you sure you want to delete this event?')) {
+                  if (window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
                     deleteEvent();
                   }
                 }}

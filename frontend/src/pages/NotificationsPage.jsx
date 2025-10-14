@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { axiosInstance } from '../lib/axios'
 import toast from 'react-hot-toast'
-import { ExternalLink, Eye, Heart, MessageSquare, Trash2, UserPlus, CheckCircle2, Briefcase, X, AtSign, Reply, HeartOff } from 'lucide-react'
+import { ExternalLink, Eye, Heart, MessageSquare, Trash2, UserPlus, CheckCircle2, Briefcase, X, AtSign, Reply, HeartOff, Calendar, Bell, XCircle, Star } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import Sidebar from '../components/Sidebar'
@@ -62,6 +62,9 @@ const NotificationsPage = () => {
     } else if (activeTab === 'forums') {
       // Forums tab: notifications with relatedDiscussion
       filtered = notifications.filter(notification => notification.relatedDiscussion)
+    } else if (activeTab === 'events') {
+      // Events tab: notifications with relatedEvent
+      filtered = notifications.filter(notification => notification.relatedEvent)
     }
     // 'all' tab shows everything, so no filtering needed
     
@@ -79,6 +82,14 @@ const NotificationsPage = () => {
         filtered = filtered.filter(n => n.type === 'discussionReply')
       } else if (filter === 'discussionMention') {
         filtered = filtered.filter(n => n.type === 'discussionMention')
+      } else if (filter === 'eventRSVP') {
+        filtered = filtered.filter(n => n.type === 'eventRSVP')
+      } else if (filter === 'eventInterested') {
+        filtered = filtered.filter(n => n.type === 'eventInterested')
+      } else if (filter === 'eventUpdate') {
+        filtered = filtered.filter(n => n.type === 'eventUpdate')
+      } else if (filter === 'eventCancelled') {
+        filtered = filtered.filter(n => n.type === 'eventCancelled')
       } else {
         filtered = filtered.filter(n => n.type === filter)
       }
@@ -111,6 +122,16 @@ const NotificationsPage = () => {
         return <Heart className='text-red-500' />
       case "discussionCommentDislike":
         return <HeartOff className='text-gray-500' />
+      case "eventRSVP":
+        return <CheckCircle2 className='text-green-500' />
+      case "eventInterested":
+        return <Star className='text-yellow-500' />
+      case "eventReminder":
+        return <Bell className='text-blue-500' />
+      case "eventUpdate":
+        return <Calendar className='text-orange-500' />
+      case "eventCancelled":
+        return <XCircle className='text-red-500' />
       default:
         return null
     }
@@ -220,6 +241,48 @@ const NotificationsPage = () => {
 						disliked your comment
 					</span>
 				);
+			case "eventRSVP":
+				const rsvpAction = notification.metadata?.action || 'added';
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						{rsvpAction === 'removed' ? 'is no longer going to your event' : 
+						 rsvpAction === 'changed' ? 'updated their RSVP for your event' : 
+						 'is going to your event'}
+					</span>
+				);
+			case "eventInterested":
+				const interestedAction = notification.metadata?.action || 'added';
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						{interestedAction === 'removed' ? 'is no longer interested in your event' : 
+						 interestedAction === 'changed' ? 'updated their interest in your event' : 
+						 'is interested in your event'}
+					</span>
+				);
+			case "eventReminder":
+				return (
+					<span>
+						Reminder: Your event is coming up soon
+					</span>
+				);
+			case "eventUpdate":
+				return (
+					<span>
+						An event you're attending has been updated
+					</span>
+				);
+			case "eventCancelled":
+				return (
+					<span>
+						An event you're attending has been cancelled
+					</span>
+				);
 			default:
 				return null;
 		}
@@ -307,6 +370,30 @@ const NotificationsPage = () => {
 		);
 	};
 
+	const renderRelatedEvent = (relatedEvent) => {
+		if (!relatedEvent) return null;
+
+		return (
+			<Link
+				to={`/event/${relatedEvent._id}`}
+				className='mt-2 p-2 bg-gray-50 rounded-md flex items-center space-x-2 hover:bg-gray-100 transition-colors'
+			>
+				<div className='flex-1 overflow-hidden'>
+					<p className='text-sm font-medium text-gray-900 truncate'>{relatedEvent.title}</p>
+					<p className='text-xs text-gray-600 truncate'>
+						{relatedEvent.eventDate && new Date(relatedEvent.eventDate).toLocaleDateString('en-US', { 
+							month: 'short', 
+							day: 'numeric', 
+							year: 'numeric' 
+						})}
+						{relatedEvent.location && ` • ${relatedEvent.location}`}
+					</p>
+				</div>
+				<ExternalLink size={14} className='text-gray-400' />
+			</Link>
+		);
+	};
+
 
 
   return (
@@ -383,6 +470,19 @@ const NotificationsPage = () => {
 										}`}
 									>
 										Forums
+									</button>
+									<button
+										onClick={() => {
+											setActiveTab('events')
+											setFilter('all')
+										}}
+										className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+											activeTab === 'events'
+												? 'bg-white text-gray-900 shadow-sm'
+												: 'text-gray-600 hover:text-gray-900'
+										}`}
+									>
+										Events
 									</button>
 								</div>
 
@@ -490,6 +590,50 @@ const NotificationsPage = () => {
 											</button>
 										</>
 									)}
+									{(activeTab === 'all' || activeTab === 'events') && (
+										<>
+											<button
+												onClick={() => setFilter('eventRSVP')}
+												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+													filter === 'eventRSVP'
+														? 'bg-green-500 text-white'
+														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+												}`}
+											>
+												Going
+											</button>
+											<button
+												onClick={() => setFilter('eventInterested')}
+												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+													filter === 'eventInterested'
+														? 'bg-yellow-500 text-white'
+														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+												}`}
+											>
+												Interested
+											</button>
+											<button
+												onClick={() => setFilter('eventUpdate')}
+												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+													filter === 'eventUpdate'
+														? 'bg-orange-500 text-white'
+														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+												}`}
+											>
+												Updates
+											</button>
+											<button
+												onClick={() => setFilter('eventCancelled')}
+												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+													filter === 'eventCancelled'
+														? 'bg-red-500 text-white'
+														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+												}`}
+											>
+												Cancelled
+											</button>
+										</>
+									)}
 								</div>
 
 					{isLoading ? (
@@ -505,13 +649,19 @@ const NotificationsPage = () => {
 								>
 									<div className='flex items-start justify-between'>
 										<div className='flex items-center space-x-4'>
-											<Link to={`/profile/${notification.relatedUser.username}`}>
-												<img
-													src={notification.relatedUser.profilePicture || "/avatar.png"}
-													alt={notification.relatedUser.name}
-													className='w-12 h-12 rounded-full object-cover'
-												/>
-											</Link>
+											{notification.relatedUser ? (
+												<Link to={`/profile/${notification.relatedUser.username}`}>
+													<img
+														src={notification.relatedUser.profilePicture || "/avatar.png"}
+														alt={notification.relatedUser.name}
+														className='w-12 h-12 rounded-full object-cover'
+													/>
+												</Link>
+											) : (
+												<div className='w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center'>
+													<Calendar className='text-gray-500' size={24} />
+												</div>
+											)}
 
 											<div>
 												<div className='flex items-center gap-2'>
@@ -528,6 +678,7 @@ const NotificationsPage = () => {
 												{renderRelatedPost(notification.relatedPost)}
 												{renderRelatedJobPost(notification.relatedJobPost)}
 												{renderRelatedDiscussion(notification.relatedDiscussion, notification)}
+												{renderRelatedEvent(notification.relatedEvent)}
 											</div>
 										</div>
 

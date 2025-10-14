@@ -9,7 +9,7 @@ const notificationSchema = new mongoose.Schema({
     type: {
         type: String,
         required: true,
-        enum: ["like", "comment", "linkAccepted", "jobApplication", "jobApplicationCancelled", "discussionLike", "discussionComment", "discussionReply", "discussionMention", "discussionCommentLike", "discussionCommentDislike", "eventRSVP", "eventReminder", "eventUpdate", "eventCancelled"],
+        enum: ["like", "comment", "linkAccepted", "jobApplication", "jobApplicationCancelled", "discussionLike", "discussionComment", "discussionReply", "discussionMention", "discussionCommentLike", "discussionCommentDislike", "eventRSVP", "eventInterested", "eventReminder", "eventUpdate", "eventCancelled"],
     },
     relatedUser: {
         type: mongoose.Schema.Types.ObjectId,
@@ -36,6 +36,9 @@ const notificationSchema = new mongoose.Schema({
     },
     relatedReply: {
         type: String, // Store reply ID as string since it's a subdocument
+    },
+    metadata: {
+        type: mongoose.Schema.Types.Mixed, // For additional context like RSVP action
     },
     read: {
         type: Boolean,

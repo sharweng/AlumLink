@@ -204,7 +204,7 @@ const EventPost = ({ event }) => {
 
       {/* RSVP Buttons - Outside the Link */}
       <div className="px-4 pb-4">
-        {!isOrganizer && event.status === 'upcoming' && (
+        {!isOrganizer && (event.status === 'upcoming' || event.status === 'ongoing') && (
           <div className="flex gap-2 h-[34px]">
             <button
               onClick={() => rsvpEvent(userStatus === 'going' ? 'not_going' : 'going')}
@@ -239,6 +239,22 @@ const EventPost = ({ event }) => {
                 <Ticket size={14} />
               </Link>
             )}
+          </div>
+        )}
+
+        {/* Completed Event Badge */}
+        {!isOrganizer && event.status === 'completed' && (
+          <div className="w-full py-1.5 px-3 rounded-lg bg-gray-200 text-gray-600 text-sm font-medium flex items-center justify-center gap-1.5 cursor-not-allowed h-[34px]">
+            <Check size={14} />
+            Event Completed
+          </div>
+        )}
+
+        {/* Cancelled Event Badge */}
+        {!isOrganizer && event.status === 'cancelled' && (
+          <div className="w-full py-1.5 px-3 rounded-lg bg-red-100 text-red-600 text-sm font-medium flex items-center justify-center gap-1.5 cursor-not-allowed h-[34px]">
+            <XIcon size={14} />
+            Event Cancelled
           </div>
         )}
 

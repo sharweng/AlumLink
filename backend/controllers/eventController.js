@@ -227,6 +227,19 @@ export const updateEvent = async (req, res) => {
             return res.status(403).json({ message: "You are not authorized to edit this event" });
         }
 
+        // Track if status is being changed to cancelled
+        const wasCancelled = status === 'cancelled' && event.status !== 'cancelled';
+        
+        // Track if any important fields are being updated (for eventUpdate notification)
+        const importantFieldsUpdated = 
+            (title !== undefined && title !== event.title) ||
+            (description !== undefined && description !== event.description) ||
+            (eventDate !== undefined && eventDate !== event.eventDate) ||
+            (eventTime !== undefined && eventTime !== event.eventTime) ||
+            (eventDuration !== undefined && eventDuration !== event.eventDuration) ||
+            (location !== undefined && location !== event.location) ||
+            (isVirtual !== undefined && isVirtual !== event.isVirtual);
+
         // Update fields
         if (title !== undefined) event.title = title;
         if (description !== undefined) event.description = description;
@@ -280,6 +293,36 @@ export const updateEvent = async (req, res) => {
         event.editedAt = new Date();
         await event.save();
 
+        // Send notifications to attendees
+        if (event.attendees && event.attendees.length > 0) {
+            // Send cancelled notification
+            if (wasCancelled) {
+                for (const attendee of event.attendees) {
+                    if (attendee.user.toString() !== userId.toString()) {
+                        const notification = new Notification({
+                            recipient: attendee.user,
+                            type: 'eventCancelled',
+                            relatedEvent: eventId,
+                        });
+                        await notification.save();
+                    }
+                }
+            }
+            // Send update notification (only if not cancelled, since cancelled has its own)
+            else if (importantFieldsUpdated) {
+                for (const attendee of event.attendees) {
+                    if (attendee.user.toString() !== userId.toString()) {
+                        const notification = new Notification({
+                            recipient: attendee.user,
+                            type: 'eventUpdate',
+                            relatedEvent: eventId,
+                        });
+                        await notification.save();
+                    }
+                }
+            }
+        }
+
         const updatedEvent = await Event.findById(eventId)
             .populate("organizer", "name username profilePicture headline")
             .populate("attendees.user", "name username profilePicture");
@@ -287,6 +330,52 @@ export const updateEvent = async (req, res) => {
         res.status(200).json(updatedEvent);
     } catch (error) {
         console.log("Error in updateEvent:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+// Cancel event
+export const cancelEvent = async (req, res) => {
+    try {
+        const eventId = req.params.id;
+        const userId = req.user._id;
+
+        const event = await Event.findById(eventId);
+
+        if (!event) {
+            return res.status(404).json({ message: "Event not found" });
+        }
+
+        // Check if the current user is the organizer
+        if (event.organizer.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "You are not authorized to cancel this event" });
+        }
+
+        // Update status to cancelled
+        event.status = 'cancelled';
+        await event.save();
+
+        // Send cancellation notifications to all attendees
+        if (event.attendees && event.attendees.length > 0) {
+            for (const attendee of event.attendees) {
+                if (attendee.user.toString() !== userId.toString()) {
+                    const notification = new Notification({
+                        recipient: attendee.user,
+                        type: 'eventCancelled',
+                        relatedEvent: eventId,
+                    });
+                    await notification.save();
+                }
+            }
+        }
+
+        const cancelledEvent = await Event.findById(eventId)
+            .populate("organizer", "name username profilePicture headline")
+            .populate("attendees.user", "name username profilePicture");
+
+        res.status(200).json(cancelledEvent);
+    } catch (error) {
+        console.log("Error in cancelEvent:", error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 };
@@ -339,6 +428,19 @@ export const rsvpToEvent = async (req, res) => {
         const existingRsvp = event.attendees.find(attendee => attendee.user.toString() === userId.toString());
 
         if (rsvpStatus === 'not_going') {
+            // Send notification based on previous status before removing RSVP
+            if (existingRsvp && event.organizer.toString() !== userId.toString()) {
+                const notificationType = existingRsvp.rsvpStatus === 'going' ? 'eventRSVP' : 'eventInterested';
+                const newNotification = new Notification({
+                    recipient: event.organizer,
+                    type: notificationType,
+                    relatedUser: userId,
+                    relatedEvent: eventId,
+                    metadata: { action: 'removed' }, // Track that this is a removal
+                });
+                await newNotification.save();
+            }
+            
             // Remove RSVP
             event.attendees = event.attendees.filter(attendee => attendee.user.toString() !== userId.toString());
         } else {
@@ -351,8 +453,25 @@ export const rsvpToEvent = async (req, res) => {
             }
 
             if (existingRsvp) {
+                // Check if status actually changed
+                const statusChanged = existingRsvp.rsvpStatus !== rsvpStatus;
+                const previousStatus = existingRsvp.rsvpStatus;
+                
                 // Update existing RSVP
                 existingRsvp.rsvpStatus = rsvpStatus;
+                
+                // Create notification for organizer if status changed
+                if (statusChanged && event.organizer.toString() !== userId.toString()) {
+                    const notificationType = rsvpStatus === 'going' ? 'eventRSVP' : 'eventInterested';
+                    const newNotification = new Notification({
+                        recipient: event.organizer,
+                        type: notificationType,
+                        relatedUser: userId,
+                        relatedEvent: eventId,
+                        metadata: { action: 'changed' }, // Track that this is a status change
+                    });
+                    await newNotification.save();
+                }
             } else {
                 // Generate ticket ID if user is going and event requires ticket
                 const ticketId = (rsvpStatus === 'going' && event.requiresTicket) ? `TICKET-${uuidv4()}` : undefined;
@@ -365,13 +484,15 @@ export const rsvpToEvent = async (req, res) => {
                     rsvpDate: new Date()
                 });
 
-                // Create notification for organizer only if new RSVP and status is 'going'
-                if (event.organizer.toString() !== userId.toString() && rsvpStatus === 'going') {
+                // Create notification for organizer for new RSVP
+                if (event.organizer.toString() !== userId.toString()) {
+                    const notificationType = rsvpStatus === 'going' ? 'eventRSVP' : 'eventInterested';
                     const newNotification = new Notification({
                         recipient: event.organizer,
-                        type: 'eventRSVP',
+                        type: notificationType,
                         relatedUser: userId,
                         relatedEvent: eventId,
+                        metadata: { action: 'added' }, // Track that this is a new RSVP
                     });
                     await newNotification.save();
                 }
