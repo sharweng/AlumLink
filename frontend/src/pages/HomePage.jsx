@@ -2,9 +2,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { axiosInstance } from '../lib/axios'
 import toast from 'react-hot-toast'
 import Sidebar from '../components/Sidebar'
-import PostCreation from '../components/PostCreation'
-import Post from '../components/Post'
-import RecommendedUser from '../components/RecommendedUser'
+import PostCreation from '../components/post/PostCreation'
+import Post from '../components/post/Post'
+import RecommendedUser from '../components/network/RecommendedUser'
 import { Users } from "lucide-react"
 
 const HomePage = () => {

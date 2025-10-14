@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { axiosInstance } from "../lib/axios";
-import ProfileHeader from "../components/ProfileHeader";
-import AboutSection from "../components/AboutSection";
-import ExperienceSection from "../components/ExperienceSection";
-import BatchCourseSection from "../components/BatchCourseSection";
-import SkillsSection from "../components/SkillsSection";
+import ProfileHeader from "../components/about/ProfileHeader";
+import AboutSection from "../components/about/AboutSection";
+import ExperienceSection from "../components/about/ExperienceSection";
+import BatchCourseSection from "../components/about/BatchCourseSection";
+import SkillsSection from "../components/about/SkillsSection";
 import toast from "react-hot-toast";
 
 const ProfilePage = () => {

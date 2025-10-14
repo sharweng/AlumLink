@@ -1,6 +1,6 @@
 import { Briefcase, X } from "lucide-react";
 import { useState } from "react";
-import { formatDate } from "../utils/dateUtils";
+import { formatDate } from "../../utils/dateUtils";
 import toast from "react-hot-toast";
 
 

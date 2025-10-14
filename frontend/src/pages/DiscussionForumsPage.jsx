@@ -3,8 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
 import { MessageSquare, Plus, Search, Filter } from 'lucide-react';
-import DiscussionPost from '../components/DiscussionPost';
-import DiscussionCreation from '../components/DiscussionCreation';
+import DiscussionPost from '../components/discussion/DiscussionPost';
+import DiscussionCreation from '../components/discussion/DiscussionCreation';
 import Sidebar from '../components/Sidebar';
 
 const DiscussionForumsPage = () => {

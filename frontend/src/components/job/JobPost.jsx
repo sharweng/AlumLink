@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { axiosInstance } from '../lib/axios';
+import { axiosInstance } from '../../lib/axios';
 import toast from 'react-hot-toast';
 import { 
   Heart, 

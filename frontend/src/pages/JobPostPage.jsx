@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
-import JobPost from '../components/JobPost';
+import JobPost from '../components/job/JobPost';
 import { Briefcase, ArrowLeft, Loader, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 

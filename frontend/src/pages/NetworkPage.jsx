@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { axiosInstance } from '../lib/axios'
 import Sidebar from '../components/Sidebar'
 import { UserPlus } from 'lucide-react'
-import  FriendRequest  from '../components/FriendRequest'
+import  FriendRequest  from '../components/network/FriendRequest'
 import UserCard from '../components/UserCard'
 
 const NetworkPage = () => {

@@ -1,6 +1,6 @@
 import { useQueryClient, useMutation, mutationOptions } from "@tanstack/react-query"
 import { useState, useRef, useEffect } from "react"
-import { axiosInstance } from "../lib/axios"
+import { axiosInstance } from "../../lib/axios"
 import toast from "react-hot-toast"
 import { Link, useParams } from "react-router-dom"
 import { Heart, Loader, MessageCircle, Send, Share2, Trash2, X, Edit, Check, Image as ImageIcon } from "lucide-react"

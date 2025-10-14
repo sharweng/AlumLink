@@ -1,6 +1,6 @@
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { axiosInstance } from "../lib/axios";
+import { axiosInstance } from "../../lib/axios";
 import toast from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { 

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { axiosInstance } from "../lib/axios";
+import { axiosInstance } from "../../lib/axios";
 import toast from "react-hot-toast";
 import { Camera, Clock, MapPin, UserCheck, UserPlus, X, Loader } from "lucide-react";
 

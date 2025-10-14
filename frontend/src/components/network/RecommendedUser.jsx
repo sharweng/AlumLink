@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import React from 'react'
-import { axiosInstance } from '../lib/axios'
+import { axiosInstance } from '../../lib/axios'
 import toast from 'react-hot-toast'
 import { Link } from 'react-router-dom'
 import { Clock, UserPlus, UserCheck, Check, X } from 'lucide-react'

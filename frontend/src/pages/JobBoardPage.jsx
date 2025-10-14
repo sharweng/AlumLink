@@ -3,8 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
-import JobPost from '../components/JobPost';
-import JobPostCreation from '../components/JobPostCreation';
+import JobPost from '../components/job/JobPost';
+import JobPostCreation from '../components/job/JobPostCreation';
 import { Briefcase, Search, Filter, Plus, Loader } from 'lucide-react';
 
 const JobBoardPage = () => {

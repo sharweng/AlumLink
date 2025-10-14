@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { axiosInstance } from '../lib/axios'
 import { ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import DiscussionPost from '../components/DiscussionPost'
+import DiscussionPost from '../components/discussion/DiscussionPost'
 import Sidebar from '../components/Sidebar'
 import { useEffect } from 'react'
 

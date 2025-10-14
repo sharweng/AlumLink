@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom"
 import { axiosInstance } from "../lib/axios"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import Sidebar from "../components/Sidebar"
-import Post from "../components/Post"
+import Post from "../components/post/Post"
 import { Loader, XCircle } from "lucide-react"
 
 const PostPage = () => {
