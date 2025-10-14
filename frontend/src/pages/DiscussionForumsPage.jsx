@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
-import { MessageSquare, Plus, Search, Filter } from 'lucide-react';
+import { MessageSquare, Plus, Search, Filter, Loader } from 'lucide-react';
 import DiscussionPost from '../components/discussion/DiscussionPost';
 import DiscussionCreation from '../components/discussion/DiscussionCreation';
 import Sidebar from '../components/Sidebar';
@@ -114,7 +114,7 @@ const DiscussionForumsPage = () => {
       <div className="space-y-4">
         {isLoading ? (
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <Loader className="animate-spin h-12 w-12 text-primary mx-auto" />
           </div>
         ) : discussions && discussions.length > 0 ? (
           discussions.map((discussion) => (

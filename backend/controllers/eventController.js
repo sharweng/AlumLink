@@ -32,14 +32,34 @@ export const getAllEvents = async (req, res) => {
         let sortOption = { eventDate: 1 }; // default: upcoming (soonest first)
         if (sort === 'latest') {
             sortOption = { createdAt: -1 }; // recently created
-        } else if (sort === 'popular') {
-            sortOption = { 'attendees': -1 }; // most attendees
         }
         
-        const events = await Event.find(query)
+        let events = await Event.find(query)
             .populate("organizer", "name username profilePicture headline")
             .populate("attendees.user", "name username profilePicture")
             .sort(sortOption);
+
+        // Custom sort for popular: going count > interested count > event date
+        if (sort === 'popular') {
+            events = events.sort((a, b) => {
+                const aGoing = a.attendees.filter(att => att.rsvpStatus === 'going').length;
+                const bGoing = b.attendees.filter(att => att.rsvpStatus === 'going').length;
+                
+                if (aGoing !== bGoing) {
+                    return bGoing - aGoing; // More going first
+                }
+                
+                const aInterested = a.attendees.filter(att => att.rsvpStatus === 'interested').length;
+                const bInterested = b.attendees.filter(att => att.rsvpStatus === 'interested').length;
+                
+                if (aInterested !== bInterested) {
+                    return bInterested - aInterested; // More interested first
+                }
+                
+                // If both are equal, sort by event date (soonest first)
+                return new Date(a.eventDate) - new Date(b.eventDate);
+            });
+        }
 
         res.status(200).json(events);
     } catch (error) {

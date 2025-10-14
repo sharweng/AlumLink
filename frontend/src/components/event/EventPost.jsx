@@ -13,7 +13,8 @@ import {
   Trash2,
   Edit,
   Check,
-  X as XIcon
+  X as XIcon,
+  Loader
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 
@@ -66,6 +67,18 @@ const EventPost = ({ event }) => {
     return badges[event.status] || badges.upcoming;
   };
 
+  const getStatusLabel = () => {
+    return event.status.charAt(0).toUpperCase() + event.status.slice(1);
+  };
+
+  const formatTime12Hour = (time24) => {
+    const [hours, minutes] = time24.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
   const getTypeBadge = () => {
     const badges = {
       Reunion: 'bg-purple-100 text-purple-800',
@@ -87,7 +100,7 @@ const EventPost = ({ event }) => {
                 {event.type}
               </span>
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge()}`}>
-                {event.status}
+                {getStatusLabel()}
               </span>
             </div>
             <Link to={`/event/${event._id}`}>
@@ -96,23 +109,6 @@ const EventPost = ({ event }) => {
               </h2>
             </Link>
           </div>
-          
-          {isOrganizer && (
-            <div className="flex gap-1">
-              <Link to={`/event/${event._id}/edit`}>
-                <button className="p-1.5 text-green-600 hover:bg-green-50 rounded-full transition-colors">
-                  <Edit size={16} />
-                </button>
-              </Link>
-              <button
-                onClick={() => deleteEvent()}
-                disabled={isDeleting}
-                className="p-1.5 text-red-600 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Organizer */}
@@ -131,7 +127,7 @@ const EventPost = ({ event }) => {
         </Link>
 
         {/* Description */}
-        <p className="text-sm text-gray-700 mb-3 line-clamp-2">{event.description}</p>
+        <p className="text-sm text-gray-700 mb-3 line-clamp-1">{event.description}</p>
 
         {/* Event Details - Compact Grid */}
         <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
@@ -141,7 +137,7 @@ const EventPost = ({ event }) => {
           </div>
           <div className="flex items-center gap-1.5 text-gray-600">
             <Clock size={14} />
-            <span>{event.eventTime}</span>
+            <span>{formatTime12Hour(event.eventTime)}</span>
           </div>
           <div className="flex items-center gap-1.5 text-gray-600">
             {event.isVirtual ? <Video size={14} /> : <MapPin size={14} />}
@@ -175,7 +171,7 @@ const EventPost = ({ event }) => {
 
         {/* RSVP Buttons */}
         {!isOrganizer && event.status === 'upcoming' && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 h-[34px]">
             <button
               onClick={() => rsvpEvent(userStatus === 'going' ? 'not_going' : 'going')}
               disabled={isRsvping}
@@ -209,6 +205,32 @@ const EventPost = ({ event }) => {
                 <Ticket size={14} />
               </Link>
             )}
+          </div>
+        )}
+
+        {/* Edit/Delete buttons for organizer */}
+        {isOrganizer && (
+          <div className="flex gap-2 h-[34px]">
+            <Link to={`/event/${event._id}/edit`} className="flex-1">
+              <button className="w-full py-1.5 px-3 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors flex items-center justify-center gap-1.5 text-sm font-medium">
+                <Edit size={14} />
+                Edit
+              </button>
+            </Link>
+            <button
+              onClick={() => deleteEvent()}
+              disabled={isDeleting}
+              className="flex-1 py-1.5 px-3 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 text-sm font-medium"
+            >
+              {isDeleting ? (
+                <Loader className="animate-spin" size={14} />
+              ) : (
+                <>
+                  <Trash2 size={14} />
+                  Delete
+                </>
+              )}
+            </button>
           </div>
         )}
       </div>

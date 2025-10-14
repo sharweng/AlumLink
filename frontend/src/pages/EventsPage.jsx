@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
-import { Calendar, Plus, Search, Filter } from 'lucide-react';
+import { Calendar, Plus, Search, Filter, Loader } from 'lucide-react';
 import EventPost from '../components/event/EventPost';
 import EventCreation from '../components/event/EventCreation';
 import Sidebar from '../components/Sidebar';
@@ -135,7 +135,7 @@ const EventsPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           {isLoading ? (
             <div className="col-span-full text-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+              <Loader className="animate-spin h-12 w-12 text-primary mx-auto" />
             </div>
           ) : events && events.length > 0 ? (
             events.map((event) => (
