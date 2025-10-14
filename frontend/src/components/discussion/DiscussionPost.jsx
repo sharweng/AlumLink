@@ -607,7 +607,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         {isEditing ? (
           <div className="mb-4 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 value={editTitle}
@@ -618,7 +618,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Content <span className="text-red-500">*</span></label>
               <textarea
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}

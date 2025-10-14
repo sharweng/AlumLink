@@ -194,7 +194,7 @@ const DiscussionCreation = ({ onClose }) => {
 
       {/* Title Input */}
       <div className="mb-4">
-        <label className="block text-sm font-semibold mb-2">Title *</label>
+        <label className="block text-sm font-semibold mb-2">Title <span className="text-red-500">*</span></label>
         <input
           type="text"
           placeholder="Enter discussion title..."
@@ -214,23 +214,9 @@ const DiscussionCreation = ({ onClose }) => {
         )}
       </div>
 
-      {/* Category Selection */}
-      <div className="mb-4">
-        <label className="block text-sm font-semibold mb-2">Category</label>
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          {categories.map(cat => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
-      </div>
-
       {/* Content Textarea */}
       <div className="mb-4">
-        <label className="block text-sm font-semibold mb-2">Content *</label>
+        <label className="block text-sm font-semibold mb-2">Content <span className="text-red-500">*</span></label>
         <textarea
           placeholder="Share your thoughts, ask questions, or start a discussion..."
           className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 resize-none min-h-[150px] ${
@@ -247,6 +233,20 @@ const DiscussionCreation = ({ onClose }) => {
         {errors.content && (
           <p className="text-red-500 text-sm mt-1">{errors.content}</p>
         )}
+      </div>
+
+      {/* Category Selection */}
+      <div className="mb-4">
+        <label className="block text-sm font-semibold mb-2">Category</label>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          {categories.map(cat => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
       </div>
 
       {/* Tags Input */}

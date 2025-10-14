@@ -9,7 +9,7 @@ const notificationSchema = new mongoose.Schema({
     type: {
         type: String,
         required: true,
-        enum: ["like", "comment", "linkAccepted", "jobApplication", "jobApplicationCancelled", "discussionLike", "discussionComment", "discussionReply", "discussionMention", "discussionCommentLike", "discussionCommentDislike"],
+        enum: ["like", "comment", "linkAccepted", "jobApplication", "jobApplicationCancelled", "discussionLike", "discussionComment", "discussionReply", "discussionMention", "discussionCommentLike", "discussionCommentDislike", "eventRSVP", "eventReminder", "eventUpdate", "eventCancelled"],
     },
     relatedUser: {
         type: mongoose.Schema.Types.ObjectId,
@@ -26,6 +26,10 @@ const notificationSchema = new mongoose.Schema({
     relatedDiscussion: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Discussion",
+    },
+    relatedEvent: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Event",
     },
     relatedComment: {
         type: String, // Store comment ID as string since it's a subdocument
