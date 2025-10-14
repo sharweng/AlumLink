@@ -231,15 +231,6 @@ const EventPost = ({ event }) => {
               {userStatus === 'interested' && <Check size={14} />}
               Interested
             </button>
-            {userStatus === 'going' && event.requiresTicket && (
-              <Link 
-                to={`/event/${event._id}/ticket`}
-                className="p-1.5 bg-green-500 text-white hover:bg-green-600 rounded-lg transition-colors flex items-center justify-center"
-                title="View Ticket"
-              >
-                <Ticket size={14} />
-              </Link>
-            )}
           </div>
         )}
 

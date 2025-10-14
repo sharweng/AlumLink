@@ -11,7 +11,8 @@ import {
     getUserTicket,
     getMyEvents,
     toggleEventReminder,
-    checkEventReminders
+    checkEventReminders,
+    validateTicket
 } from "../controllers/eventController.js";
 
 const router = express.Router();
@@ -26,6 +27,7 @@ router.put("/:id/cancel", protectRoute, cancelEvent);
 router.delete("/:id", protectRoute, deleteEvent);
 router.post("/:id/rsvp", protectRoute, rsvpToEvent);
 router.post("/:id/reminder", protectRoute, toggleEventReminder);
+router.post("/:id/validate-ticket", protectRoute, validateTicket);
 router.get("/:id/ticket", protectRoute, getUserTicket);
 
 export default router;

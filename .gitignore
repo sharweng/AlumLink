@@ -2,3 +2,5 @@ node_modules
 .env
 
 testNodeMailer.js
+QR_CODE_TESTING.md 
+TICKET_SYSTEM.md 

@@ -356,17 +356,6 @@ const EventDetailPage = () => {
             </div>
           )}
 
-          {/* View Ticket Button */}
-          {userStatus === 'going' && event.requiresTicket && (
-            <Link 
-              to={`/event/${event._id}/ticket`}
-              className="mt-3 w-full py-3 px-6 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
-            >
-              <Ticket size={20} />
-              View Ticket
-            </Link>
-          )}
-
           {/* Organizer Actions */}
           {isOrganizer && (
             <div className="flex gap-3">

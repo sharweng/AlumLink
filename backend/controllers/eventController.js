@@ -818,3 +818,77 @@ export const checkEventReminders = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+// Validate ticket (for event organizers to scan QR codes)
+export const validateTicket = async (req, res) => {
+    try {
+        const eventId = req.params.id;
+        const { ticketId, scannedData } = req.body;
+
+        console.log(`[VALIDATE TICKET] Validating ticket ${ticketId} for event ${eventId}`);
+
+        const event = await Event.findById(eventId)
+            .populate("attendees.user", "name username profilePicture email");
+
+        if (!event) {
+            return res.status(404).json({ valid: false, message: "Event not found" });
+        }
+
+        // Check if the current user is the organizer
+        if (event.organizer.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ valid: false, message: "Only event organizers can validate tickets" });
+        }
+
+        // Find attendee with this ticket
+        const attendee = event.attendees.find(a => a.ticketId === ticketId);
+
+        if (!attendee) {
+            console.log(`[VALIDATE TICKET] Ticket ${ticketId} not found`);
+            return res.status(200).json({ 
+                valid: false, 
+                message: "Invalid ticket - Not found in attendee list" 
+            });
+        }
+
+        if (attendee.rsvpStatus !== 'going') {
+            console.log(`[VALIDATE TICKET] Ticket ${ticketId} - User not marked as going`);
+            return res.status(200).json({ 
+                valid: false, 
+                message: "Invalid ticket - RSVP status is not 'going'" 
+            });
+        }
+
+        // Optional: Verify scanned data matches event details
+        if (scannedData) {
+            if (scannedData.eventTitle !== event.title || 
+                scannedData.eventDate !== event.eventDate ||
+                scannedData.eventTime !== event.eventTime) {
+                console.log(`[VALIDATE TICKET] Ticket data mismatch`);
+                return res.status(200).json({ 
+                    valid: false, 
+                    message: "Invalid ticket - Event details don't match" 
+                });
+            }
+        }
+
+        console.log(`[VALIDATE TICKET] ✓ Valid ticket for ${attendee.user.name}`);
+
+        // Ticket is valid
+        res.status(200).json({ 
+            valid: true, 
+            message: "Valid ticket - Entry granted",
+            attendee: {
+                name: attendee.user.name,
+                username: attendee.user.username,
+                email: attendee.user.email,
+                profilePicture: attendee.user.profilePicture,
+                ticketId: attendee.ticketId,
+                rsvpDate: attendee.rsvpDate,
+                rsvpStatus: attendee.rsvpStatus
+            }
+        });
+    } catch (error) {
+        console.log("Error in validateTicket:", error.message);
+        res.status(500).json({ valid: false, message: "Internal server error" });
+    }
+};

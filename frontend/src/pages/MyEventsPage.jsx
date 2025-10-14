@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
-import { Calendar, Bell, BellOff, Loader } from 'lucide-react';
+import { Calendar, Bell, BellOff, Loader, Ticket } from 'lucide-react';
 import EventPost from '../components/event/EventPost';
+import EventTicket from '../components/event/EventTicket';
 import Sidebar from '../components/Sidebar';
 
 const MyEventsPage = () => {
   const queryClient = useQueryClient();
   const authUser = queryClient.getQueryData(['authUser']);
   const [activeTab, setActiveTab] = useState('going'); // 'going', 'interested', or 'all'
+  const [selectedTicket, setSelectedTicket] = useState(null); // For ticket modal
 
   const { data: myEvents, isLoading } = useQuery({
     queryKey: ['myEvents'],
@@ -78,6 +80,18 @@ const MyEventsPage = () => {
       toast.error(error.response?.data?.message || 'Failed to update reminder');
     },
   });
+
+  const handleViewTicket = async (event) => {
+    try {
+      const res = await axiosInstance.get(`/events/${event._id}/ticket`);
+      setSelectedTicket({
+        ...res.data,
+        user: authUser // Add user info to ticket data
+      });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to load ticket');
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -163,9 +177,25 @@ const MyEventsPage = () => {
                 <div key={event._id} className="relative">
                   <EventPost event={event} />
                   
-                  {/* Reminder Button Overlay - Only show for upcoming/ongoing events */}
-                  {canHaveReminder && (
-                    <div className="absolute top-4 right-4 z-10">
+                  {/* Action Buttons Overlay */}
+                  <div className="absolute top-4 right-4 z-10 flex gap-2">
+                    {/* View Ticket Button - Only for going users with tickets */}
+                    {isGoing && event.requiresTicket && userAttendee?.ticketId && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleViewTicket(event);
+                        }}
+                        className="p-2 bg-green-500 text-white rounded-full shadow-lg hover:bg-green-600 transition-colors"
+                        title="View Ticket"
+                      >
+                        <Ticket size={20} />
+                      </button>
+                    )}
+
+                    {/* Reminder Button - Only show for upcoming/ongoing events */}
+                    {canHaveReminder && (
                       <button
                         onClick={(e) => {
                           e.preventDefault();
@@ -197,8 +227,8 @@ const MyEventsPage = () => {
                           <BellOff size={20} />
                         )}
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               );
             })
@@ -219,6 +249,16 @@ const MyEventsPage = () => {
           )}
         </div>
       </div>
+
+      {/* Ticket Modal */}
+      {selectedTicket && (
+        <EventTicket
+          event={selectedTicket.event}
+          ticket={selectedTicket.ticket}
+          user={selectedTicket.user}
+          onClose={() => setSelectedTicket(null)}
+        />
+      )}
     </div>
   );
 };
