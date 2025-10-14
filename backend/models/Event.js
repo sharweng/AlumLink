@@ -20,18 +20,10 @@ const eventSchema = new mongoose.Schema({
         enum: ['Reunion', 'Webinar', 'Workshop'],
         required: true,
     },
-    eventDate: {
-        type: Date,
-        required: true,
-    },
-    eventTime: {
-        type: String,
-        required: true,
-    },
-    location: {
-        type: String,
-        required: true,
-    },
+    eventDate: { type: String, required: true },
+  eventTime: { type: String, required: true },
+  eventDuration: { type: Number, default: 2 }, // Duration in hours (default 2 hours for backward compatibility)
+  location: { type: String, required: true },
     isVirtual: {
         type: Boolean,
         default: false,

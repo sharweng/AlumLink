@@ -217,8 +217,15 @@ const EventDetailPage = () => {
             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
               <Clock className="text-primary" size={24} />
               <div>
-                <p className="text-sm text-gray-500">Time</p>
+                <p className="text-sm text-gray-500">Start Time</p>
                 <p className="font-medium">{formatTime12Hour(event.eventTime)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <Clock className="text-primary" size={24} />
+              <div>
+                <p className="text-sm text-gray-500">Duration</p>
+                <p className="font-medium">{event.eventDuration || 2} {(event.eventDuration || 2) === 1 ? 'hour' : 'hours'}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">

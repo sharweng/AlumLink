@@ -3,7 +3,46 @@ import Notification from "../models/Notification.js";
 import cloudinary from "../lib/cloudinary.js";
 import { v4 as uuidv4 } from "uuid";
 
-// Get all events with filters
+// Helper function to calculate event status based on current time
+const calculateEventStatus = (eventDate, eventTime, eventDuration, currentStatus) => {
+  // If event is cancelled, keep it cancelled
+  if (currentStatus === 'cancelled') {
+    return 'cancelled';
+  }
+
+  // Safety checks for required fields
+  if (!eventDate || !eventTime) {
+    console.log('Missing eventDate or eventTime, returning upcoming as default');
+    return 'upcoming';
+  }
+
+  // Default duration to 2 hours if not provided (backward compatibility)
+  const duration = eventDuration || 2;
+
+  const now = new Date();
+  
+  try {
+    // Parse event start time
+    const [hours, minutes] = eventTime.split(':').map(Number);
+    const eventStart = new Date(eventDate);
+    eventStart.setHours(hours, minutes, 0, 0);
+    
+    // Calculate event end time by adding duration (in hours)
+    const eventEnd = new Date(eventStart.getTime() + duration * 60 * 60 * 1000);
+
+    // Determine status based on current time
+    if (now < eventStart) {
+      return 'upcoming';
+    } else if (now >= eventStart && now <= eventEnd) {
+      return 'ongoing';
+    } else {
+      return 'completed';
+    }
+  } catch (error) {
+    console.log('Error calculating event status:', error.message);
+    return 'upcoming'; // Default to upcoming if calculation fails
+  }
+};// Get all events with filters
 export const getAllEvents = async (req, res) => {
     try {
         const { type, search, sort = 'upcoming', status = 'upcoming' } = req.query;
@@ -38,6 +77,35 @@ export const getAllEvents = async (req, res) => {
             .populate("organizer", "name username profilePicture headline")
             .populate("attendees.user", "name username profilePicture")
             .sort(sortOption);
+
+        // Update event statuses based on current time
+        for (const event of events) {
+            try {
+                const calculatedStatus = calculateEventStatus(event.eventDate, event.eventTime, event.eventDuration, event.status);
+                if (calculatedStatus !== event.status) {
+                    event.status = calculatedStatus;
+                    await event.save();
+                }
+            } catch (error) {
+                console.log(`Error updating status for event ${event._id}:`, error.message);
+                // Skip this event and continue with others
+                continue;
+            }
+        }
+
+        // Re-filter by status after updating
+        if (status && status !== 'all') {
+            events = events.filter(event => event.status === status);
+        }
+
+        // Filter out events with critical missing data to prevent frontend crashes
+        events = events.filter(event => {
+            if (!event.title || !event.eventDate || !event.eventTime) {
+                console.log(`Filtering out event ${event._id} due to missing critical data`);
+                return false;
+            }
+            return true;
+        });
 
         // Custom sort for popular: going count > interested count > event date
         if (sort === 'popular') {
@@ -91,9 +159,9 @@ export const getEventById = async (req, res) => {
 // Create new event
 export const createEvent = async (req, res) => {
     try {
-        const { title, description, type, eventDate, eventTime, location, isVirtual, virtualLink, capacity, requiresTicket, ticketPrice, images, tags } = req.body;
+        const { title, description, type, eventDate, eventTime, eventDuration, location, isVirtual, virtualLink, capacity, requiresTicket, ticketPrice, images, tags } = req.body;
 
-        if (!title || !description || !type || !eventDate || !eventTime || !location) {
+        if (!title || !description || !type || !eventDate || !eventTime || !eventDuration || !location) {
             return res.status(400).json({ message: "All required fields must be provided" });
         }
 
@@ -107,6 +175,9 @@ export const createEvent = async (req, res) => {
             }
         }
 
+        // Calculate initial status
+        const initialStatus = calculateEventStatus(eventDate, eventTime, eventDuration, 'upcoming');
+
         const newEvent = new Event({
             organizer: req.user._id,
             title,
@@ -114,12 +185,14 @@ export const createEvent = async (req, res) => {
             type,
             eventDate,
             eventTime,
+            eventDuration,
             location,
             isVirtual: isVirtual || false,
             virtualLink: isVirtual ? virtualLink : undefined,
             capacity: capacity || 0,
             requiresTicket: requiresTicket || false,
             ticketPrice: requiresTicket ? ticketPrice : 0,
+            status: initialStatus,
             images: uploadedImages,
             tags: tags || [],
         });
@@ -141,7 +214,7 @@ export const updateEvent = async (req, res) => {
     try {
         const eventId = req.params.id;
         const userId = req.user._id;
-        const { title, description, type, eventDate, eventTime, location, isVirtual, virtualLink, capacity, requiresTicket, ticketPrice, tags, status, removedImages, newImages } = req.body;
+        const { title, description, type, eventDate, eventTime, eventDuration, location, isVirtual, virtualLink, capacity, requiresTicket, ticketPrice, tags, status, removedImages, newImages } = req.body;
 
         const event = await Event.findById(eventId);
 
@@ -160,6 +233,7 @@ export const updateEvent = async (req, res) => {
         if (type !== undefined) event.type = type;
         if (eventDate !== undefined) event.eventDate = eventDate;
         if (eventTime !== undefined) event.eventTime = eventTime;
+        if (eventDuration !== undefined) event.eventDuration = eventDuration;
         if (location !== undefined) event.location = location;
         if (isVirtual !== undefined) event.isVirtual = isVirtual;
         if (virtualLink !== undefined) event.virtualLink = virtualLink;
@@ -198,6 +272,10 @@ export const updateEvent = async (req, res) => {
                 event.images.push(imgResult.secure_url);
             }
         }
+
+        // Recalculate status based on date/time unless manually set to cancelled
+        const calculatedStatus = calculateEventStatus(event.eventDate, event.eventTime, event.eventDuration, event.status);
+        event.status = calculatedStatus;
 
         event.editedAt = new Date();
         await event.save();

@@ -1,5 +1,6 @@
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { axiosInstance } from "../../lib/axios";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
@@ -20,6 +21,7 @@ import { formatDistanceToNow, format } from "date-fns";
 
 const EventPost = ({ event }) => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const authUser = queryClient.getQueryData(["authUser"]);
   const isOrganizer = authUser?._id === event.organizer._id;
   
@@ -72,11 +74,34 @@ const EventPost = ({ event }) => {
   };
 
   const formatTime12Hour = (time24) => {
+    if (!time24) return 'TBD';
     const [hours, minutes] = time24.split(':');
     const hour = parseInt(hours);
     const ampm = hour >= 12 ? 'PM' : 'AM';
     const hour12 = hour % 12 || 12;
     return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  const formatEventDate = (dateString) => {
+    try {
+      if (!dateString) return 'TBD';
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      return format(date, 'MMM dd, yyyy');
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
+  const formatCreatedAt = (dateString) => {
+    try {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '';
+      return formatDistanceToNow(date) + ' ago';
+    } catch (error) {
+      return '';
+    }
   };
 
   const getTypeBadge = () => {
@@ -111,20 +136,25 @@ const EventPost = ({ event }) => {
           </div>
 
           {/* Organizer */}
-          <div className="flex items-center gap-2 mb-3" onClick={(e) => e.stopPropagation()}>
-            <Link to={`/profile/${event.organizer.username}`} className="flex items-center gap-2">
-              <img
-                src={event.organizer.profilePicture || "/avatar.png"}
-                alt={event.organizer.name}
-                className="w-7 h-7 rounded-full object-cover"
-              />
-              <div>
-                <p className="text-xs font-medium">{event.organizer.name}</p>
-                <p className="text-xs text-gray-500">
-                  {formatDistanceToNow(new Date(event.createdAt))} ago
-                </p>
-              </div>
-            </Link>
+          <div 
+            className="flex items-center gap-2 mb-3 cursor-pointer hover:opacity-80" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              navigate(`/profile/${event.organizer.username}`);
+            }}
+          >
+            <img
+              src={event.organizer.profilePicture || "/avatar.png"}
+              alt={event.organizer.name}
+              className="w-7 h-7 rounded-full object-cover"
+            />
+            <div>
+              <p className="text-xs font-medium">{event.organizer.name}</p>
+              <p className="text-xs text-gray-500">
+                {formatCreatedAt(event.createdAt)}
+              </p>
+            </div>
           </div>
 
           {/* Description */}
@@ -134,7 +164,7 @@ const EventPost = ({ event }) => {
           <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
             <div className="flex items-center gap-1.5 text-gray-600">
               <Calendar size={14} />
-              <span>{format(new Date(event.eventDate), 'MMM dd, yyyy')}</span>
+              <span>{formatEventDate(event.eventDate)}</span>
             </div>
             <div className="flex items-center gap-1.5 text-gray-600">
               <Clock size={14} />

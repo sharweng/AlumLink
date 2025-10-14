@@ -18,6 +18,7 @@ const EventEditPage = () => {
     type: "Webinar",
     eventDate: "",
     eventTime: "",
+    eventDuration: "",
     location: "",
     isVirtual: false,
     virtualLink: "",
@@ -50,6 +51,7 @@ const EventEditPage = () => {
         type: event.type || "Webinar",
         eventDate: event.eventDate ? event.eventDate.split('T')[0] : "",
         eventTime: event.eventTime || "",
+        eventDuration: event.eventDuration || "",
         location: event.location || "",
         isVirtual: event.isVirtual || false,
         virtualLink: event.virtualLink || "",
@@ -121,6 +123,12 @@ const EventEditPage = () => {
     if (!formData.description.trim()) newErrors.description = "Description is required";
     if (!formData.eventDate) newErrors.eventDate = "Event date is required";
     if (!formData.eventTime) newErrors.eventTime = "Event time is required";
+    if (!formData.eventDuration) newErrors.eventDuration = "Event duration is required";
+    
+    // Validate that duration is a positive number
+    if (formData.eventDuration && (isNaN(formData.eventDuration) || parseFloat(formData.eventDuration) <= 0)) {
+      newErrors.eventDuration = "Duration must be a positive number";
+    }
     
     if (formData.isVirtual) {
       if (!formData.virtualLink.trim()) newErrors.virtualLink = "Virtual link is required";
@@ -143,6 +151,7 @@ const EventEditPage = () => {
 
     const eventData = {
       ...formData,
+      eventDuration: parseFloat(formData.eventDuration),
       tags: formData.tags ? formData.tags.split(",").map((tag) => tag.trim()) : [],
       capacity: formData.capacity ? parseInt(formData.capacity) : 0,
       ticketPrice: formData.ticketPrice ? parseFloat(formData.ticketPrice) : 0,
@@ -298,7 +307,7 @@ const EventEditPage = () => {
             </div>
 
             {/* Date and Time */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   <Calendar size={16} className="inline mr-1" />
@@ -320,7 +329,7 @@ const EventEditPage = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   <Clock size={16} className="inline mr-1" />
-                  Event Time <span className="text-red-500">*</span>
+                  Start Time <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="time"
@@ -333,6 +342,29 @@ const EventEditPage = () => {
                 />
                 {errors.eventTime && (
                   <p className="mt-1 text-sm text-red-600">{errors.eventTime}</p>
+                )}
+              </div>
+
+              {/* Event Duration */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Clock size={16} className="inline mr-1" />
+                  Duration (hours) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  name="eventDuration"
+                  value={formData.eventDuration}
+                  onChange={handleChange}
+                  placeholder="e.g., 2 or 1.5"
+                  step="0.5"
+                  min="0.5"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
+                    errors.eventDuration ? "border-red-500" : "border-gray-300"
+                  }`}
+                />
+                {errors.eventDuration && (
+                  <p className="mt-1 text-sm text-red-600">{errors.eventDuration}</p>
                 )}
               </div>
             </div>
