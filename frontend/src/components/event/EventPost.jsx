@@ -91,85 +91,89 @@ const EventPost = ({ event }) => {
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
       {/* Event Content */}
-      <div className="p-4">
-        {/* Header with Type and Status Badges */}
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeBadge()}`}>
-                {event.type}
-              </span>
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge()}`}>
-                {getStatusLabel()}
-              </span>
-            </div>
-            <Link to={`/event/${event._id}`}>
-              <h2 className="text-lg font-bold hover:text-primary cursor-pointer line-clamp-2">
+      <Link to={`/event/${event._id}`}>
+        <div className="p-4 cursor-pointer hover:bg-gray-50 transition-colors">
+          {/* Header with Type and Status Badges */}
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeBadge()}`}>
+                  {event.type}
+                </span>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge()}`}>
+                  {getStatusLabel()}
+                </span>
+              </div>
+              <h2 className="text-lg font-bold hover:text-primary line-clamp-2">
                 {event.title}
               </h2>
+            </div>
+          </div>
+
+          {/* Organizer */}
+          <div className="flex items-center gap-2 mb-3" onClick={(e) => e.stopPropagation()}>
+            <Link to={`/profile/${event.organizer.username}`} className="flex items-center gap-2">
+              <img
+                src={event.organizer.profilePicture || "/avatar.png"}
+                alt={event.organizer.name}
+                className="w-7 h-7 rounded-full object-cover"
+              />
+              <div>
+                <p className="text-xs font-medium">{event.organizer.name}</p>
+                <p className="text-xs text-gray-500">
+                  {formatDistanceToNow(new Date(event.createdAt))} ago
+                </p>
+              </div>
             </Link>
           </div>
-        </div>
 
-        {/* Organizer */}
-        <Link to={`/profile/${event.organizer.username}`} className="flex items-center gap-2 mb-3">
-          <img
-            src={event.organizer.profilePicture || "/avatar.png"}
-            alt={event.organizer.name}
-            className="w-7 h-7 rounded-full object-cover"
-          />
-          <div>
-            <p className="text-xs font-medium">{event.organizer.name}</p>
-            <p className="text-xs text-gray-500">
-              {formatDistanceToNow(new Date(event.createdAt))} ago
-            </p>
-          </div>
-        </Link>
+          {/* Description */}
+          <p className="text-sm text-gray-700 mb-3 line-clamp-1">{event.description}</p>
 
-        {/* Description */}
-        <p className="text-sm text-gray-700 mb-3 line-clamp-1">{event.description}</p>
-
-        {/* Event Details - Compact Grid */}
-        <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
-          <div className="flex items-center gap-1.5 text-gray-600">
-            <Calendar size={14} />
-            <span>{format(new Date(event.eventDate), 'MMM dd, yyyy')}</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-gray-600">
-            <Clock size={14} />
-            <span>{formatTime12Hour(event.eventTime)}</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-gray-600">
-            {event.isVirtual ? <Video size={14} /> : <MapPin size={14} />}
-            <span className="truncate">{event.isVirtual ? 'Virtual Event' : event.location}</span>
-          </div>
-          {event.requiresTicket && (
+          {/* Event Details - Compact Grid */}
+          <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
             <div className="flex items-center gap-1.5 text-gray-600">
-              <Ticket size={14} />
-              <span>{event.ticketPrice > 0 ? `₱${event.ticketPrice}` : 'Free'}</span>
+              <Calendar size={14} />
+              <span>{format(new Date(event.eventDate), 'MMM dd, yyyy')}</span>
             </div>
-          )}
-        </div>
-
-        {/* RSVP Stats */}
-        <div className="flex items-center gap-3 mb-3 text-xs flex-wrap">
-          <div className="flex items-center gap-1">
-            <Users size={14} className="text-primary" />
-            <span className="font-medium min-w-[60px]">{goingCount} going</span>
+            <div className="flex items-center gap-1.5 text-gray-600">
+              <Clock size={14} />
+              <span>{formatTime12Hour(event.eventTime)}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-gray-600">
+              {event.isVirtual ? <Video size={14} /> : <MapPin size={14} />}
+              <span className="truncate">{event.isVirtual ? 'Virtual Event' : event.location}</span>
+            </div>
+            {event.requiresTicket && (
+              <div className="flex items-center gap-1.5 text-gray-600">
+                <Ticket size={14} />
+                <span>{event.ticketPrice > 0 ? `₱${event.ticketPrice}` : 'Free'}</span>
+              </div>
+            )}
           </div>
-          <span className="text-gray-400">•</span>
-          <span className="text-gray-600 min-w-[80px]">{interestedCount} interested</span>
-          {event.capacity > 0 && (
-            <>
-              <span className="text-gray-400">•</span>
-              <span className="text-gray-600 min-w-[70px]">
-                {event.capacity - goingCount} spots left
-              </span>
-            </>
-          )}
-        </div>
 
-        {/* RSVP Buttons */}
+          {/* RSVP Stats */}
+          <div className="flex items-center gap-3 mb-3 text-xs flex-wrap">
+            <div className="flex items-center gap-1">
+              <Users size={14} className="text-primary" />
+              <span className="font-medium min-w-[60px]">{goingCount} going</span>
+            </div>
+            <span className="text-gray-400">•</span>
+            <span className="text-gray-600 min-w-[80px]">{interestedCount} interested</span>
+            {event.capacity > 0 && (
+              <>
+                <span className="text-gray-400">•</span>
+                <span className="text-gray-600 min-w-[70px]">
+                  {event.capacity - goingCount} spots left
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      </Link>
+
+      {/* RSVP Buttons - Outside the Link */}
+      <div className="px-4 pb-4">
         {!isOrganizer && event.status === 'upcoming' && (
           <div className="flex gap-2 h-[34px]">
             <button

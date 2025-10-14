@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { axiosInstance } from '../lib/axios'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Loader } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import DiscussionPost from '../components/discussion/DiscussionPost'
 import Sidebar from '../components/Sidebar'
@@ -70,16 +70,48 @@ const DiscussionPage = () => {
 
   if (isLoading) {
     return (
-      <div className='flex justify-center items-center h-64'>
-        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500'></div>
+      <div className='grid grid-cols-1 lg:grid-cols-4 gap-6'>
+        <div className='lg:col-span-1'>
+          <Sidebar user={authUser} />
+        </div>
+        <div className='lg:col-span-3'>
+          <div className='mb-4'>
+            <Link
+              to='/forums'
+              className='flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors'
+            >
+              <ArrowLeft size={20} />
+              Back to Forums
+            </Link>
+          </div>
+          <div className='bg-white rounded-lg shadow p-8 flex justify-center items-center min-h-[400px]'>
+            <Loader className='animate-spin h-12 w-12 text-primary' />
+          </div>
+        </div>
       </div>
     )
   }
 
   if (!discussion?.data) {
     return (
-      <div className='text-center py-8'>
-        <p className='text-gray-500'>Discussion not found</p>
+      <div className='grid grid-cols-1 lg:grid-cols-4 gap-6'>
+        <div className='lg:col-span-1'>
+          <Sidebar user={authUser} />
+        </div>
+        <div className='lg:col-span-3'>
+          <div className='mb-4'>
+            <Link
+              to='/forums'
+              className='flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors'
+            >
+              <ArrowLeft size={20} />
+              Back to Forums
+            </Link>
+          </div>
+          <div className='bg-white rounded-lg shadow p-8 text-center min-h-[400px] flex items-center justify-center'>
+            <p className='text-gray-500 text-lg'>Discussion not found</p>
+          </div>
+        </div>
       </div>
     )
   }
