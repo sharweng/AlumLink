@@ -172,8 +172,21 @@ export const updateEvent = async (req, res) => {
         // Handle removed images
         if (removedImages && Array.isArray(removedImages) && removedImages.length > 0) {
             for (const imageUrl of removedImages) {
-                const publicId = imageUrl.split("/").pop().split(".")[0];
-                await cloudinary.uploader.destroy(publicId);
+                // Extract public_id from Cloudinary URL
+                // URL format: https://res.cloudinary.com/<cloud_name>/image/upload/<version>/<public_id>.<format>
+                const urlParts = imageUrl.split('/');
+                const uploadIndex = urlParts.indexOf('upload');
+                if (uploadIndex !== -1 && uploadIndex + 1 < urlParts.length) {
+                    // Get everything after 'upload/' and before the file extension
+                    const publicIdWithExt = urlParts.slice(uploadIndex + 1).join('/');
+                    const publicId = publicIdWithExt.substring(0, publicIdWithExt.lastIndexOf('.'));
+                    
+                    try {
+                        await cloudinary.uploader.destroy(publicId);
+                    } catch (err) {
+                        console.log("Error deleting image from Cloudinary:", err);
+                    }
+                }
                 event.images = event.images.filter(img => img !== imageUrl);
             }
         }

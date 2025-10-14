@@ -18,7 +18,9 @@ import {
   Reply as ReplyIcon,
   HeartOff,
   Image as ImageIcon,
-  X
+  X,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -36,7 +38,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   const [editingReplyContent, setEditingReplyContent] = useState("");
   const [expandedComments, setExpandedComments] = useState(new Set());
   const [commentSortOrder, setCommentSortOrder] = useState("newest"); // newest, oldest, topLiked
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(discussion.title || "");
   const [editContent, setEditContent] = useState(discussion.content || "");
@@ -876,7 +878,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                   src={image}
                   alt={`Discussion image ${index + 1}`}
                   className="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => setSelectedImage(image)}
+                  onClick={() => setSelectedImageIndex(index)}
                 />
               ))}
             </div>
@@ -1288,24 +1290,60 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
       )}
 
       {/* Image Lightbox Modal */}
-      {selectedImage && (
+      {selectedImageIndex !== null && discussion?.images && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4"
-          onClick={() => setSelectedImage(null)}
+          onClick={() => setSelectedImageIndex(null)}
         >
           <button
-            onClick={() => setSelectedImage(null)}
+            onClick={() => setSelectedImageIndex(null)}
             className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
             aria-label="Close"
           >
             <X size={32} />
           </button>
+          
+          {/* Previous Button */}
+          {discussion.images.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImageIndex((selectedImageIndex - 1 + discussion.images.length) % discussion.images.length);
+              }}
+              className="absolute left-4 text-white hover:text-gray-300 transition-colors p-2 bg-black bg-opacity-50 rounded-full"
+              aria-label="Previous image"
+            >
+              <ChevronLeft size={32} />
+            </button>
+          )}
+
           <img
-            src={selectedImage}
-            alt="Full size"
+            src={discussion.images[selectedImageIndex]}
+            alt={`Full size - Image ${selectedImageIndex + 1}`}
             className="max-w-full max-h-full object-contain"
             onClick={(e) => e.stopPropagation()}
           />
+
+          {/* Next Button */}
+          {discussion.images.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImageIndex((selectedImageIndex + 1) % discussion.images.length);
+              }}
+              className="absolute right-4 text-white hover:text-gray-300 transition-colors p-2 bg-black bg-opacity-50 rounded-full"
+              aria-label="Next image"
+            >
+              <ChevronRight size={32} />
+            </button>
+          )}
+
+          {/* Image Counter */}
+          {discussion.images.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white bg-black bg-opacity-50 px-4 py-2 rounded-full">
+              {selectedImageIndex + 1} / {discussion.images.length}
+            </div>
+          )}
         </div>
       )}
     </div>

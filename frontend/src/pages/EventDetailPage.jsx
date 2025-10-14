@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
+import { useState } from 'react';
 import { 
   Calendar, 
   Clock, 
@@ -15,7 +16,9 @@ import {
   Trash2,
   Check,
   X as XIcon,
-  Loader
+  Loader,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 
@@ -24,6 +27,7 @@ const EventDetailPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const authUser = queryClient.getQueryData(['authUser']);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(null);
 
   const { data: event, isLoading } = useQuery({
     queryKey: ['event', id],
@@ -146,15 +150,6 @@ const EventDetailPage = () => {
         </Link>
 
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        {/* Event Image */}
-        {event.images && event.images.length > 0 && (
-          <img 
-            src={event.images[0]} 
-            alt={event.title}
-            className="w-full h-64 md:h-96 object-cover"
-          />
-        )}
-
         {/* Event Content */}
         <div className="p-6">
           {/* Header */}
@@ -186,6 +181,23 @@ const EventDetailPage = () => {
               </p>
             </div>
           </Link>
+
+          {/* Event Images */}
+          {event.images && event.images.length > 0 && (
+            <div className="mb-6">
+              <div className="grid grid-cols-2 gap-2">
+                {event.images.map((image, index) => (
+                  <img 
+                    key={index}
+                    src={image} 
+                    alt={`${event.title} - Image ${index + 1}`}
+                    className="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setSelectedImageIndex(index)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Description */}
           <div className="mb-6">
@@ -372,6 +384,64 @@ const EventDetailPage = () => {
         </div>
       )}
       </div>
+
+      {/* Image Lightbox Modal */}
+      {selectedImageIndex !== null && event?.images && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4"
+          onClick={() => setSelectedImageIndex(null)}
+        >
+          <button
+            onClick={() => setSelectedImageIndex(null)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+            aria-label="Close"
+          >
+            <XIcon size={32} />
+          </button>
+          
+          {/* Previous Button */}
+          {event.images.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImageIndex((selectedImageIndex - 1 + event.images.length) % event.images.length);
+              }}
+              className="absolute left-4 text-white hover:text-gray-300 transition-colors p-2 bg-black bg-opacity-50 rounded-full"
+              aria-label="Previous image"
+            >
+              <ChevronLeft size={32} />
+            </button>
+          )}
+
+          <img
+            src={event.images[selectedImageIndex]}
+            alt={`Full size - Image ${selectedImageIndex + 1}`}
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* Next Button */}
+          {event.images.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImageIndex((selectedImageIndex + 1) % event.images.length);
+              }}
+              className="absolute right-4 text-white hover:text-gray-300 transition-colors p-2 bg-black bg-opacity-50 rounded-full"
+              aria-label="Next image"
+            >
+              <ChevronRight size={32} />
+            </button>
+          )}
+
+          {/* Image Counter */}
+          {event.images.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white bg-black bg-opacity-50 px-4 py-2 rounded-full">
+              {selectedImageIndex + 1} / {event.images.length}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

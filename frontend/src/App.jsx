@@ -17,6 +17,7 @@ import DiscussionForumsPage from "./pages/DiscussionForumsPage"
 import DiscussionPage from "./pages/DiscussionPage"
 import EventsPage from "./pages/EventsPage"
 import EventDetailPage from "./pages/EventDetailPage"
+import EventEditPage from "./pages/EventEditPage"
 
 function App() {
   const { data: authUser, isLoading } = useQuery({
@@ -48,6 +49,7 @@ function App() {
         <Route path="/discussion/:discussionId" element={ authUser ? <DiscussionPage /> : <Navigate to={"/login"} /> } />
         <Route path="/events" element={ authUser ? <EventsPage /> : <Navigate to={"/login"} /> } />
         <Route path="/event/:id" element={ authUser ? <EventDetailPage /> : <Navigate to={"/login"} /> } />
+        <Route path="/event/:id/edit" element={ authUser ? <EventEditPage /> : <Navigate to={"/login"} /> } />
         <Route path="/notifications" element={ authUser ? <NotificationsPage /> : <Navigate to={"/login"} /> } />
         <Route path="/network" element={ authUser ? <NetworkPage /> : <Navigate to={"/login"} /> } />
         <Route path="/post/:postId" element={ authUser ? <PostPage /> : <Navigate to={"/login"} /> } />
