@@ -62,6 +62,10 @@ const eventSchema = new mongoose.Schema({
         rsvpDate: {
             type: Date,
             default: Date.now
+        },
+        reminderEnabled: {
+            type: Boolean,
+            default: false
         }
     }],
     tags: [{

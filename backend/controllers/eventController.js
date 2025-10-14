@@ -1,5 +1,6 @@
 import Event from "../models/Event.js";
 import Notification from "../models/Notification.js";
+import DeletedReminder from "../models/DeletedReminder.js";
 import cloudinary from "../lib/cloudinary.js";
 import { v4 as uuidv4 } from "uuid";
 
@@ -42,7 +43,128 @@ const calculateEventStatus = (eventDate, eventTime, eventDuration, currentStatus
     console.log('Error calculating event status:', error.message);
     return 'upcoming'; // Default to upcoming if calculation fails
   }
-};// Get all events with filters
+};
+
+// Helper function to check if event is within 1 day (24 hours) and send reminders
+const checkAndSendReminders = async (event, excludeUserId = null) => {
+  try {
+    if (!event.eventDate || !event.eventTime) {
+      return;
+    }
+
+    const now = new Date();
+    const [hours, minutes] = event.eventTime.split(':').map(Number);
+    
+    // Parse the event date (format: YYYY-MM-DD)
+    const dateParts = event.eventDate.split('-');
+    const eventStart = new Date(
+      parseInt(dateParts[0]), // year
+      parseInt(dateParts[1]) - 1, // month (0-indexed)
+      parseInt(dateParts[2]), // day
+      hours,
+      minutes,
+      0,
+      0
+    );
+
+    // Calculate time difference in milliseconds and hours
+    const timeDiffInMs = eventStart.getTime() - now.getTime();
+    const timeDiffInHours = timeDiffInMs / (1000 * 60 * 60);
+    const timeDiffInMinutes = timeDiffInMs / (1000 * 60);
+
+    // Debug logging with more detail
+    console.log(`\n[REMINDER CHECK] Event: ${event.title}`);
+    console.log(`  Event Date: ${event.eventDate}, Time: ${event.eventTime}`);
+    console.log(`  Current time: ${now.toISOString()} | Local: ${now.toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}`);
+    console.log(`  Event time: ${eventStart.toISOString()} | Local: ${eventStart.toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}`);
+    console.log(`  Time diff: ${timeDiffInHours.toFixed(4)} hours (${timeDiffInMinutes.toFixed(2)} minutes)`);
+    console.log(`  Exact 24h threshold: ${timeDiffInHours <= 24}`);
+    console.log(`  Event not started: ${timeDiffInHours > 0}`);
+    console.log(`  Within reminder window: ${timeDiffInHours > 0 && timeDiffInHours <= 24}`);
+
+    // Check if event is within 24 hours (1 day) and hasn't started yet
+    if (timeDiffInHours > 0 && timeDiffInHours <= 24) {
+      console.log(`  ✓ Event is within 24 hours! Checking attendees with reminders...`);
+      
+      // Calculate when the 24-hour window started for this event
+      const reminderWindowStart = new Date(eventStart.getTime() - (24 * 60 * 60 * 1000));
+      
+      // Send reminders to all attendees with reminders enabled
+      for (const attendee of event.attendees) {
+        // Skip the excluded user (organizer when called from updateEvent)
+        if (excludeUserId && attendee.user.toString() === excludeUserId.toString()) {
+          console.log(`    Skipping organizer ${attendee.user} (excluded)`);
+          continue;
+        }
+
+        // Only send reminder if user has it enabled AND is either going or interested
+        const isGoingOrInterested = attendee.rsvpStatus === 'going' || attendee.rsvpStatus === 'interested';
+        
+        if (attendee.reminderEnabled && isGoingOrInterested) {
+          console.log(`    Attendee ${attendee.user} has reminder enabled (${attendee.rsvpStatus})`);
+          
+          // Check if user deleted a reminder for this event in this window
+          const deletedReminder = await DeletedReminder.findOne({
+            user: attendee.user,
+            event: event._id,
+            reminderWindowStart: reminderWindowStart
+          });
+
+          if (deletedReminder) {
+            console.log(`    ✗ User deleted reminder for this window - respecting their choice`);
+            continue;
+          }
+          
+          // Check if a reminder was already sent within this 24-hour window
+          const existingReminder = await Notification.findOne({
+            recipient: attendee.user,
+            type: 'eventReminder',
+            relatedEvent: event._id,
+            createdAt: { $gte: reminderWindowStart } // Reminder sent after window opened
+          });
+
+          console.log(`    Existing reminder in this 24h window: ${existingReminder ? 'YES' : 'NO'}`);
+          if (existingReminder) {
+            console.log(`      Reminder sent at: ${existingReminder.createdAt}`);
+            console.log(`      Window started at: ${reminderWindowStart}`);
+          }
+
+          // Only send reminder if we haven't sent one in this 24-hour window
+          if (!existingReminder) {
+            console.log(`    → Sending reminder to attendee ${attendee.user}`);
+
+            // Create new reminder notification with RSVP status in metadata
+            const reminderNotification = new Notification({
+              recipient: attendee.user,
+              type: 'eventReminder',
+              relatedEvent: event._id,
+              metadata: { 
+                eventDate: event.eventDate,
+                eventTime: event.eventTime,
+                rsvpStatus: attendee.rsvpStatus // Store going or interested
+              },
+            });
+            await reminderNotification.save();
+            console.log(`    ✓ Reminder notification created for ${attendee.rsvpStatus} user`);
+          } else {
+            console.log(`    ✗ Reminder already sent in this 24-hour window`);
+          }
+        } else if (!attendee.reminderEnabled) {
+          console.log(`    Attendee ${attendee.user} has reminder disabled`);
+        } else {
+          console.log(`    Attendee ${attendee.user} status is ${attendee.rsvpStatus} (not going/interested)`);
+        }
+      }
+    } else if (timeDiffInHours <= 0) {
+      console.log(`  ✗ Event has already started or passed`);
+    } else {
+      console.log(`  ✗ Event is more than 24 hours away (${timeDiffInHours.toFixed(2)}h remaining)`);
+    }
+  } catch (error) {
+    console.log('Error in checkAndSendReminders:', error.message);
+  }
+};
+// Get all events with filters
 export const getAllEvents = async (req, res) => {
     try {
         const { type, search, sort = 'upcoming', status = 'upcoming' } = req.query;
@@ -86,6 +208,9 @@ export const getAllEvents = async (req, res) => {
                     event.status = calculatedStatus;
                     await event.save();
                 }
+                
+                // Check and send reminders for events within 24 hours
+                await checkAndSendReminders(event);
             } catch (error) {
                 console.log(`Error updating status for event ${event._id}:`, error.message);
                 // Skip this event and continue with others
@@ -148,6 +273,9 @@ export const getEventById = async (req, res) => {
         if (!event) {
             return res.status(404).json({ message: "Event not found" });
         }
+
+        // Check and send reminders if event is within 24 hours
+        await checkAndSendReminders(event);
 
         res.status(200).json(event);
     } catch (error) {
@@ -295,6 +423,9 @@ export const updateEvent = async (req, res) => {
 
         // Send notifications to attendees
         if (event.attendees && event.attendees.length > 0) {
+            // Check if event is within 1 day and send reminders to attendees (excluding organizer)
+            await checkAndSendReminders(event, userId);
+
             // Send cancelled notification
             if (wasCancelled) {
                 for (const attendee of event.attendees) {
@@ -310,16 +441,23 @@ export const updateEvent = async (req, res) => {
             }
             // Send update notification (only if not cancelled, since cancelled has its own)
             else if (importantFieldsUpdated) {
+                console.log(`[UPDATE NOTIFICATION] Sending update notifications to ${event.attendees.length - 1} attendees`);
                 for (const attendee of event.attendees) {
                     if (attendee.user.toString() !== userId.toString()) {
+                        console.log(`  → Sending update notification to attendee ${attendee.user} (${attendee.rsvpStatus})`);
                         const notification = new Notification({
                             recipient: attendee.user,
                             type: 'eventUpdate',
                             relatedEvent: eventId,
+                            metadata: {
+                                rsvpStatus: attendee.rsvpStatus // Store going or interested
+                            }
                         });
                         await notification.save();
                     }
                 }
+            } else {
+                console.log(`[UPDATE NOTIFICATION] No important fields updated, skipping update notifications`);
             }
         }
 
@@ -460,6 +598,11 @@ export const rsvpToEvent = async (req, res) => {
                 // Update existing RSVP
                 existingRsvp.rsvpStatus = rsvpStatus;
                 
+                // Auto-enable reminder for "going" status
+                if (rsvpStatus === 'going') {
+                    existingRsvp.reminderEnabled = true;
+                }
+                
                 // Create notification for organizer if status changed
                 if (statusChanged && event.organizer.toString() !== userId.toString()) {
                     const notificationType = rsvpStatus === 'going' ? 'eventRSVP' : 'eventInterested';
@@ -481,7 +624,8 @@ export const rsvpToEvent = async (req, res) => {
                     user: userId,
                     rsvpStatus,
                     ticketId,
-                    rsvpDate: new Date()
+                    rsvpDate: new Date(),
+                    reminderEnabled: rsvpStatus === 'going' // Auto-enable for "going"
                 });
 
                 // Create notification for organizer for new RSVP
@@ -500,6 +644,9 @@ export const rsvpToEvent = async (req, res) => {
         }
 
         await event.save();
+
+        // Check if event is within 1 day and send reminder if user just enabled it
+        await checkAndSendReminders(event);
 
         const updatedEvent = await Event.findById(eventId)
             .populate("organizer", "name username profilePicture headline")
@@ -548,6 +695,126 @@ export const getUserTicket = async (req, res) => {
         });
     } catch (error) {
         console.log("Error in getUserTicket:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+// Get user's RSVP'd events
+export const getMyEvents = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        // Find all events where the user is an attendee
+        const events = await Event.find({
+            'attendees.user': userId
+        })
+            .populate("organizer", "name username profilePicture headline")
+            .populate("attendees.user", "name username profilePicture")
+            .sort({ eventDate: 1 }); // Sort by soonest first
+
+        // Update event statuses and filter out invalid events
+        const validEvents = [];
+        for (const event of events) {
+            // Skip events with missing critical data
+            if (!event.title || !event.eventDate || !event.eventTime) {
+                continue;
+            }
+
+            try {
+                const calculatedStatus = calculateEventStatus(event.eventDate, event.eventTime, event.eventDuration, event.status);
+                if (calculatedStatus !== event.status) {
+                    event.status = calculatedStatus;
+                    await event.save();
+                }
+                
+                // Check and send reminders for events within 24 hours
+                await checkAndSendReminders(event);
+                
+                validEvents.push(event);
+            } catch (error) {
+                console.log(`Error updating status for event ${event._id}:`, error.message);
+                continue;
+            }
+        }
+
+        res.status(200).json(validEvents);
+    } catch (error) {
+        console.log("Error in getMyEvents:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+// Toggle event reminder
+export const toggleEventReminder = async (req, res) => {
+    try {
+        const eventId = req.params.id;
+        const userId = req.user._id;
+        const { enable } = req.body;
+
+        console.log(`[TOGGLE REMINDER] User ${userId} toggling reminder ${enable ? 'ON' : 'OFF'} for event ${eventId}`);
+
+        const event = await Event.findById(eventId);
+
+        if (!event) {
+            return res.status(404).json({ message: "Event not found" });
+        }
+
+        // Find user's attendee record
+        const attendee = event.attendees.find(att => att.user.toString() === userId.toString());
+
+        if (!attendee) {
+            return res.status(404).json({ message: "You are not registered for this event" });
+        }
+
+        // Update reminder status
+        attendee.reminderEnabled = enable;
+        await event.save();
+
+        console.log(`[TOGGLE REMINDER] Reminder ${enable ? 'enabled' : 'disabled'} for user ${userId}`);
+
+        // If reminder is being enabled, check if event is within 1 day and send notification
+        if (enable) {
+            console.log(`[TOGGLE REMINDER] Checking if reminder should be sent...`);
+            await checkAndSendReminders(event);
+        }
+
+        res.status(200).json({ 
+            message: enable ? "Reminder enabled" : "Reminder disabled",
+            reminderEnabled: attendee.reminderEnabled 
+        });
+    } catch (error) {
+        console.log("Error in toggleEventReminder:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+// Check and send reminders for all user's events
+export const checkEventReminders = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        // Get all events where user is an attendee with reminders enabled
+        const events = await Event.find({
+            'attendees': {
+                $elemMatch: {
+                    user: userId,
+                    reminderEnabled: true,
+                    rsvpStatus: { $in: ['going', 'interested'] }
+                }
+            },
+            status: { $in: ['upcoming', 'ongoing'] }
+        });
+
+        console.log(`\n[CHECK REMINDERS] Checking ${events.length} events for user ${userId}`);
+
+        // Check each event for reminders
+        for (const event of events) {
+            await checkAndSendReminders(event);
+        }
+
+        res.status(200).json({ message: "Reminders checked", eventsChecked: events.length });
+    } catch (error) {
+        console.log("Error in checkEventReminders:", error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 };

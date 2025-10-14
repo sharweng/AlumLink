@@ -1,5 +1,7 @@
 import Notification from "../models/Notification.js"
 import Discussion from "../models/Discussion.js"
+import DeletedReminder from "../models/DeletedReminder.js"
+import Event from "../models/Event.js"
 
 export const getUserNotifications = async (req, res) => {
     try {
@@ -69,6 +71,46 @@ export const markNotificationAsRead = async (req, res) => {
 export const deleteNotification = async (req, res) => {
     try {
         const notificationId = req.params.id;
+        const notification = await Notification.findOne({ _id: notificationId, recipient: req.user._id });
+        
+        if (!notification) {
+            return res.status(404).json({ message: "Notification not found" });
+        }
+
+        // If it's an eventReminder notification, track that it was deleted
+        if (notification.type === 'eventReminder' && notification.relatedEvent) {
+            try {
+                const event = await Event.findById(notification.relatedEvent);
+                if (event && event.eventDate && event.eventTime) {
+                    // Calculate when the 24-hour window started for this event
+                    const [hours, minutes] = event.eventTime.split(':').map(Number);
+                    const dateParts = event.eventDate.split('-');
+                    const eventStart = new Date(
+                        parseInt(dateParts[0]),
+                        parseInt(dateParts[1]) - 1,
+                        parseInt(dateParts[2]),
+                        hours,
+                        minutes,
+                        0,
+                        0
+                    );
+                    const reminderWindowStart = new Date(eventStart.getTime() - (24 * 60 * 60 * 1000));
+
+                    // Create a record that this user deleted this reminder for this window
+                    await DeletedReminder.create({
+                        user: req.user._id,
+                        event: notification.relatedEvent,
+                        reminderWindowStart: reminderWindowStart,
+                    });
+
+                    console.log(`[DELETED REMINDER] User ${req.user._id} deleted reminder for event ${notification.relatedEvent} (window: ${reminderWindowStart})`);
+                }
+            } catch (err) {
+                console.log("Error tracking deleted reminder:", err.message);
+                // Continue with deletion even if tracking fails
+            }
+        }
+
         await Notification.findOneAndDelete({ _id: notificationId, recipient: req.user._id });
 
         res.json({ message: "Notification deleted successfully" })

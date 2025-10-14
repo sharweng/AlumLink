@@ -29,6 +29,16 @@ const Navbar = () => {
     enabled: !!authUser
   })
 
+  // Check event reminders periodically when user is logged in
+  useQuery({
+    queryKey: ["eventReminders"],
+    queryFn: async () => axiosInstance.get("/events/check-reminders"),
+    enabled: !!authUser,
+    refetchInterval: 60000, // Check every 60 seconds (1 minute)
+    refetchOnWindowFocus: true, // Also check when user returns to tab
+    refetchOnMount: true, // Check when component mounts
+  })
+
   const { mutate: logout } = useMutation({
     mutationFn: () => axiosInstance.post("/auth/logout"),
     onSuccess: () => {

@@ -47,6 +47,7 @@ const EventDetailPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event', id] });
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['myEvents'] });
       toast.success('RSVP updated successfully');
     },
     onError: (error) => {

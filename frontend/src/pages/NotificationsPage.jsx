@@ -86,6 +86,8 @@ const NotificationsPage = () => {
         filtered = filtered.filter(n => n.type === 'eventRSVP')
       } else if (filter === 'eventInterested') {
         filtered = filtered.filter(n => n.type === 'eventInterested')
+      } else if (filter === 'eventReminder') {
+        filtered = filtered.filter(n => n.type === 'eventReminder')
       } else if (filter === 'eventUpdate') {
         filtered = filtered.filter(n => n.type === 'eventUpdate')
       } else if (filter === 'eventCancelled') {
@@ -266,15 +268,21 @@ const NotificationsPage = () => {
 					</span>
 				);
 			case "eventReminder":
+				const rsvpStatus = notification.metadata?.rsvpStatus || 'going';
 				return (
 					<span>
-						Reminder: Your event is coming up soon
+						{rsvpStatus === 'going' 
+							? "Reminder: An event you're attending is happening soon (within 24 hours)"
+							: "Reminder: An event you're interested in is happening soon (within 24 hours)"}
 					</span>
 				);
 			case "eventUpdate":
+				const updateRsvpStatus = notification.metadata?.rsvpStatus || 'going';
 				return (
 					<span>
-						An event you're attending has been updated
+						{updateRsvpStatus === 'going' 
+							? "An event you're attending has been updated"
+							: "An event you're interested in has been updated"}
 					</span>
 				);
 			case "eventCancelled":
@@ -611,6 +619,16 @@ const NotificationsPage = () => {
 												}`}
 											>
 												Interested
+											</button>
+											<button
+												onClick={() => setFilter('eventReminder')}
+												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+													filter === 'eventReminder'
+														? 'bg-blue-500 text-white'
+														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+												}`}
+											>
+												Reminders
 											</button>
 											<button
 												onClick={() => setFilter('eventUpdate')}

@@ -16,6 +16,7 @@ import JobPostPage from "./pages/JobPostPage"
 import DiscussionForumsPage from "./pages/DiscussionForumsPage"
 import DiscussionPage from "./pages/DiscussionPage"
 import EventsPage from "./pages/EventsPage"
+import MyEventsPage from "./pages/MyEventsPage"
 import EventDetailPage from "./pages/EventDetailPage"
 import EventEditPage from "./pages/EventEditPage"
 
@@ -48,6 +49,7 @@ function App() {
         <Route path="/forums" element={ authUser ? <DiscussionForumsPage /> : <Navigate to={"/login"} /> } />
         <Route path="/discussion/:discussionId" element={ authUser ? <DiscussionPage /> : <Navigate to={"/login"} /> } />
         <Route path="/events" element={ authUser ? <EventsPage /> : <Navigate to={"/login"} /> } />
+        <Route path="/my-events" element={ authUser ? <MyEventsPage /> : <Navigate to={"/login"} /> } />
         <Route path="/event/:id" element={ authUser ? <EventDetailPage /> : <Navigate to={"/login"} /> } />
         <Route path="/event/:id/edit" element={ authUser ? <EventEditPage /> : <Navigate to={"/login"} /> } />
         <Route path="/notifications" element={ authUser ? <NotificationsPage /> : <Navigate to={"/login"} /> } />
