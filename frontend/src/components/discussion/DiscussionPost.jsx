@@ -51,6 +51,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   const [removedImages, setRemovedImages] = useState([]);
   const [removedFiles, setRemovedFiles] = useState([]);
   const [editFileError, setEditFileError] = useState("");
+  const [showEditErrors, setShowEditErrors] = useState({ title: false, content: false });
   
   const isOwner = authUser?._id === discussion.author._id;
   const isLiked = discussion.likes?.includes(authUser?._id);
@@ -123,6 +124,28 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
 
   const { mutate: updateDiscussion, isPending: isUpdatingDiscussion } = useMutation({
     mutationFn: async () => {
+      // Reset errors
+      setShowEditErrors({ title: false, content: false });
+
+      // Validate required fields
+      const errors = { title: false, content: false };
+      let hasError = false;
+
+      if (!editTitle.trim()) {
+        errors.title = true;
+        hasError = true;
+      }
+
+      if (!editContent.trim()) {
+        errors.content = true;
+        hasError = true;
+      }
+
+      if (hasError) {
+        setShowEditErrors(errors);
+        throw new Error("Please fill in all required fields");
+      }
+
       // Validate file sizes before uploading (25MB limit)
       const maxFileSize = 25 * 1024 * 1024;
       const oversizedFiles = editFiles.filter(file => file.size > maxFileSize);
@@ -173,15 +196,20 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
       setRemovedImages([]);
       setRemovedFiles([]);
       setEditFileError("");
+      setShowEditErrors({ title: false, content: false });
       toast.success("Discussion updated successfully");
     },
     onError: (error) => {
       const errorMessage = error.message || error.response?.data?.message || "Failed to update discussion";
-      setEditFileError(errorMessage);
       
-      // Only show toast for non-file-size errors (file size errors already have visual indicators)
-      if (!errorMessage.includes("larger than 25MB")) {
-        toast.error(errorMessage);
+      // Don't show toast for validation errors (they have visual indicators)
+      if (!errorMessage.includes("required fields")) {
+        setEditFileError(errorMessage);
+        
+        // Only show toast for non-file-size errors (file size errors already have visual indicators)
+        if (!errorMessage.includes("larger than 25MB")) {
+          toast.error(errorMessage);
+        }
       }
     },
   });
@@ -613,21 +641,45 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
               <input
                 type="text"
                 value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                onChange={(e) => {
+                  setEditTitle(e.target.value);
+                  if (showEditErrors.title) {
+                    setShowEditErrors({ ...showEditErrors, title: false });
+                  }
+                }}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                  showEditErrors.title 
+                    ? 'border-red-500 focus:ring-red-500' 
+                    : 'border-gray-300 focus:ring-primary'
+                }`}
                 placeholder="Discussion title"
               />
+              {showEditErrors.title && (
+                <p className="text-red-500 text-sm mt-1">Title is required</p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Content <span className="text-red-500">*</span></label>
               <textarea
                 value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
+                onChange={(e) => {
+                  setEditContent(e.target.value);
+                  if (showEditErrors.content) {
+                    setShowEditErrors({ ...showEditErrors, content: false });
+                  }
+                }}
                 rows={6}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                  showEditErrors.content 
+                    ? 'border-red-500 focus:ring-red-500' 
+                    : 'border-gray-300 focus:ring-primary'
+                }`}
                 placeholder="What's on your mind?"
               />
+              {showEditErrors.content && (
+                <p className="text-red-500 text-sm mt-1">Content is required</p>
+              )}
             </div>
 
             <div>
@@ -713,9 +765,9 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Add Images</label>
               <div className="flex items-center gap-2">
-                <label className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 cursor-pointer transition-colors">
+                <label className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
                   <ImageIcon size={20} />
-                  <span className="text-sm">Choose Images</span>
+                  <span className="text-sm">Upload Images</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -777,7 +829,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
               <div className="flex items-center gap-2">
                 <label className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
                   <FileText size={20} />
-                  <span className="text-sm">Choose Files</span>
+                  <span className="text-sm">Upload Files</span>
                   <input
                     type="file"
                     multiple
@@ -830,7 +882,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
             <div className="flex gap-2">
               <button
                 onClick={() => updateDiscussion()}
-                disabled={isUpdatingDiscussion || !editTitle.trim() || !editContent.trim()}
+                disabled={isUpdatingDiscussion}
                 className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark disabled:opacity-50"
               >
                 {isUpdatingDiscussion ? "Saving..." : "Save Changes"}
@@ -849,6 +901,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                   setRemovedImages([]);
                   setRemovedFiles([]);
                   setEditFileError("");
+                  setShowEditErrors({ title: false, content: false });
                 }}
                 disabled={isUpdatingDiscussion}
                 className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300"

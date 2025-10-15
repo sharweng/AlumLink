@@ -352,9 +352,9 @@ const DiscussionCreation = ({ onClose }) => {
       {/* Action Buttons */}
       <div className="flex justify-between items-center mt-6">
         <div className="flex gap-4">
-          <label className="flex items-center gap-2 text-primary hover:text-red-700 transition-colors cursor-pointer">
+          <label className="flex items-center gap-2 text-gray-600 hover:text-gray-700 transition-colors cursor-pointer">
             <Image size={20} />
-            <span>Add Images</span>
+            <span>Upload Images</span>
             <input
               type="file"
               accept="image/*"
@@ -363,9 +363,9 @@ const DiscussionCreation = ({ onClose }) => {
               onChange={handleImageChange}
             />
           </label>
-          <label className="flex items-center gap-2 text-primary hover:text-red-700 transition-colors cursor-pointer">
+          <label className="flex items-center gap-2 text-gray-600 hover:text-gray-700 transition-colors cursor-pointer">
             <FileText size={20} />
-            <span>Add Files</span>
+            <span>Upload Files</span>
             <input
               type="file"
               multiple
