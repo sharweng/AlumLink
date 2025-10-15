@@ -12,6 +12,7 @@ import searchRoutes from "./routes/searchRoute.js"
 import jobRoutes from "./routes/jobRoute.js"
 import discussionRoutes from "./routes/discussionRoute.js"
 import eventRoutes from "./routes/eventRoute.js"
+import adminRoutes from "./routes/adminRoute.js"
 
 import { connectDB } from "./lib/db.js";
 
@@ -38,6 +39,7 @@ app.use("/api/v1/search", searchRoutes)
 app.use("/api/v1/jobs", jobRoutes)
 app.use("/api/v1/discussions", discussionRoutes)
 app.use("/api/v1/events", eventRoutes)
+app.use("/api/v1/admin", adminRoutes)
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)

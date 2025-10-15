@@ -98,6 +98,11 @@ export const login = async (req, res) => {
             return res.status(400).json({ message: "Invalid credentials" });
         }
 
+        // Check if user is deactivated
+        if (!user.isActive) {
+            return res.status(403).json({ message: "Your account has been deactivated. Please contact an administrator." });
+        }
+
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "3d" });
         await res.cookie("jwt-alumnilink", token, {
             httpOnly: true,
@@ -106,11 +111,16 @@ export const login = async (req, res) => {
             maxAge: 3 * 24 * 60 * 60 * 1000,
         });
 
-        res.json({ message: "Logged in successfully", user: {
-            _id: user._id,
-            name: user.name,
-            email: user.email
-        }});
+        res.json({ 
+            message: "Logged in successfully", 
+            user: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                isSuperAdmin: user.isSuperAdmin
+            }
+        });
     } catch (error) {
         console.log("Error in login authController:", error.message)
         res.status(500).json({ message: "Internal server error" })

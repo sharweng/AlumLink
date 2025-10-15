@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { axiosInstance } from "../../lib/axios"
-import { Home, User, Users, Bell, LogOut, Search, Briefcase, MessageSquare, Calendar } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Home, User, Users, Bell, LogOut, Search, Briefcase, MessageSquare, Calendar, Shield } from "lucide-react"
+import { Link, useNavigate } from "react-router-dom"
 import { useState, useRef, useEffect } from "react"
 import SearchResults from "../SearchResults"
+import toast from "react-hot-toast"
 
 const Navbar = () => {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const authUser = queryClient.getQueryData(["authUser"])
   
   // Search state
@@ -37,6 +39,23 @@ const Navbar = () => {
     refetchInterval: 60000, // Check every 60 seconds (1 minute)
     refetchOnWindowFocus: true, // Also check when user returns to tab
     refetchOnMount: true, // Check when component mounts
+  })
+
+  // Check if user is deactivated periodically
+  useQuery({
+    queryKey: ["userActiveStatus"],
+    queryFn: async () => {
+      const res = await axiosInstance.get("/auth/me");
+      if (!res.data.isActive) {
+        queryClient.setQueryData(["authUser"], null);
+        toast.error("Your account has been deactivated");
+        navigate("/login");
+      }
+      return res.data;
+    },
+    enabled: !!authUser,
+    refetchInterval: 5000, // Check every 5 seconds
+    refetchOnWindowFocus: true,
   })
 
   const { mutate: logout } = useMutation({
@@ -150,10 +169,17 @@ const Navbar = () => {
 					<div className='flex items-center gap-2 md:gap-6'>
 						{authUser ? (
 							<>
-								<Link to={"/"} className='text-neutral flex flex-col items-center'>
-									<Home size={20} />
-									<span className='text-xs hidden md:block'>Home</span>
-								</Link>
+								{authUser.role === 'admin' ? (
+									<Link to={"/admin/dashboard"} className='text-neutral flex flex-col items-center'>
+										<Shield size={20} />
+										<span className='text-xs hidden md:block'>Admin</span>
+									</Link>
+								) : (
+									<Link to={"/"} className='text-neutral flex flex-col items-center'>
+										<Home size={20} />
+										<span className='text-xs hidden md:block'>Home</span>
+									</Link>
+								)}
 								<Link to='/jobs' className='text-neutral flex flex-col items-center'>
 									<Briefcase size={20} />
 									<span className='text-xs hidden md:block'>Jobs</span>

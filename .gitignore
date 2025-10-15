@@ -3,4 +3,6 @@ node_modules
 
 testNodeMailer.js
 QR_CODE_TESTING.md 
-TICKET_SYSTEM.md 
+TICKET_SYSTEM.md
+SUPER_ADMIN.md
+scripts/*

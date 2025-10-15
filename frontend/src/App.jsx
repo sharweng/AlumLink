@@ -19,6 +19,7 @@ import EventsPage from "./pages/EventsPage"
 import MyEventsPage from "./pages/MyEventsPage"
 import EventDetailPage from "./pages/EventDetailPage"
 import EventEditPage from "./pages/EventEditPage"
+import AdminDashboard from "./pages/AdminDashboard"
 
 function App() {
   const { data: authUser, isLoading } = useQuery({
@@ -41,9 +42,16 @@ function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={ authUser ? <HomePage /> : <Navigate to={"/login"} /> } />
+        <Route path="/" element={ 
+          authUser ? (
+            authUser.role === 'admin' ? <Navigate to="/admin/dashboard" /> : <HomePage />
+          ) : <Navigate to={"/login"} /> 
+        } />
         <Route path="/signup" element={ !authUser ? <SignUpPage /> : <Navigate to={"/"} /> } />
         <Route path="/login" element={ !authUser ? <LoginPage /> : <Navigate to={"/"} /> } />
+        <Route path="/admin/dashboard" element={ 
+          authUser?.role === 'admin' ? <AdminDashboard /> : <Navigate to={"/"} /> 
+        } />
         <Route path="/jobs" element={ authUser ? <JobBoardPage /> : <Navigate to={"/login"} /> } />
         <Route path="/job/:jobId" element={ authUser ? <JobPostPage /> : <Navigate to={"/login"} /> } />
         <Route path="/forums" element={ authUser ? <DiscussionForumsPage /> : <Navigate to={"/login"} /> } />
