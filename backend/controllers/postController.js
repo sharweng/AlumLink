@@ -23,18 +23,33 @@ export const getFeedPosts = async (req, res) => {
 
 export const createPost = async (req, res) => {
     try {
-        const { content, image } = req.body;
+        const { content, image, images } = req.body;
 
         let newPost
 
-        if (image) {
+        // Handle multiple images
+        if (images && images.length > 0) {
+            const uploadPromises = images.map(img => cloudinary.uploader.upload(img));
+            const imgResults = await Promise.all(uploadPromises);
+            const imageUrls = imgResults.map(result => result.secure_url);
+            
+            newPost = new Post({
+                author: req.user._id,
+                content,
+                images: imageUrls
+            });
+        } 
+        // Handle single image (backward compatibility)
+        else if (image) {
             const imgResult = await cloudinary.uploader.upload(image)
             newPost = new Post({
                 author: req.user._id,
                 content,
                 image: imgResult.secure_url
             });
-        } else {
+        } 
+        // No images
+        else {
             newPost = new Post({
                 author: req.user._id,
                 content,
@@ -65,8 +80,16 @@ export const deletePost = async (req, res) => {
             return res.status(403).json({ message: "You are not authorized to delete this post" });
         }
 
-        // deletes image from cloudinary if exists
-        if (post.image) {
+        // deletes images from cloudinary if exists
+        if (post.images && post.images.length > 0) {
+            const deletePromises = post.images.map(imageUrl => {
+                const publicId = imageUrl.split("/").pop().split(".")[0];
+                return cloudinary.uploader.destroy(publicId);
+            });
+            await Promise.all(deletePromises);
+        }
+        // delete single image (backward compatibility)
+        else if (post.image) {
             const publicId = post.image.split("/").pop().split(".")[0];
             await cloudinary.uploader.destroy(publicId);
         }
@@ -83,7 +106,7 @@ export const editPost = async (req, res) => {
     try {
         const postId = req.params.id;
         const userId = req.user._id;
-        const { content, image } = req.body;
+        const { content, image, removedImages, newImages } = req.body;
 
         const post = await Post.findById(postId);
 
@@ -96,7 +119,34 @@ export const editPost = async (req, res) => {
             return res.status(403).json({ message: "You are not authorized to edit this post" });
         }
 
-        // Handle image update
+        // Handle removed images from array
+        if (removedImages && removedImages.length > 0 && post.images && post.images.length > 0) {
+            // Delete removed images from Cloudinary
+            const deletePromises = removedImages.map(imageUrl => {
+                const publicId = imageUrl.split("/").pop().split(".")[0];
+                return cloudinary.uploader.destroy(publicId);
+            });
+            await Promise.all(deletePromises);
+            
+            // Update images array by filtering out removed images
+            post.images = post.images.filter(img => !removedImages.includes(img));
+        }
+
+        // Handle new images being added to existing images array
+        if (newImages && newImages.length > 0) {
+            const uploadPromises = newImages.map(img => cloudinary.uploader.upload(img));
+            const imgResults = await Promise.all(uploadPromises);
+            const newImageUrls = imgResults.map(result => result.secure_url);
+            
+            // Add new images to existing images array
+            if (post.images && post.images.length > 0) {
+                post.images = [...post.images, ...newImageUrls];
+            } else {
+                post.images = newImageUrls;
+            }
+        }
+
+        // Handle single image update (backward compatibility)
         if (image === null) {
             // Remove existing image
             if (post.image) {

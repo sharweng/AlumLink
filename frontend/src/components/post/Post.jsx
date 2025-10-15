@@ -17,7 +17,9 @@ import {
   HeartOff,
   Reply as ReplyIcon,
   ChevronDown,
-  ChevronRight as ChevronRightIcon
+  ChevronRight as ChevronRightIcon,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react"
 import PostAction from "./PostAction"
 import { formatDistanceToNow } from "date-fns"
@@ -41,9 +43,13 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   const [isEditingPost, setIsEditingPost] = useState(false)
   const [editPostContent, setEditPostContent] = useState(post.content || "")
   const [editPostImage, setEditPostImage] = useState(null)
+  const [newImages, setNewImages] = useState([])
+  const [newImagePreviews, setNewImagePreviews] = useState([])
+  const [removedImages, setRemovedImages] = useState([])
   const [showEditError, setShowEditError] = useState(false)
   const [imageMaxHeight, setImageMaxHeight] = useState(null)
   const [isImageTall, setIsImageTall] = useState(false)
+  const [selectedImageIndex, setSelectedImageIndex] = useState(null)
   const fileInputRef = useRef(null)
   const imageContainerRef = useRef(null)
   const isOwner = authUser._id === post.author._id
@@ -190,12 +196,18 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   })
 
   const { mutate: editPost, isPending: isEditingPostMutation } = useMutation({
-    mutationFn: async ({ content, image }) => {
+    mutationFn: async ({ content, image, removedImages, newImages }) => {
       const payload = { content }
       if (image === "REMOVE_IMAGE") {
         payload.image = null // Explicitly remove image
       } else if (image) {
         payload.image = image // Update with new image
+      }
+      if (removedImages && removedImages.length > 0) {
+        payload.removedImages = removedImages
+      }
+      if (newImages && newImages.length > 0) {
+        payload.newImages = newImages
       }
       await axiosInstance.put(`/posts/edit/${post._id}`, payload)
     },
@@ -205,6 +217,9 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
       setIsEditingPost(false)
       setEditPostContent("")
       setEditPostImage(null)
+      setNewImages([])
+      setNewImagePreviews([])
+      setRemovedImages([])
       toast.success("Post updated successfully")
     },
     onError: (error) => {
@@ -446,6 +461,9 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     setIsEditingPost(false)
     setEditPostContent(post.content || "")
     setEditPostImage(null)
+    setNewImages([])
+    setNewImagePreviews([])
+    setRemovedImages([])
     setShowEditError(false)
   }
 
@@ -454,26 +472,41 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     
     // Validation: require at least content or image
     const hasContent = editPostContent.trim()
-    // Check if there's an image: either a new image was uploaded, or the original image exists and wasn't removed
-    const hasImage = (editPostImage && editPostImage !== "REMOVE_IMAGE") || (!editPostImage && post.image)
+    // Check if there's an image: either a new image was uploaded, or there are remaining images after removals
+    const remainingImages = post.images ? post.images.filter(img => !removedImages.includes(img)) : []
+    const hasImage = (editPostImage && editPostImage !== "REMOVE_IMAGE") || (!editPostImage && post.image) || remainingImages.length > 0 || newImages.length > 0
     
     if (!hasContent && !hasImage) {
       setShowEditError(true)
       return
     }
     
-    editPost({ content: editPostContent, image: editPostImage })
+    editPost({ content: editPostContent, image: editPostImage, removedImages, newImages })
   }
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = () => {
-        setEditPostImage(reader.result)
-        setShowEditError(false) // Clear error when image is added
-      }
-      reader.readAsDataURL(file)
+    const files = Array.from(e.target.files)
+    if (files.length > 0) {
+      const newImageFiles = []
+      const newPreviews = []
+      
+      let loadedCount = 0
+      
+      files.forEach((file) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          newImageFiles.push(reader.result)
+          newPreviews.push(reader.result)
+          loadedCount++
+          
+          if (loadedCount === files.length) {
+            setNewImages(prev => [...prev, ...newImageFiles])
+            setNewImagePreviews(prev => [...prev, ...newPreviews])
+            setShowEditError(false)
+          }
+        }
+        reader.readAsDataURL(file)
+      })
     }
   }
 
@@ -482,6 +515,15 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
+  }
+
+  const removeExistingImage = (imageUrl) => {
+    setRemovedImages(prev => [...prev, imageUrl])
+  }
+
+  const removeNewImage = (index) => {
+    setNewImages(prev => prev.filter((_, i) => i !== index))
+    setNewImagePreviews(prev => prev.filter((_, i) => i !== index))
   }
 
   const handleLikePost = async () => {
@@ -593,14 +635,14 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                   if (e.target.value.trim()) setShowEditError(false) // Clear error when typing
                 }}
                 className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none ${
-                  showEditError && !editPostContent.trim() && !((editPostImage && editPostImage !== "REMOVE_IMAGE") || (!editPostImage && post.image))
+                  showEditError && !editPostContent.trim() && !((editPostImage && editPostImage !== "REMOVE_IMAGE") || (!editPostImage && (post.image || (post.images && post.images.length > 0))))
                     ? 'border-2 border-red-500' 
                     : 'border-gray-300'
                 }`}
                 rows={3}
                 placeholder="What's on your mind?"
               />
-              {showEditError && !editPostContent.trim() && !((editPostImage && editPostImage !== "REMOVE_IMAGE") || (!editPostImage && post.image)) && (
+              {showEditError && !editPostContent.trim() && !((editPostImage && editPostImage !== "REMOVE_IMAGE") || (!editPostImage && (post.image || (post.images && post.images.length > 0)))) && (
                 <p className="text-red-500 text-sm mt-1">Content is required if no image is provided</p>
               )}
             </div>
@@ -612,6 +654,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                 ref={fileInputRef}
                 onChange={handleImageChange}
                 accept="image/*"
+                multiple
                 className="hidden"
               />
               <div className="flex flex-col">
@@ -619,7 +662,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                    showEditError && !editPostContent.trim() && !((editPostImage && editPostImage !== "REMOVE_IMAGE") || (!editPostImage && post.image))
+                    showEditError && !editPostContent.trim() && !((editPostImage && editPostImage !== "REMOVE_IMAGE") || (!editPostImage && (post.image || (post.images && post.images.length > 0))))
                       ? 'text-red-500 font-semibold'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
@@ -627,35 +670,60 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                   <ImageIcon size={18} />
                   <span>Photo</span>
                 </button>
-                {showEditError && !editPostContent.trim() && !((editPostImage && editPostImage !== "REMOVE_IMAGE") || (!editPostImage && post.image)) && (
+                {showEditError && !editPostContent.trim() && !((editPostImage && editPostImage !== "REMOVE_IMAGE") || (!editPostImage && (post.image || (post.images && post.images.length > 0)))) && (
                   <p className="text-red-500 text-sm mt-1">Or add a photo</p>
                 )}
               </div>
-              
-              {(editPostImage !== "REMOVE_IMAGE" && (editPostImage || post.image)) && (
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  className="text-red-500 hover:text-red-700 transition-colors"
-                >
-                  <X size={16} />
-                </button>
-              )}
             </div>
 
-            {/* Image preview */}
-            {editPostImage && editPostImage !== "REMOVE_IMAGE" && (
-              <div className="relative w-full aspect-square bg-gray-100">
-                <img 
-                  src={editPostImage} 
-                  alt="Preview" 
-                  className="w-full h-full object-cover"
-                />
+            {/* Combined image grid: existing + new images */}
+            {(post.images && post.images.length > 0) || newImagePreviews.length > 0 ? (
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                {/* Existing images */}
+                {post.images && post.images
+                  .filter(img => !removedImages.includes(img))
+                  .map((image, index) => (
+                    <div key={`existing-${index}`} className="relative group aspect-square">
+                      <img 
+                        src={image} 
+                        alt={`Current image ${index + 1}`} 
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeExistingImage(image)}
+                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                
+                {/* New images */}
+                {newImagePreviews.map((preview, index) => (
+                  <div key={`new-${index}`} className="relative group aspect-square">
+                    <img 
+                      src={preview} 
+                      alt={`New image ${index + 1}`} 
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeNewImage(index)}
+                      className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    >
+                      <X size={12} />
+                    </button>
+                    <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-2 py-0.5 rounded">
+                      New
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
+            ) : null}
             
-            {/* Show current image if no new image is selected and not marked for removal */}
-            {!editPostImage && post.image && (
+            {/* Show current single image (backward compatibility) */}
+            {!post.images && post.image && (
               <div className="relative w-full aspect-square bg-gray-100">
                 <img 
                   src={post.image} 
@@ -666,7 +734,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
             )}
 
             {/* Action buttons */}
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 pb-4">
               <button
                 type="button"
                 onClick={handleCancelPostEdit}
@@ -693,12 +761,82 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
             {post.content && (
               <p className="text-gray-700 px-4 pt-4 pb-4">{post.content}</p>
             )}
-            {post.image && (
-              <div ref={imageContainerRef} className="relative w-full aspect-square bg-gray-100">
+            
+            {/* Display multiple images */}
+            {post.images && post.images.length > 0 && (
+              <>
+                {post.images.length === 1 ? (
+                  // Single image - Facebook style
+                  <div ref={imageContainerRef} className="relative w-full bg-gray-100">
+                    <img 
+                      src={post.images[0]} 
+                      alt="Post image" 
+                      className="w-full h-auto object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                      style={{ maxHeight: '600px' }}
+                      onClick={() => setSelectedImageIndex(0)}
+                      onLoad={(e) => {
+                        const img = e.target;
+                        const aspectRatio = img.naturalWidth / img.naturalHeight;
+                        
+                        // If portrait (height > width), make container square and use object-cover
+                        if (aspectRatio < 1) {
+                          img.parentElement.classList.add('aspect-square');
+                          img.classList.remove('object-contain', 'h-auto');
+                          img.classList.add('object-cover', 'h-full');
+                        }
+                      }}
+                    />
+                  </div>
+                ) : (
+                  // Multiple images - Grid layout
+                  <div className={`grid ${
+                    post.images.length === 2 ? 'grid-cols-2' : 'grid-cols-2'
+                  }`}>
+                    {post.images.slice(0, post.images.length > 4 ? 4 : post.images.length).map((image, index) => (
+                      <div key={index} className="w-full aspect-square bg-gray-100 relative overflow-hidden">
+                        <img 
+                          src={image} 
+                          alt={`Post image ${index + 1}`} 
+                          className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => setSelectedImageIndex(index)}
+                        />
+                        {/* Overlay for 4th image when there are more than 4 images */}
+                        {post.images.length > 4 && index === 3 && (
+                          <div 
+                            className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center cursor-pointer hover:bg-opacity-70 transition-opacity"
+                            onClick={() => setSelectedImageIndex(index)}
+                          >
+                            <span className="text-white text-4xl font-bold">
+                              +{post.images.length - 3}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+            
+            {/* Display single image (backward compatibility) - Facebook style */}
+            {!post.images && post.image && (
+              <div ref={imageContainerRef} className="relative w-full bg-gray-100">
                 <img 
                   src={post.image} 
                   alt="Post content" 
-                  className="w-full h-full object-cover"
+                  className="w-full h-auto object-contain"
+                  style={{ maxHeight: '600px' }}
+                  onLoad={(e) => {
+                    const img = e.target;
+                    const aspectRatio = img.naturalWidth / img.naturalHeight;
+                    
+                    // If portrait (height > width), make container square and use object-cover
+                    if (aspectRatio < 1) {
+                      img.parentElement.classList.add('aspect-square');
+                      img.classList.remove('object-contain', 'h-auto');
+                      img.classList.add('object-cover', 'h-full');
+                    }
+                  }}
                 />
               </div>
             )}
@@ -1108,6 +1246,64 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* Image Lightbox Modal */}
+      {selectedImageIndex !== null && post?.images && post.images.length > 0 && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4"
+          onClick={() => setSelectedImageIndex(null)}
+        >
+          <button
+            onClick={() => setSelectedImageIndex(null)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+            aria-label="Close"
+          >
+            <X size={32} />
+          </button>
+          
+          {/* Previous Button */}
+          {post.images.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImageIndex((selectedImageIndex - 1 + post.images.length) % post.images.length);
+              }}
+              className="absolute left-4 text-white hover:text-gray-300 transition-colors p-2 bg-black bg-opacity-50 rounded-full"
+              aria-label="Previous image"
+            >
+              <ChevronLeft size={32} />
+            </button>
+          )}
+
+          <img
+            src={post.images[selectedImageIndex]}
+            alt={`Full size - Image ${selectedImageIndex + 1}`}
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* Next Button */}
+          {post.images.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImageIndex((selectedImageIndex + 1) % post.images.length);
+              }}
+              className="absolute right-4 text-white hover:text-gray-300 transition-colors p-2 bg-black bg-opacity-50 rounded-full"
+              aria-label="Next image"
+            >
+              <ChevronRight size={32} />
+            </button>
+          )}
+
+          {/* Image Counter */}
+          {post.images.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white bg-black bg-opacity-50 px-4 py-2 rounded-full">
+              {selectedImageIndex + 1} / {post.images.length}
+            </div>
+          )}
         </div>
       )}
     </div>

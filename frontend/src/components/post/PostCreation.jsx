@@ -2,12 +2,12 @@ import { axiosInstance } from "../../lib/axios"
 import { useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import toast from "react-hot-toast"
-import { Image, Loader } from "lucide-react"
+import { Image, Loader, X } from "lucide-react"
 
 const PostCreation = ({ user }) => {
   const [content, setContent] = useState("")
-  const [image, setImage] = useState("")
-  const [imagePreview, setImagePreview] = useState("")
+  const [images, setImages] = useState([])
+  const [imagePreviews, setImagePreviews] = useState([])
   const [showError, setShowError] = useState(false)
 
   const queryClient = useQueryClient()
@@ -32,13 +32,17 @@ const PostCreation = ({ user }) => {
   const handlePostCreation = async () => {
     try {
       // Validation: require at least content or image
-      if (!content.trim() && !image) {
+      if (!content.trim() && images.length === 0) {
         setShowError(true);
         return;
       }
 
       const postData = { content }
-      if (image) postData.image = await readFileAsDataURL(image)
+      
+      if (images.length > 0) {
+        const imageDataURLs = await Promise.all(images.map(img => readFileAsDataURL(img)));
+        postData.images = imageDataURLs;
+      }
 
       createPostMutation(postData)
     } catch (error) {
@@ -48,20 +52,29 @@ const PostCreation = ({ user }) => {
 
   const resetForm = () => {
     setContent("")
-    setImage(null)
-    setImagePreview(null)
+    setImages([])
+    setImagePreviews([])
     setShowError(false)
   }
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0]
-    setImage(file)
-    if(file){
-      readFileAsDataURL(file).then(setImagePreview)
+    const files = Array.from(e.target.files)
+    setImages([...images, ...files])
+    
+    files.forEach(file => {
+      readFileAsDataURL(file).then(preview => {
+        setImagePreviews(prev => [...prev, preview])
+      })
+    })
+    
+    if(files.length > 0){
       setShowError(false) // Clear error when image is added
-    }else{
-      setImagePreview(null)
     }
+  }
+
+  const removeImage = (index) => {
+    setImages(images.filter((_, i) => i !== index))
+    setImagePreviews(imagePreviews.filter((_, i) => i !== index))
   }
 
   const readFileAsDataURL = (file) => {
@@ -80,21 +93,37 @@ const PostCreation = ({ user }) => {
         <div className="flex-1">
           <textarea placeholder="What's on your mind?"
             className={`w-full p-3 rounded-lg bg-base-100 hover:bg-base-200 focus:bg-base-200 focus:outline-none resize-none transition-colors duration-200 min-h-[100px] ${
-              showError && !content.trim() && !image ? 'border-2 border-red-500' : ''
+              showError && !content.trim() && images.length === 0 ? 'border-2 border-red-500' : ''
             }`}
             value={ content }
             onChange={(e) => {
               setContent(e.target.value)
               if (e.target.value.trim()) setShowError(false) // Clear error when typing
             }} />
-          {showError && !content.trim() && !image && (
+          {showError && !content.trim() && images.length === 0 && (
             <p className="text-red-500 text-sm mt-1">Content is required if no image is provided</p>
           )}
         </div>
       </div>
-      { imagePreview && (
-        <div className="mt-4">
-          <img src={ imagePreview } alt="Selected" className="w-full h-auto rounded-lg" />
+      
+      {/* Image Previews */}
+      {imagePreviews.length > 0 && (
+        <div className="mt-4 grid grid-cols-3 md:grid-cols-4 gap-2">
+          {imagePreviews.map((preview, index) => (
+            <div key={index} className="relative group aspect-square">
+              <img 
+                src={preview} 
+                alt={`Preview ${index + 1}`} 
+                className="w-full h-full object-cover rounded-lg"
+              />
+              <button
+                onClick={() => removeImage(index)}
+                className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -102,14 +131,14 @@ const PostCreation = ({ user }) => {
         <div className="flex flex-col">
           <div className="flex space-x-4">
             <label className={`flex items-center text-info hover:text-info-dark transition-colors duration-200 cursor-pointer ${
-              showError && !content.trim() && !image ? 'text-red-500 font-semibold' : ''
+              showError && !content.trim() && images.length === 0 ? 'text-red-500 font-semibold' : ''
             }`}>
               <Image size={20} className="mr-2" />
               <span>Photo</span>
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+              <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageChange} />
             </label>
           </div>
-          {showError && !content.trim() && !image && (
+          {showError && !content.trim() && images.length === 0 && (
             <p className="text-red-500 text-sm mt-1">Or add a photo</p>
           )}
         </div>
