@@ -80,7 +80,7 @@ const NotificationsPage = () => {
     // Apply type filter
     if (filter !== 'all') {
       if (filter === 'application') {
-        filtered = filtered.filter(n => n.type === 'jobApplication' || n.type === 'jobApplicationCancelled')
+        filtered = filtered.filter(n => n.type === 'jobApplication' || n.type === 'jobApplicationCancelled' || n.type === 'jobUpdate')
       } else if (filter === 'link') {
         filtered = filtered.filter(n => n.type === 'linkAccepted')
       } else if (filter === 'discussionLike') {
@@ -121,6 +121,8 @@ const NotificationsPage = () => {
         return <Briefcase className='text-blue-500' />
       case "jobApplicationCancelled":
         return <X className='text-red-500' />
+      case "jobUpdate":
+        return <Briefcase className='text-orange-500' />
       case "discussionLike":
         return <Heart className='text-red-500' />
       case "discussionComment":
@@ -196,6 +198,16 @@ const NotificationsPage = () => {
 							{notification.relatedUser.name}
 						</Link>{" "}
 						cancelled their application to your job post
+					</span>
+				);
+			case "jobUpdate":
+				return (
+					<span>
+						The job post{" "}
+						<Link to={`/job/${notification.relatedJobPost._id}`} className='font-bold'>
+							{notification.relatedJobPost.title}
+						</Link>{" "}
+						you applied to has been updated
 					</span>
 				);
 			case "discussionLike":

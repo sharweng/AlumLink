@@ -170,13 +170,25 @@ const JobPostEdit = ({ jobPost, onClose }) => {
   };
 
   return (
-    <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
-      <div className='bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto'>
+    <div 
+      className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
+    >
+      <div 
+        className='bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto'
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className='sticky top-0 bg-white border-b p-6'>
           <div className='flex items-center justify-between'>
             <h2 className='text-xl font-bold '>Edit Job Post</h2>
             <button
-              onClick={onClose}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
               className='p-2 hover:bg-gray-100 rounded-full transition-colors'
             >
               <X size={20} />
@@ -202,7 +214,7 @@ const JobPostEdit = ({ jobPost, onClose }) => {
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             <div>
               <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Job Title *
+                Job Title <span className='text-red-500'>*</span>
               </label>
               <input
                 type='text'
@@ -218,7 +230,7 @@ const JobPostEdit = ({ jobPost, onClose }) => {
 
             <div>
               <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Company *
+                Company <span className='text-red-500'>*</span>
               </label>
               <input
                 type='text'
@@ -234,7 +246,7 @@ const JobPostEdit = ({ jobPost, onClose }) => {
 
             <div>
               <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Location *
+                Location <span className='text-red-500'>*</span>
               </label>
               <input
                 type='text'
@@ -333,7 +345,7 @@ const JobPostEdit = ({ jobPost, onClose }) => {
           {/* Description */}
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Job Description *
+              Job Description <span className='text-red-500'>*</span>
             </label>
             <textarea
               value={formData.description}
@@ -350,7 +362,7 @@ const JobPostEdit = ({ jobPost, onClose }) => {
           {/* Requirements */}
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Requirements *
+              Requirements <span className='text-red-500'>*</span>
             </label>
             <textarea
               value={formData.requirements}

@@ -1,9 +1,9 @@
-import { useParams } from "react-router-dom"
+import { useParams, Link } from "react-router-dom"
 import { axiosInstance } from "../lib/axios"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import Sidebar from "../components/Sidebar"
 import Post from "../components/post/Post"
-import { Loader, XCircle } from "lucide-react"
+import { Loader, XCircle, ArrowLeft } from "lucide-react"
 
 const PostPage = () => {
   const { postId } = useParams()
@@ -41,10 +41,19 @@ const PostPage = () => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      <div className="col-span-1 lg:col-span-1">
+      <div className="lg:col-span-1">
         <Sidebar user={authUser} />
       </div>
-      <div className="col-span-1 lg:col-span-3">
+      <div className="lg:col-span-3">
+        {/* Back Button */}
+        <Link
+          to='/'
+          className='inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors'
+        >
+          <ArrowLeft size={16} />
+          Back to Feed
+        </Link>
+        
         { renderPost() }
       </div>
     </div>

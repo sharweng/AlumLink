@@ -31,8 +31,8 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
   });
 
   const handleCardClick = (e) => {
-    // Don't navigate if clicking on buttons or links
-    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.dropdown-menu') || isDetailPage) {
+    // Don't navigate if clicking on buttons, links, dropdown menu, or if modal is open
+    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.dropdown-menu') || showEditModal || isDetailPage) {
       return;
     }
     navigate(`/job/${jobPost._id}`);

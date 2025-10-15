@@ -127,6 +127,22 @@ export const updateJobPost = async (req, res) => {
             { new: true }
         ).populate("author", "name username profilePicture headline");
 
+        // Send notifications to all applicants
+        if (jobPost.applicants && jobPost.applicants.length > 0) {
+            const notifications = jobPost.applicants.map(applicant => {
+                const applicantId = typeof applicant.user === 'object' ? applicant.user._id : applicant.user;
+                
+                return new Notification({
+                    recipient: applicantId,
+                    type: "jobUpdate",
+                    relatedUser: req.user._id,
+                    relatedJobPost: jobPost._id,
+                });
+            });
+
+            await Notification.insertMany(notifications);
+        }
+
         res.status(200).json(updatedJobPost);
     } catch (error) {
         console.log("Error in updateJobPost:", error.message);
