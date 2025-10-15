@@ -75,154 +75,132 @@ const JobBoardPage = () => {
 
   return (
     <div className='grid grid-cols-1 lg:grid-cols-4 gap-6'>
-      {/* Sidebar */}
-      <div className='hidden lg:block lg:col-span-1'>
+      <div className='lg:col-span-1'>
         <Sidebar user={authUser} />
       </div>
-
-      {/* Main Content - Now takes full remaining width */}
-      <div className='col-span-1 lg:col-span-3 order-first lg:order-none'>
+      
+      <div className='lg:col-span-3'>
         {/* Header */}
-        <div className='bg-white rounded-lg shadow p-6 mb-6'>
-          <div className='flex items-center justify-between mb-4'>
-            <div className='flex items-center gap-3'>
-              <h1 className='text-2xl font-bold'>Job & Internship Board</h1>
-            </div>
+        <div className='mb-6'>
+          <div className='flex justify-between items-center mb-4'>
+            <h1 className='text-3xl font-bold flex items-center gap-2'>
+              <Briefcase className='text-primary' />
+              Job & Internship Board
+            </h1>
             <button
               onClick={() => setShowCreateForm(!showCreateForm)}
-              className='bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2'
+              className='btn btn-primary flex items-center gap-2'
             >
               <Plus size={20} />
               Post Job
             </button>
           </div>
 
-          {/* Search Bar */}
-          <form onSubmit={handleSearch} className='mb-4'>
-            <div className='relative'>
-              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' size={20} />
-              <input
-                type='text'
-                placeholder='Search jobs, companies, skills...'
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className='w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent'
-              />
-            </div>
-          </form>
-
-          {/* Filter Toggle */}
-          <div className='flex items-center justify-between'>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className='flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors'
-            >
-              <Filter size={20} />
-              {showFilters ? 'Hide Filters' : 'Show Filters'}
-            </button>
-            {(filters.type !== 'all' || filters.workType !== 'all' || filters.location || filters.company || filters.skills || searchQuery) && (
-              <button
-                onClick={clearFilters}
-                className='text-red-500 hover:text-red-600 text-sm'
-              >
-                Clear All Filters
-              </button>
-            )}
-          </div>
-
-          {/* Filters */}
-          {showFilters && (
-            <div className='mt-4 p-4 bg-gray-50 rounded-lg grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>Job Type</label>
-                <select
-                  value={filters.type}
-                  onChange={(e) => handleFilterChange('type', e.target.value)}
-                  className='w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 focus:border-transparent'
-                >
-                  <option value='all'>All Types</option>
-                  <option value='job'>Full-time Job</option>
-                  <option value='part-time'>Part-time Job</option>
-                  <option value='internship'>Internship</option>
-                  <option value='freelance'>Freelance</option>
-                </select>
-              </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>Work Type</label>
-                <select
-                  value={filters.workType}
-                  onChange={(e) => handleFilterChange('workType', e.target.value)}
-                  className='w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 focus:border-transparent'
-                >
-                  <option value='all'>All Work Types</option>
-                  <option value='remote'>Remote</option>
-                  <option value='onsite'>On-site</option>
-                  <option value='hybrid'>Hybrid</option>
-                </select>
-              </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>Location</label>
-                <input
-                  type='text'
-                  placeholder='Enter location'
-                  value={filters.location}
-                  onChange={(e) => handleFilterChange('location', e.target.value)}
-                  className='w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 focus:border-transparent'
-                />
-              </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>Company</label>
-                <input
-                  type='text'
-                  placeholder='Enter company name'
-                  value={filters.company}
-                  onChange={(e) => handleFilterChange('company', e.target.value)}
-                  className='w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 focus:border-transparent'
-                />
-              </div>
-              <div className='md:col-span-2'>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>Skills</label>
-                <input
-                  type='text'
-                  placeholder='Enter skills (comma separated)'
-                  value={filters.skills}
-                  onChange={(e) => handleFilterChange('skills', e.target.value)}
-                  className='w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 focus:border-transparent'
-                />
-              </div>
+          {/* Create Job Form */}
+          {showCreateForm && (
+            <div className='mb-6'>
+              <JobPostCreation onClose={() => setShowCreateForm(false)} />
             </div>
           )}
+
+          {/* Search and Filters */}
+          <div className='bg-white rounded-lg shadow p-4 mb-4'>
+            <div className='grid grid-cols-1 gap-4'>
+              {/* Search */}
+              <div className='relative'>
+                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' size={20} />
+                <input
+                  type='text'
+                  placeholder='Search jobs, companies, skills...'
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className='w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary'
+                />
+              </div>
+
+              {/* Filter Toggle */}
+              <div className='flex items-center justify-between'>
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className='flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors'
+                >
+                  <Filter size={20} />
+                  {showFilters ? 'Hide Filters' : 'Show Filters'}
+                </button>
+                {(filters.type !== 'all' || filters.workType !== 'all' || filters.location || filters.company || filters.skills || searchQuery) && (
+                  <button
+                    onClick={clearFilters}
+                    className='text-red-500 hover:text-red-600 text-sm'
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+
+              {/* Filters */}
+              {showFilters && (
+                <div className='pt-2 grid grid-cols-1 md:grid-cols-3 gap-4'>
+                  <select
+                    value={filters.type}
+                    onChange={(e) => handleFilterChange('type', e.target.value)}
+                    className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary'
+                  >
+                    <option value='all'>All Types</option>
+                    <option value='job'>Full-time Job</option>
+                    <option value='part-time'>Part-time</option>
+                    <option value='internship'>Internship</option>
+                    <option value='freelance'>Freelance</option>
+                  </select>
+                  <select
+                    value={filters.workType}
+                    onChange={(e) => handleFilterChange('workType', e.target.value)}
+                    className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary'
+                  >
+                    <option value='all'>All Work Types</option>
+                    <option value='remote'>Remote</option>
+                    <option value='onsite'>On-site</option>
+                    <option value='hybrid'>Hybrid</option>
+                  </select>
+                  <input
+                    type='text'
+                    placeholder='Location'
+                    value={filters.location}
+                    onChange={(e) => handleFilterChange('location', e.target.value)}
+                    className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary'
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Job Post Creation Form */}
-        {showCreateForm && (
-          <div className='mb-6'>
-            <JobPostCreation onClose={() => setShowCreateForm(false)} />
-          </div>
-        )}
-
-        {/* Job Posts */}
-        <div className='space-y-6'>
+        {/* Job Posts List */}
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-4 items-start'>
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
-              <Loader className="animate-spin h-10 w-10 text-primary mb-4" />
-              <span className="text-lg text-info font-medium">Loading job posts...</span>
+            <div className='col-span-full text-center py-8'>
+              <Loader className='animate-spin h-12 w-12 text-primary mx-auto' />
             </div>
           ) : jobPostsData?.jobPosts?.length > 0 ? (
             jobPostsData.jobPosts.map(jobPost => (
-              <JobPost key={jobPost._id} jobPost={jobPost} isDetailPage={false} />
+              <JobPost key={jobPost._id} jobPost={jobPost} />
             ))
           ) : (
-            <div className='bg-white rounded-lg shadow p-8 text-center'>
-              <div className='mb-6'>
-                <Briefcase size={64} className="mx-auto text-red-500" />
-              </div>
-              <h2 className='text-2xl font-bold mb-4 '>No Job Posts Found</h2>
+            <div className='col-span-full bg-white rounded-lg shadow p-8 text-center'>
+              <Briefcase size={64} className='mx-auto text-gray-400 mb-4' />
+              <h2 className='text-2xl font-bold mb-2'>No Jobs Found</h2>
               <p className='text-gray-600 mb-6'>
                 {searchQuery || Object.values(filters).some(v => v && v !== 'all')
-                  ? 'Try adjusting your search criteria or filters.'
+                  ? 'Try adjusting your filters or search terms'
                   : 'Be the first to post a job opportunity!'}
               </p>
+              {!showCreateForm && (
+                <button
+                  onClick={() => setShowCreateForm(true)}
+                  className='btn btn-primary'
+                >
+                  Post Job
+                </button>
+              )}
             </div>
           )}
         </div>

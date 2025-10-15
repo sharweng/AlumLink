@@ -163,7 +163,7 @@ const JobPostCreation = ({ onClose }) => {
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Job Title *
+              Job Title <span className='text-red-500'>*</span>
             </label>
             <input
               type='text'
@@ -179,7 +179,7 @@ const JobPostCreation = ({ onClose }) => {
 
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Company *
+              Company <span className='text-red-500'>*</span>
             </label>
             <input
               type='text'
@@ -195,7 +195,7 @@ const JobPostCreation = ({ onClose }) => {
 
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Location *
+              Location <span className='text-red-500'>*</span>
             </label>
             <input
               type='text'
@@ -294,7 +294,7 @@ const JobPostCreation = ({ onClose }) => {
         {/* Description */}
         <div>
           <label className='block text-sm font-medium text-gray-700 mb-1'>
-            Job Description *
+            Job Description <span className='text-red-500'>*</span>
           </label>
           <textarea
             value={formData.description}
@@ -311,7 +311,7 @@ const JobPostCreation = ({ onClose }) => {
         {/* Requirements */}
         <div>
           <label className='block text-sm font-medium text-gray-700 mb-1'>
-            Requirements *
+            Requirements <span className='text-red-500'>*</span>
           </label>
           <textarea
             value={formData.requirements}
@@ -369,49 +369,53 @@ const JobPostCreation = ({ onClose }) => {
         </div>
 
         {/* Application Details */}
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Application URL
-            </label>
-            <input
-              type='url'
-              value={formData.applicationUrl}
-              onChange={(e) => handleInputChange('applicationUrl', e.target.value)}
-              className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent'
-              placeholder='https://company.com/careers/apply'
-            />
-          </div>
+        <div>
+          <p className='text-sm font-medium text-gray-700 mb-3'>
+            Application Method <span className='text-red-500'>*</span> (Provide at least one)
+          </p>
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>
+                Application URL
+              </label>
+              <input
+                type='url'
+                value={formData.applicationUrl}
+                onChange={(e) => handleInputChange('applicationUrl', e.target.value)}
+                className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent'
+                placeholder='https://company.com/careers/apply'
+              />
+            </div>
 
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Application Email
-            </label>
-            <input
-              type='email'
-              value={formData.applicationEmail}
-              onChange={(e) => handleInputChange('applicationEmail', e.target.value)}
-              className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent'
-              placeholder='careers@company.com'
-            />
-          </div>
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>
+                Application Email
+              </label>
+              <input
+                type='email'
+                value={formData.applicationEmail}
+                onChange={(e) => handleInputChange('applicationEmail', e.target.value)}
+                className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent'
+                placeholder='careers@company.com'
+              />
+            </div>
 
-          <div className='md:col-span-2'>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Application Deadline (Optional)
-            </label>
-            <input
-              type='date'
-              value={formData.applicationDeadline}
-              onChange={(e) => handleInputChange('applicationDeadline', e.target.value)}
-              className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent'
-            />
+            <div className='md:col-span-2'>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>
+                Application Deadline (Optional)
+              </label>
+              <input
+                type='date'
+                value={formData.applicationDeadline}
+                onChange={(e) => handleInputChange('applicationDeadline', e.target.value)}
+                className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent'
+              />
+            </div>
           </div>
+          {errors.application && (
+            <p className='text-red-500 text-sm mt-2'>{errors.application}</p>
+          )}
         </div>
-
-        {errors.application && (
-          <p className='text-red-500 text-sm'>{errors.application}</p>
-        )}
 
         {/* Submit Button */}
         <div className='flex justify-end gap-3 pt-4'>

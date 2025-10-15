@@ -57,16 +57,25 @@ const NotificationsPage = () => {
       // Posts tab: notifications with relatedPost (regular posts)
       filtered = notifications.filter(notification => notification.relatedPost)
     } else if (activeTab === 'jobs') {
-      // Jobs tab: notifications with relatedJobPost (job posts) 
-      filtered = notifications.filter(notification => notification.relatedJobPost)
+      // Jobs tab: notifications with relatedJobPost (job posts) - exclude likes and comments
+      filtered = notifications.filter(notification => 
+        notification.relatedJobPost && 
+        notification.type !== 'like' && 
+        notification.type !== 'comment'
+      )
     } else if (activeTab === 'forums') {
       // Forums tab: notifications with relatedDiscussion
       filtered = notifications.filter(notification => notification.relatedDiscussion)
     } else if (activeTab === 'events') {
       // Events tab: notifications with relatedEvent
       filtered = notifications.filter(notification => notification.relatedEvent)
+    } else if (activeTab === 'all') {
+      // All tab: exclude job post likes and comments
+      filtered = notifications.filter(notification => 
+        !(notification.relatedJobPost && (notification.type === 'like' || notification.type === 'comment'))
+      )
     }
-    // 'all' tab shows everything, so no filtering needed
+    // 'all' tab shows everything except job likes/comments
     
     // Apply type filter
     if (filter !== 'all') {
