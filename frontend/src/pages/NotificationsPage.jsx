@@ -83,6 +83,32 @@ const NotificationsPage = () => {
         filtered = filtered.filter(n => n.type === 'jobApplication' || n.type === 'jobApplicationCancelled' || n.type === 'jobUpdate')
       } else if (filter === 'link') {
         filtered = filtered.filter(n => n.type === 'linkAccepted')
+      } else if (filter === 'like') {
+        // Likes filter includes both likes and dislikes from posts and discussions
+        filtered = filtered.filter(n => 
+          n.type === 'like' || 
+          n.type === 'discussionLike' || 
+          n.type === 'postCommentLike' || 
+          n.type === 'postCommentDislike' ||
+          n.type === 'discussionCommentLike' ||
+          n.type === 'discussionCommentDislike'
+        )
+      } else if (filter === 'comment') {
+        // Comments filter includes comments, replies, and mentions from posts and discussions
+        filtered = filtered.filter(n => 
+          n.type === 'comment' || 
+          n.type === 'discussionComment' ||
+          n.type === 'postReply' ||
+          n.type === 'discussionReply' ||
+          n.type === 'postMention' ||
+          n.type === 'discussionMention'
+        )
+      } else if (filter === 'reply') {
+        // Combined filter for "All" tab - includes both post and discussion replies
+        filtered = filtered.filter(n => n.type === 'postReply' || n.type === 'discussionReply')
+      } else if (filter === 'mention') {
+        // Combined filter for "All" tab - includes both post and discussion mentions
+        filtered = filtered.filter(n => n.type === 'postMention' || n.type === 'discussionMention')
       } else if (filter === 'discussionLike') {
         filtered = filtered.filter(n => n.type === 'discussionLike')
       } else if (filter === 'discussionComment') {
@@ -115,6 +141,14 @@ const NotificationsPage = () => {
         return <Heart className='text-red-500' />
       case "comment":
         return <MessageSquare className='text-green-500' />
+      case "postReply":
+        return <Reply className='text-blue-500' />
+      case "postMention":
+        return <AtSign className='text-purple-500' />
+      case "postCommentLike":
+        return <Heart className='text-red-500' />
+      case "postCommentDislike":
+        return <HeartOff className='text-gray-500' />
       case "linkAccepted":
         return <UserPlus className='text-purple-500' />
       case "jobApplication":
@@ -199,6 +233,15 @@ const NotificationsPage = () => {
 							{notification.relatedUser.name}
 						</Link>{" "}
 						disliked your comment
+					</span>
+				);
+			case "postMention":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						mentioned you in a post
 					</span>
 				);
 			case "linkAccepted":
@@ -361,7 +404,7 @@ const NotificationsPage = () => {
 		}
 
 		// Determine what content to show
-		const isCommentNotification = ['postCommentLike', 'postCommentDislike', 'postReply'].includes(notification.type);
+		const isCommentNotification = ['postCommentLike', 'postCommentDislike', 'postReply', 'comment'].includes(notification.type);
 		const showCommentContent = isCommentNotification && notification.commentContent;
 
 		return (
@@ -567,7 +610,7 @@ const NotificationsPage = () => {
 								</div>
 
 								{/* Notification Type Filters */}
-								<div className='flex space-x-2 mb-4 flex-wrap'>
+								<div className='flex space-x-2 mb-4 flex-wrap gap-y-2'>
 									<button
 										onClick={() => setFilter('all')}
 										className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
@@ -578,31 +621,149 @@ const NotificationsPage = () => {
 									>
 										All
 									</button>
-									{(activeTab === 'all' || activeTab === 'posts' || activeTab === 'jobs') && (
-										<button
-											onClick={() => setFilter('like')}
-											className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-												filter === 'like'
-													? 'bg-red-500 text-white'
-													: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-											}`}
-										>
-											Likes
-										</button>
+									
+					{/* Combined filters for "All" tab */}
+					{activeTab === 'all' && (
+						<>
+							<button
+								onClick={() => setFilter('like')}
+								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+									filter === 'like'
+										? 'bg-red-500 text-white'
+										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+								}`}
+							>
+								Likes
+							</button>
+							<button
+								onClick={() => setFilter('comment')}
+								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+									filter === 'comment'
+										? 'bg-green-500 text-white'
+										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+								}`}
+							>
+								Comments
+							</button>
+							<button
+								onClick={() => setFilter('application')}
+								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+									filter === 'application'
+										? 'bg-blue-500 text-white'
+										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+								}`}
+							>
+								Applications
+							</button>
+							<button
+								onClick={() => setFilter('link')}
+								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+									filter === 'link'
+										? 'bg-purple-500 text-white'
+										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+								}`}
+							>
+								Links
+							</button>
+							<button
+								onClick={() => setFilter('eventRSVP')}
+								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+									filter === 'eventRSVP'
+										? 'bg-green-500 text-white'
+										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+								}`}
+							>
+								Going
+							</button>
+							<button
+								onClick={() => setFilter('eventInterested')}
+								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+									filter === 'eventInterested'
+										? 'bg-yellow-500 text-white'
+										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+								}`}
+							>
+								Interested
+							</button>
+							<button
+								onClick={() => setFilter('eventReminder')}
+								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+									filter === 'eventReminder'
+										? 'bg-blue-500 text-white'
+										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+								}`}
+							>
+								Reminders
+							</button>
+							<button
+								onClick={() => setFilter('eventUpdate')}
+								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+									filter === 'eventUpdate'
+										? 'bg-orange-500 text-white'
+										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+								}`}
+							>
+								Updates
+							</button>
+							<button
+								onClick={() => setFilter('eventCancelled')}
+								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+									filter === 'eventCancelled'
+										? 'bg-red-500 text-white'
+										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+								}`}
+							>
+								Cancelled
+							</button>
+						</>
+					)}									{/* Posts tab filters */}
+									{activeTab === 'posts' && (
+										<>
+											<button
+												onClick={() => setFilter('like')}
+												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+													filter === 'like'
+														? 'bg-red-500 text-white'
+														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+												}`}
+											>
+												Likes
+											</button>
+											<button
+												onClick={() => setFilter('comment')}
+												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+													filter === 'comment'
+														? 'bg-green-500 text-white'
+														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+												}`}
+											>
+												Comments
+											</button>
+											<button
+												onClick={() => setFilter('postReply')}
+												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+													filter === 'postReply'
+														? 'bg-blue-500 text-white'
+														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+												}`}
+											>
+												Replies
+											</button>
+											<button
+												onClick={() => setFilter('postMention')}
+												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+													filter === 'postMention'
+														? 'bg-purple-500 text-white'
+														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+												}`}
+											>
+												Mentions
+											</button>
+										</>
 									)}
-									{(activeTab === 'all' || activeTab === 'posts' || activeTab === 'jobs') && (
-										<button
-											onClick={() => setFilter('comment')}
-											className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-												filter === 'comment'
-													? 'bg-green-500 text-white'
-													: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-											}`}
-										>
-											Comments
-										</button>
-									)}
-									{(activeTab === 'all' || activeTab === 'jobs') && (
+
+									{/* Jobs tab filters */}
+									{activeTab === 'jobs' && (
 										<button
 											onClick={() => setFilter('application')}
 											className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
@@ -614,19 +775,9 @@ const NotificationsPage = () => {
 											Applications
 										</button>
 									)}
-									{(activeTab === 'all') && (
-										<button
-											onClick={() => setFilter('link')}
-											className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-												filter === 'link'
-													? 'bg-purple-500 text-white'
-													: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-											}`}
-										>
-											Links
-										</button>
-									)}
-									{(activeTab === 'all' || activeTab === 'forums') && (
+
+									{/* Forums tab filters */}
+									{activeTab === 'forums' && (
 										<>
 											<button
 												onClick={() => setFilter('discussionLike')}
@@ -670,7 +821,9 @@ const NotificationsPage = () => {
 											</button>
 										</>
 									)}
-									{(activeTab === 'all' || activeTab === 'events') && (
+
+									{/* Events tab filters */}
+									{activeTab === 'events' && (
 										<>
 											<button
 												onClick={() => setFilter('eventRSVP')}
