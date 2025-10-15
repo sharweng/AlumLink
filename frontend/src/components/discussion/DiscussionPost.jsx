@@ -2,7 +2,7 @@ import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { axiosInstance } from "../../lib/axios";
 import toast from "react-hot-toast";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { 
   Heart, 
   MessageCircle, 
@@ -29,6 +29,7 @@ import { formatDistanceToNow } from "date-fns";
 const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = null }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const authUser = queryClient.getQueryData(["authUser"]);
   const [showComments, setShowComments] = useState(isDetailView);
   const [newComment, setNewComment] = useState("");
@@ -73,6 +74,59 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
       setExpandedComments(new Set([commentIdToExpand]));
     }
   }, [commentIdToExpand]);
+
+  // Handle highlighting from URL parameters (notifications)
+  useEffect(() => {
+    const commentId = searchParams.get('comment');
+    const replyId = searchParams.get('reply');
+    
+    if (discussion && (commentId || replyId)) {
+      // Ensure comments are shown
+      setShowComments(true);
+      
+      // If it's a reply, expand the parent comment
+      if (replyId && commentId) {
+        setExpandedComments(prev => new Set(prev).add(commentId));
+      }
+      
+      // Wait for DOM to render
+      setTimeout(() => {
+        const targetId = replyId || commentId;
+        const element = document.getElementById(targetId);
+        
+        if (element) {
+          // Scroll to the element
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          // Find and highlight the appropriate box
+          let contentBox;
+          
+          if (replyId) {
+            // For replies, get the bg-gray-100 element
+            contentBox = element.querySelector('.bg-gray-100');
+          } else {
+            // For comments, get the direct bg-gray-50 child
+            const children = element.children;
+            for (let child of children) {
+              if (child.classList.contains('flex-1')) {
+                contentBox = child.querySelector('.bg-gray-50');
+                break;
+              }
+            }
+          }
+          
+          if (contentBox) {
+            const originalBgClass = contentBox.className;
+            contentBox.className = contentBox.className.replace(/bg-gray-\d+/, 'bg-yellow-100');
+            
+            setTimeout(() => {
+              contentBox.className = originalBgClass;
+            }, 2000);
+          }
+        }
+      }, 300);
+    }
+  }, [discussion, searchParams]);
 
   // Helper function to render text with @mentions highlighted
   const renderTextWithMentions = (text) => {
@@ -259,16 +313,50 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
       return response.data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["discussions"] });
-      queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
       setNewComment("");
       toast.success("Comment added successfully");
       
-      // Get the newly created comment (last one in the array)
+      // Clear URL parameters to prevent double highlighting
+      if (searchParams.get('comment') || searchParams.get('reply')) {
+        navigate(`/discussion/${discussion._id}`, { replace: true });
+      }
+      
+      // Ensure comments section is open
+      setShowComments(true);
+      
+      // Highlight the new comment after data refreshes
       if (data.comments && data.comments.length > 0) {
         const newComment = data.comments[data.comments.length - 1];
-        // Navigate to the new comment
-        navigate(`/discussion/${discussion._id}?comment=${newComment._id}`);
+        
+        // Invalidate queries to refresh the data
+        queryClient.invalidateQueries({ queryKey: ["discussions"] });
+        queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
+        
+        // Wait for the queries to refetch and DOM to update
+        setTimeout(() => {
+          const element = document.getElementById(newComment._id);
+          if (element) {
+            // Scroll to the element
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Find and highlight the comment box
+            const children = element.children;
+            for (let child of children) {
+              if (child.classList.contains('flex-1')) {
+                const contentBox = child.querySelector('.bg-gray-50');
+                if (contentBox) {
+                  const originalBgClass = contentBox.className;
+                  contentBox.className = contentBox.className.replace(/bg-gray-\d+/, 'bg-yellow-100');
+                  
+                  setTimeout(() => {
+                    contentBox.className = originalBgClass;
+                  }, 2000);
+                }
+                break;
+              }
+            }
+          }
+        }, 300);
       }
     },
     onError: (error) => {
@@ -312,19 +400,50 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
       return { data: response.data, commentId };
     },
     onSuccess: ({ data, commentId }) => {
-      queryClient.invalidateQueries({ queryKey: ["discussions"] });
-      queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
       setReplyingToCommentId(null);
       setNewReply("");
       toast.success("Reply added successfully");
       
-      // Find the comment and get the newly created reply
+      // Clear URL parameters to prevent double highlighting
+      if (searchParams.get('comment') || searchParams.get('reply')) {
+        navigate(`/discussion/${discussion._id}`, { replace: true });
+      }
+      
+      // Ensure comments section is open
+      setShowComments(true);
+      
+      // Highlight the new reply after data refreshes
       if (data.comments) {
         const comment = data.comments.find(c => c._id === commentId);
         if (comment && comment.replies && comment.replies.length > 0) {
           const newReply = comment.replies[comment.replies.length - 1];
-          // Navigate to the new reply
-          navigate(`/discussion/${discussion._id}?comment=${commentId}&reply=${newReply._id}`);
+          
+          // Expand the replies section first
+          setExpandedComments(prev => new Set(prev).add(commentId));
+          
+          // Invalidate queries to refresh the data
+          queryClient.invalidateQueries({ queryKey: ["discussions"] });
+          queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
+          
+          // Wait for the queries to refetch and DOM to update
+          setTimeout(() => {
+            const element = document.getElementById(newReply._id);
+            if (element) {
+              // Scroll to the element
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              
+              // Find and highlight the reply box (bg-gray-100 for replies)
+              const contentBox = element.querySelector('.bg-gray-100');
+              if (contentBox) {
+                const originalBgClass = contentBox.className;
+                contentBox.className = contentBox.className.replace(/bg-gray-\d+/, 'bg-yellow-100');
+                
+                setTimeout(() => {
+                  contentBox.className = originalBgClass;
+                }, 2000);
+              }
+            }
+          }, 300);
         }
       }
     },
@@ -989,7 +1108,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
       </div>
 
       {/* Actions */}
-      <div className="px-4 py-3 border-t flex items-center gap-6">
+      <div className="px-4 py-3 border-t flex items-center justify-between">
         <button
           onClick={() => likeDiscussion()}
           className={`flex items-center gap-2 ${isLiked ? 'text-red-500' : 'text-gray-600'} hover:text-red-500 transition-colors`}
@@ -1015,7 +1134,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
           title="Share discussion"
         >
           <Share2 size={20} />
-          <span className="text-sm">Share</span>
+          <span className="text-sm min-w-[20px] text-left">0</span>
         </button>
       </div>
 
