@@ -694,14 +694,10 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                 </h3>
               </Link>
               <p className="text-sm text-gray-500">{discussion.author?.headline}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-gray-400">
-                  {formatDistanceToNow(new Date(discussion.createdAt), { addSuffix: true })}
-                </span>
-                {discussion.editedAt && (
-                  <span className="text-xs text-gray-400">(edited)</span>
-                )}
-              </div>
+              <p className="text-xs text-gray-400">
+                {formatDistanceToNow(new Date(discussion.createdAt), { addSuffix: true })}
+                {discussion.editedAt && <span className="ml-1">(edited)</span>}
+              </p>
             </div>
           </div>
           {isOwner && (
@@ -729,9 +725,9 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div>
         {/* Title and Category */}
-        <div className="mb-3">
+        <div className="mb-3 px-4 pt-4">
           <div className="flex items-start gap-2 mb-2">
             {isDetailView ? (
               <h2 className="text-xl font-bold flex-1">
@@ -764,7 +760,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
 
         {/* Edit Form or Display Content */}
         {isEditing ? (
-          <div className="mb-4 space-y-4">
+          <div className="mb-4 space-y-4 px-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
               <input
@@ -1042,7 +1038,9 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         ) : (
           <>
             {/* Discussion Content */}
-            <p className="text-gray-700 whitespace-pre-wrap mb-4">{discussion.content}</p>
+            {discussion.content && (
+              <p className="text-gray-700 whitespace-pre-wrap pb-4 px-4">{discussion.content}</p>
+            )}
           </>
         )}
 
@@ -1051,19 +1049,20 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         {/* Images - Full view in detail, count in list */}
         {discussion.images && discussion.images.length > 0 && (
           isDetailView ? (
-            <div className="grid grid-cols-2 gap-2 mb-4">
+            <div className={`grid gap-2 mb-4 ${discussion.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
               {discussion.images.map((image, index) => (
-                <img
-                  key={index}
-                  src={image}
-                  alt={`Discussion image ${index + 1}`}
-                  className="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => setSelectedImageIndex(index)}
-                />
+                <div key={index} className="w-full aspect-square bg-gray-100">
+                  <img
+                    src={image}
+                    alt={`Discussion image ${index + 1}`}
+                    className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setSelectedImageIndex(index)}
+                  />
+                </div>
               ))}
             </div>
           ) : (
-            <div className="mb-3 flex items-center gap-2 text-sm text-gray-600">
+            <div className="mb-3 flex items-center gap-2 text-sm text-gray-600 px-4">
               <ImageIcon size={16} />
               <span>{discussion.images.length} {discussion.images.length === 1 ? 'image' : 'images'} attached</span>
             </div>
@@ -1073,7 +1072,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         {/* Files - Full view in detail, count in list */}
         {discussion.files && discussion.files.length > 0 && (
           isDetailView ? (
-            <div className="mb-4 space-y-2">
+            <div className="mb-4 space-y-2 px-4">
               <h4 className="text-sm font-semibold text-gray-700">Attachments:</h4>
               {discussion.files.map((file, index) => (
                 <a
@@ -1097,7 +1096,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
               ))}
             </div>
           ) : (
-            <div className="mb-3 flex items-center gap-2 text-sm text-gray-600">
+            <div className="mb-3 flex items-center gap-2 text-sm text-gray-600 px-4">
               <FileText size={16} />
               <span>{discussion.files.length} {discussion.files.length === 1 ? 'file' : 'files'} attached</span>
             </div>

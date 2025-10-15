@@ -1,5 +1,6 @@
 import Notification from "../models/Notification.js"
 import Discussion from "../models/Discussion.js"
+import Post from "../models/Post.js"
 import DeletedReminder from "../models/DeletedReminder.js"
 import Event from "../models/Event.js"
 
@@ -17,7 +18,7 @@ export const getUserNotifications = async (req, res) => {
             notifications.map(async (notification) => {
                 const notifObj = notification.toObject();
                 
-                // If notification has a related comment, fetch the comment content
+                // If notification has a related comment for discussion, fetch the comment content
                 if (notifObj.relatedDiscussion && notifObj.relatedComment) {
                     try {
                         const discussion = await Discussion.findById(notifObj.relatedDiscussion._id);
@@ -37,7 +38,31 @@ export const getUserNotifications = async (req, res) => {
                         }
                     } catch (err) {
                         // If error fetching comment, just continue without it
-                        console.log("Error fetching comment content:", err.message);
+                        console.log("Error fetching discussion comment content:", err.message);
+                    }
+                }
+                
+                // If notification has a related comment for post, fetch the comment content
+                if (notifObj.relatedPost && notifObj.relatedComment) {
+                    try {
+                        const post = await Post.findById(notifObj.relatedPost._id);
+                        if (post) {
+                            const comment = post.comments.id(notifObj.relatedComment);
+                            if (comment) {
+                                notifObj.commentContent = comment.content;
+                                
+                                // If it's a reply notification, get the reply content instead
+                                if (notifObj.relatedReply) {
+                                    const reply = comment.replies.id(notifObj.relatedReply);
+                                    if (reply) {
+                                        notifObj.commentContent = reply.content;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        // If error fetching comment, just continue without it
+                        console.log("Error fetching post comment content:", err.message);
                     }
                 }
                 

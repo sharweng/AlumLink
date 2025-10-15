@@ -153,6 +153,7 @@ const NotificationsPage = () => {
   const renderNotificationContent = (notification) => {
 		const isJobNotification = !!notification.relatedJobPost;
 		const isDiscussionNotification = !!notification.relatedDiscussion;
+		const isPostNotification = !!notification.relatedPost;
 		
 		switch (notification.type) {
 			case "like":
@@ -171,6 +172,33 @@ const NotificationsPage = () => {
 							{notification.relatedUser.name}
 						</Link>{" "}
 						commented on your {isJobNotification ? 'job post' : 'post'}
+					</span>
+				);
+			case "postReply":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						replied to your comment
+					</span>
+				);
+			case "postCommentLike":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						liked your comment
+					</span>
+				);
+			case "postCommentDislike":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						disliked your comment
 					</span>
 				);
 			case "linkAccepted":
@@ -317,19 +345,42 @@ const NotificationsPage = () => {
 		}
 	};
 
-  const renderRelatedPost = (relatedPost) => {
+  const renderRelatedPost = (relatedPost, notification) => {
 		if (!relatedPost) return null;
+
+		// Build URL with query params for comment/reply navigation
+		let url = `/post/${relatedPost._id}`;
+		
+		// Add parameters based on notification type
+		if (notification.relatedReply) {
+			// For replies - scroll directly to the reply
+			url += `?comment=${notification.relatedComment}&reply=${notification.relatedReply}`;
+		} else if (notification.relatedComment) {
+			// For comments, likes, dislikes - scroll to the comment itself
+			url += `?comment=${notification.relatedComment}`;
+		}
+
+		// Determine what content to show
+		const isCommentNotification = ['postCommentLike', 'postCommentDislike', 'postReply'].includes(notification.type);
+		const showCommentContent = isCommentNotification && notification.commentContent;
 
 		return (
 			<Link
-				to={`/post/${relatedPost._id}`}
+				to={url}
 				className='mt-2 p-2 bg-gray-50 rounded-md flex items-center space-x-2 hover:bg-gray-100 transition-colors'
 			>
-				{relatedPost.image && (
+				{relatedPost.image && !showCommentContent && (
 					<img src={relatedPost.image} alt='Post preview' className='w-10 h-10 object-cover rounded' />
 				)}
 				<div className='flex-1 overflow-hidden'>
-					<p className='text-sm text-gray-600 truncate'>{relatedPost.content}</p>
+					{showCommentContent ? (
+						<>
+							<p className='text-sm text-gray-700 truncate italic'>"{notification.commentContent}"</p>
+							<p className='text-xs text-gray-500 mt-0.5 truncate'>in {relatedPost.content || 'post'}</p>
+						</>
+					) : (
+						<p className='text-sm text-gray-600 truncate'>{relatedPost.content}</p>
+					)}
 				</div>
 				<ExternalLink size={14} className='text-gray-400' />
 			</Link>
@@ -714,7 +765,7 @@ const NotificationsPage = () => {
 														addSuffix: true,
 													})}
 												</p>
-												{renderRelatedPost(notification.relatedPost)}
+												{renderRelatedPost(notification.relatedPost, notification)}
 												{renderRelatedJobPost(notification.relatedJobPost)}
 												{renderRelatedDiscussion(notification.relatedDiscussion, notification)}
 												{renderRelatedEvent(notification.relatedEvent)}

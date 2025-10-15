@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom"
+import { useParams, Link, useSearchParams } from "react-router-dom"
 import { axiosInstance } from "../lib/axios"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import Sidebar from "../components/Sidebar"
@@ -7,6 +7,8 @@ import { Loader, XCircle, ArrowLeft } from "lucide-react"
 
 const PostPage = () => {
   const { postId } = useParams()
+  const [searchParams] = useSearchParams()
+  const commentId = searchParams.get('comment')
 
   const queryClient = useQueryClient()
   const authUser = queryClient.getQueryData(["authUser"])
@@ -33,7 +35,7 @@ const PostPage = () => {
         </div>
       );
     } else {
-      return <Post post={post.data} />;
+      return <Post post={post.data} isDetailView={true} commentIdToExpand={commentId} />;
     }
   };
 

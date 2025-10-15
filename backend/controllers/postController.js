@@ -11,6 +11,7 @@ export const getFeedPosts = async (req, res) => {
         const posts = await Post.find({ author:{$in: [...userLinks, req.user._id]} })
             .populate("author", "name username profilePicture headline")
             .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture")
             .sort({ createdAt: -1 });
 
             res.status(200).json(posts);
@@ -140,6 +141,7 @@ export const getPostById = async (req, res) => {
         const post = await Post.findById(postId)
         .populate("author", "name username profilePicture headline")
         .populate("comments.user", "name username profilePicture headline")
+        .populate("comments.replies.user", "name username profilePicture")
 
         res.status(200).json(post);
     } catch (error) {
@@ -157,6 +159,11 @@ export const createComment = async (req, res) => {
             $push: { comments: { user: req.user._id, content } }
         }, { new: true })
         .populate("author", "name email username profilePicture headline")
+        .populate("comments.user", "name username profilePicture")
+        .populate("comments.replies.user", "name username profilePicture");
+
+        // Get the newly created comment
+        const newComment = post.comments[post.comments.length - 1];
 
         // notification logic
         if (post.author._id.toString() !== req.user._id.toString()) {
@@ -165,6 +172,7 @@ export const createComment = async (req, res) => {
                 type: "comment",
                 relatedUser: req.user._id,
                 relatedPost: post._id,
+                relatedComment: newComment._id.toString(),
             });
 
             await newNotification.save();
@@ -294,6 +302,266 @@ export const likePost = async (req, res) => {
         res.status(200).json(post);
     } catch (error) {
         console.log("Error in likePost postController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export const createReply = async (req, res) => {
+    try {
+        const { id, commentId } = req.params;
+        const { content } = req.body;
+
+        if (!content || !content.trim()) {
+            return res.status(400).json({ message: "Reply content is required" });
+        }
+
+        const post = await Post.findById(id);
+
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        const comment = post.comments.id(commentId);
+
+        if (!comment) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        comment.replies.push({
+            user: req.user._id,
+            content: content.trim(),
+        });
+
+        await post.save();
+
+        const populatedPost = await Post.findById(id)
+            .populate("author", "name email username profilePicture headline")
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
+
+        // Get the newly created reply
+        const newReply = comment.replies[comment.replies.length - 1];
+
+        // Create notification for the comment author if replier is not the comment author
+        if (comment.user.toString() !== req.user._id.toString()) {
+            const newNotification = new Notification({
+                recipient: comment.user,
+                type: "postReply",
+                relatedUser: req.user._id,
+                relatedPost: post._id,
+                relatedComment: comment._id.toString(),
+                relatedReply: newReply._id.toString(),
+            });
+
+            await newNotification.save();
+        }
+
+        res.status(200).json({ data: populatedPost, commentId: comment._id.toString() });
+    } catch (error) {
+        console.log("Error in createReply:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export const deleteReply = async (req, res) => {
+    try {
+        const { id, commentId, replyId } = req.params;
+        const userId = req.user._id;
+
+        const post = await Post.findById(id).populate("comments.replies.user", "_id");
+
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        const comment = post.comments.id(commentId);
+
+        if (!comment) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        const reply = comment.replies.id(replyId);
+
+        if (!reply) {
+            return res.status(404).json({ message: "Reply not found" });
+        }
+
+        // Check if the user is the author of the reply
+        if (reply.user._id.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "You are not authorized to delete this reply" });
+        }
+
+        // Remove the reply
+        reply.deleteOne();
+        await post.save();
+
+        const updatedPost = await Post.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
+
+        res.status(200).json(updatedPost);
+    } catch (error) {
+        console.log("Error in deleteReply:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export const updateReply = async (req, res) => {
+    try {
+        const { id, commentId, replyId } = req.params;
+        const { content } = req.body;
+        const userId = req.user._id;
+
+        if (!content || !content.trim()) {
+            return res.status(400).json({ message: "Reply content is required" });
+        }
+
+        const post = await Post.findById(id).populate("comments.replies.user", "_id");
+
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        const comment = post.comments.id(commentId);
+
+        if (!comment) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        const reply = comment.replies.id(replyId);
+
+        if (!reply) {
+            return res.status(404).json({ message: "Reply not found" });
+        }
+
+        // Check if the user is the author of the reply
+        if (reply.user._id.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "You are not authorized to edit this reply" });
+        }
+
+        reply.content = content.trim();
+        reply.editedAt = new Date();
+        await post.save();
+
+        const updatedPost = await Post.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
+
+        res.status(200).json(updatedPost);
+    } catch (error) {
+        console.log("Error in updateReply:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export const likeComment = async (req, res) => {
+    try {
+        const { id, commentId } = req.params;
+        const userId = req.user._id;
+
+        const post = await Post.findById(id);
+
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        const comment = post.comments.id(commentId);
+
+        if (!comment) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        const isLiked = comment.likes.includes(userId);
+
+        if (isLiked) {
+            // Remove like
+            comment.likes = comment.likes.filter(id => id.toString() !== userId.toString());
+        } else {
+            // Add like and remove dislike if exists
+            comment.likes.push(userId);
+            comment.dislikes = comment.dislikes.filter(id => id.toString() !== userId.toString());
+            
+            // Create notification for comment owner if liker is not the comment author
+            if (comment.user.toString() !== userId.toString()) {
+                const newNotification = new Notification({
+                    recipient: comment.user,
+                    type: "postCommentLike",
+                    relatedUser: userId,
+                    relatedPost: post._id,
+                    relatedComment: commentId,
+                });
+
+                await newNotification.save();
+            }
+        }
+
+        await post.save();
+
+        const updatedPost = await Post.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
+
+        res.status(200).json(updatedPost);
+    } catch (error) {
+        console.log("Error in likeComment:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export const dislikeComment = async (req, res) => {
+    try {
+        const { id, commentId } = req.params;
+        const userId = req.user._id;
+
+        const post = await Post.findById(id);
+
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        const comment = post.comments.id(commentId);
+
+        if (!comment) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        const isDisliked = comment.dislikes.includes(userId);
+
+        if (isDisliked) {
+            // Remove dislike
+            comment.dislikes = comment.dislikes.filter(id => id.toString() !== userId.toString());
+        } else {
+            // Add dislike and remove like if exists
+            comment.dislikes.push(userId);
+            comment.likes = comment.likes.filter(id => id.toString() !== userId.toString());
+            
+            // Create notification for comment owner if disliker is not the comment author
+            if (comment.user.toString() !== userId.toString()) {
+                const newNotification = new Notification({
+                    recipient: comment.user,
+                    type: "postCommentDislike",
+                    relatedUser: userId,
+                    relatedPost: post._id,
+                    relatedComment: commentId,
+                });
+
+                await newNotification.save();
+            }
+        }
+
+        await post.save();
+
+        const updatedPost = await Post.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
+
+        res.status(200).json(updatedPost);
+    } catch (error) {
+        console.log("Error in dislikeComment:", error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 }
