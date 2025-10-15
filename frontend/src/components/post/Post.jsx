@@ -18,6 +18,7 @@ const Post = ({ post }) => {
   const [isEditingPost, setIsEditingPost] = useState(false)
   const [editPostContent, setEditPostContent] = useState(post.content || "")
   const [editPostImage, setEditPostImage] = useState(null)
+  const [showEditError, setShowEditError] = useState(false)
   const [imageMaxHeight, setImageMaxHeight] = useState(null)
   const [isImageTall, setIsImageTall] = useState(false)
   const fileInputRef = useRef(null)
@@ -163,10 +164,22 @@ const Post = ({ post }) => {
     setIsEditingPost(false)
     setEditPostContent(post.content || "")
     setEditPostImage(null)
+    setShowEditError(false)
   }
 
   const handleSavePostEdit = (e) => {
     e.preventDefault()
+    
+    // Validation: require at least content or image
+    const hasContent = editPostContent.trim()
+    // Check if there's an image: either a new image was uploaded, or the original image exists and wasn't removed
+    const hasImage = (editPostImage && editPostImage !== "REMOVE_IMAGE") || (!editPostImage && post.image)
+    
+    if (!hasContent && !hasImage) {
+      setShowEditError(true)
+      return
+    }
+    
     editPost({ content: editPostContent, image: editPostImage })
   }
 
@@ -176,6 +189,7 @@ const Post = ({ post }) => {
       const reader = new FileReader()
       reader.onload = () => {
         setEditPostImage(reader.result)
+        setShowEditError(false) // Clear error when image is added
       }
       reader.readAsDataURL(file)
     }
@@ -272,13 +286,25 @@ const Post = ({ post }) => {
       <div className='mb-4'>
         {isEditingPost ? (
           <form onSubmit={handleSavePostEdit} className="space-y-4">
-            <textarea
-              value={editPostContent}
-              onChange={(e) => setEditPostContent(e.target.value)}
-              className='w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none'
-              rows={3}
-              placeholder="What's on your mind?"
-            />
+            <div>
+              <textarea
+                value={editPostContent}
+                onChange={(e) => {
+                  setEditPostContent(e.target.value)
+                  if (e.target.value.trim()) setShowEditError(false) // Clear error when typing
+                }}
+                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none ${
+                  showEditError && !editPostContent.trim() && !((editPostImage && editPostImage !== "REMOVE_IMAGE") || (!editPostImage && post.image))
+                    ? 'border-2 border-red-500' 
+                    : 'border-gray-300'
+                }`}
+                rows={3}
+                placeholder="What's on your mind?"
+              />
+              {showEditError && !editPostContent.trim() && !((editPostImage && editPostImage !== "REMOVE_IMAGE") || (!editPostImage && post.image)) && (
+                <p className="text-red-500 text-sm mt-1">Content is required if no image is provided</p>
+              )}
+            </div>
             
             {/* Image upload */}
             <div className="flex items-center gap-3">
@@ -289,14 +315,23 @@ const Post = ({ post }) => {
                 accept="image/*"
                 className="hidden"
               />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ImageIcon size={18} />
-                <span>Photo</span>
-              </button>
+              <div className="flex flex-col">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                    showEditError && !editPostContent.trim() && !((editPostImage && editPostImage !== "REMOVE_IMAGE") || (!editPostImage && post.image))
+                      ? 'text-red-500 font-semibold'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <ImageIcon size={18} />
+                  <span>Photo</span>
+                </button>
+                {showEditError && !editPostContent.trim() && !((editPostImage && editPostImage !== "REMOVE_IMAGE") || (!editPostImage && post.image)) && (
+                  <p className="text-red-500 text-sm mt-1">Or add a photo</p>
+                )}
+              </div>
               
               {(editPostImage !== "REMOVE_IMAGE" && (editPostImage || post.image)) && (
                 <button
@@ -342,7 +377,7 @@ const Post = ({ post }) => {
               </button>
               <button
                 type="submit"
-                disabled={isEditingPostMutation || (!editPostContent.trim() && !editPostImage && !post.image)}
+                disabled={isEditingPostMutation}
                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {isEditingPostMutation ? (
