@@ -41,13 +41,8 @@ const JobPostPage = () => {
   const { data: jobPost, isLoading, error } = useQuery({
     queryKey: ['jobPost', jobId],
     queryFn: async () => {
-      try {
-        const res = await axiosInstance.get(`/jobs/${jobId}`);
-        return res.data;
-      } catch (error) {
-        toast.error(error.response?.data?.message || 'Failed to load job post');
-        throw error;
-      }
+      const res = await axiosInstance.get(`/jobs/${jobId}`);
+      return res.data;
     },
     enabled: !!jobId,
   });
@@ -158,6 +153,13 @@ const JobPostPage = () => {
         </div>
         
         <div className='lg:col-span-3'>
+          <Link
+            to='/jobs'
+            className='inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors'
+          >
+            <ArrowLeft size={16} />
+            Back to Job Board
+          </Link>
           <div className='flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow'>
             <Loader className='animate-spin h-10 w-10 text-primary mb-4' />
             <span className='text-lg text-info font-medium'>Loading job post...</span>
@@ -175,17 +177,17 @@ const JobPostPage = () => {
         </div>
         
         <div className='lg:col-span-3'>
+          <Link
+            to='/jobs'
+            className='inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors'
+          >
+            <ArrowLeft size={16} />
+            Back to Job Board
+          </Link>
           <div className='flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow'>
             <XCircle className='h-12 w-12 text-gray-400 mb-3' />
             <span className='text-xl font-semibold text-gray-500'>Job post not found</span>
             <span className='text-info mt-1'>The job post you are looking for does not exist or was removed.</span>
-            <Link
-              to='/jobs'
-              className='inline-flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors mt-4'
-            >
-              <ArrowLeft size={16} />
-              Back to Job Board
-            </Link>
           </div>
         </div>
       </div>

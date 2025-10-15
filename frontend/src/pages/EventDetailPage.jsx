@@ -123,12 +123,13 @@ const EventDetailPage = () => {
           <Sidebar user={authUser} />
         </div>
         <div className="lg:col-span-3">
-          <Link to="/events" className="inline-flex items-center gap-2 text-gray-600 hover:text-primary mb-4">
-            <ArrowLeft size={20} />
+          <Link to="/events" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors">
+            <ArrowLeft size={16} />
             Back to Events
           </Link>
-          <div className="bg-white rounded-lg shadow p-8 flex justify-center items-center min-h-[400px]">
-            <Loader className="animate-spin h-12 w-12 text-primary" />
+          <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
+            <Loader className="animate-spin h-10 w-10 text-primary mb-4" />
+            <span className="text-lg text-info font-medium">Loading event...</span>
           </div>
         </div>
       </div>
@@ -142,12 +143,14 @@ const EventDetailPage = () => {
           <Sidebar user={authUser} />
         </div>
         <div className="lg:col-span-3">
-          <Link to="/events" className="inline-flex items-center gap-2 text-gray-600 hover:text-primary mb-4">
-            <ArrowLeft size={20} />
+          <Link to="/events" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors">
+            <ArrowLeft size={16} />
             Back to Events
           </Link>
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <p className="text-gray-500">Event not found</p>
+          <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
+            <XCircle className="h-12 w-12 text-gray-400 mb-3" />
+            <span className="text-xl font-semibold text-gray-500">Event not found</span>
+            <span className="text-info mt-1">The event you are looking for does not exist or was removed.</span>
           </div>
         </div>
       </div>
@@ -168,8 +171,8 @@ const EventDetailPage = () => {
 
       <div className="lg:col-span-3">
         {/* Back Button */}
-        <Link to="/events" className="inline-flex items-center gap-2 text-gray-600 hover:text-primary mb-4">
-          <ArrowLeft size={20} />
+        <Link to="/events" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors">
+          <ArrowLeft size={16} />
           Back to Events
         </Link>
 

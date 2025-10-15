@@ -777,7 +777,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
               <>
                 {post.images.length === 1 ? (
                   // Single image - Facebook style
-                  <div ref={imageContainerRef} className="relative w-full bg-gray-100 justify-center items-center flex">
+                  <div ref={imageContainerRef} className="relative w-full bg-gray-100 justify-center flex">
                     <img 
                       src={post.images[0]} 
                       alt="Post image" 
