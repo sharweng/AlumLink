@@ -4,6 +4,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
+import ConfirmModal from '../components/common/ConfirmModal';
 import { 
   Briefcase, 
   ArrowLeft, 
@@ -35,6 +36,7 @@ const JobPostPage = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showApplyConfirm, setShowApplyConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: jobPost, isLoading, error } = useQuery({
     queryKey: ['jobPost', jobId],
@@ -95,6 +97,7 @@ const JobPostPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobPosts'] });
+      setShowDeleteConfirm(false);
       toast.success('Job post deleted successfully');
       navigate('/jobs');
     },
@@ -261,16 +264,14 @@ const JobPostPage = () => {
                         </button>
                         <button
                           onClick={() => {
-                            if (window.confirm('Are you sure you want to delete this job post?')) {
-                              deleteJobPost();
-                            }
+                            setShowDeleteConfirm(true);
                             setShowDropdown(false);
                           }}
                           disabled={isDeleting}
                           className='w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 disabled:opacity-50'
                         >
                           {isDeleting ? (
-                            <div className='w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin' />
+                            <Loader className='animate-spin' size={16} />
                           ) : (
                             <Trash2 size={16} />
                           )}
@@ -476,6 +477,20 @@ const JobPostPage = () => {
             </div>
           </div>
         )}
+
+        {/* Delete Job Post Confirmation Modal */}
+        <ConfirmModal
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={() => deleteJobPost()}
+          title="Delete Job Post"
+          message="Are you sure you want to delete this job post? This action cannot be undone and all applicant data will be removed."
+          confirmText="Yes, Delete"
+          cancelText="Cancel"
+          isLoading={isDeleting}
+          loadingText="Deleting..."
+          confirmButtonClass="bg-red-500 hover:bg-red-600"
+        />
       </div>
     </div>
   );

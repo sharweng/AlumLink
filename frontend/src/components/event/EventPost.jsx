@@ -18,12 +18,14 @@ import {
   Loader
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
+import ConfirmModal from "../common/ConfirmModal";
 
 const EventPost = ({ event }) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const authUser = queryClient.getQueryData(["authUser"]);
   const isOrganizer = authUser?._id === event.organizer._id;
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const userRsvp = event.attendees?.find(a => a.user._id === authUser?._id);
   const userStatus = userRsvp?.rsvpStatus;
@@ -53,6 +55,7 @@ const EventPost = ({ event }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
+      setShowDeleteConfirm(false);
       toast.success("Event deleted successfully");
     },
     onError: (error) => {
@@ -260,7 +263,7 @@ const EventPost = ({ event }) => {
               </button>
             </Link>
             <button
-              onClick={() => deleteEvent()}
+              onClick={() => setShowDeleteConfirm(true)}
               disabled={isDeleting}
               className="flex-1 py-1.5 px-3 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 text-sm font-medium"
             >
@@ -276,6 +279,20 @@ const EventPost = ({ event }) => {
           </div>
         )}
       </div>
+
+      {/* Delete Event Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => deleteEvent()}
+        title="Delete Event"
+        message="Are you sure you want to delete this event? This action cannot be undone and all attendee data will be removed."
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        isLoading={isDeleting}
+        loadingText="Deleting..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
     </div>
   );
 };

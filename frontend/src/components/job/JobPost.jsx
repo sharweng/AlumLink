@@ -16,6 +16,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import JobPostEdit from './JobPostEdit';
 import { Link, useNavigate } from 'react-router-dom';
+import ConfirmModal from '../common/ConfirmModal';
 
 const JobPost = ({ jobPost, isDetailPage = false }) => {
   const queryClient = useQueryClient();
@@ -23,6 +24,7 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
   const authUser = queryClient.getQueryData(['authUser']);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const isOwner = authUser._id === jobPost.author._id;
   const hasApplied = jobPost.applicants?.some(applicant => {
@@ -52,6 +54,7 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobPosts'] });
       queryClient.invalidateQueries({ queryKey: ['jobPost', jobPost._id] });
+      setShowDeleteConfirm(false);
       toast.success('Job post deleted successfully');
     },
     onError: (error) => {
@@ -206,9 +209,7 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (window.confirm('Are you sure you want to delete this job post?')) {
-                          deleteJobPost();
-                        }
+                        setShowDeleteConfirm(true);
                         setShowDropdown(false);
                       }}
                       disabled={isDeleting}
@@ -253,6 +254,20 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
           onClose={() => setShowEditModal(false)} 
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => deleteJobPost()}
+        title="Delete Job Post"
+        message="Are you sure you want to delete this job post? This action cannot be undone and all applicant data will be removed."
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        isLoading={isDeleting}
+        loadingText="Deleting..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
     </div>
   );
 };

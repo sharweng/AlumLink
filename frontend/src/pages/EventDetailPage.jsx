@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
+import ConfirmModal from '../components/common/ConfirmModal';
 import { useState } from 'react';
 import { 
   Calendar, 
@@ -30,6 +31,8 @@ const EventDetailPage = () => {
   const queryClient = useQueryClient();
   const authUser = queryClient.getQueryData(['authUser']);
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
+  const [showCancelEventConfirm, setShowCancelEventConfirm] = useState(false);
+  const [showDeleteEventConfirm, setShowDeleteEventConfirm] = useState(false);
 
   const { data: event, isLoading } = useQuery({
     queryKey: ['event', id],
@@ -61,6 +64,7 @@ const EventDetailPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      setShowDeleteEventConfirm(false);
       toast.success('Event deleted successfully');
       navigate('/events');
     },
@@ -77,6 +81,7 @@ const EventDetailPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event', id] });
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      setShowCancelEventConfirm(false);
       toast.success('Event cancelled successfully');
     },
     onError: (error) => {
@@ -367,11 +372,7 @@ const EventDetailPage = () => {
               </Link>
               {event.status !== 'cancelled' && event.status !== 'completed' && (
                 <button
-                  onClick={() => {
-                    if (window.confirm('Are you sure you want to cancel this event? All attendees will be notified.')) {
-                      cancelEvent();
-                    }
-                  }}
+                  onClick={() => setShowCancelEventConfirm(true)}
                   disabled={isCancelling}
                   className="flex-1 py-3 px-6 bg-orange-600 text-white hover:bg-orange-700 rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
@@ -386,11 +387,7 @@ const EventDetailPage = () => {
                 </button>
               )}
               <button
-                onClick={() => {
-                  if (window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
-                    deleteEvent();
-                  }
-                }}
+                onClick={() => setShowDeleteEventConfirm(true)}
                 disabled={isDeleting}
                 className="flex-1 py-3 px-6 bg-red-600 text-white hover:bg-red-700 rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
@@ -493,6 +490,34 @@ const EventDetailPage = () => {
           )}
         </div>
       )}
+
+      {/* Cancel Event Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showCancelEventConfirm}
+        onClose={() => setShowCancelEventConfirm(false)}
+        onConfirm={() => cancelEvent()}
+        title="Cancel Event"
+        message="Are you sure you want to cancel this event? All attendees will be notified about the cancellation."
+        confirmText="Yes, Cancel Event"
+        cancelText="Keep Event"
+        isLoading={isCancelling}
+        loadingText="Cancelling..."
+        confirmButtonClass="bg-orange-600 hover:bg-orange-700"
+      />
+
+      {/* Delete Event Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteEventConfirm}
+        onClose={() => setShowDeleteEventConfirm(false)}
+        onConfirm={() => deleteEvent()}
+        title="Delete Event"
+        message="Are you sure you want to delete this event? This action cannot be undone and all attendee data will be permanently removed."
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        isLoading={isDeleting}
+        loadingText="Deleting..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
     </div>
   );
 };

@@ -25,6 +25,7 @@ import {
   ChevronRight as ChevronRightIcon
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import ConfirmModal from "../common/ConfirmModal";
 
 const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = null }) => {
   const navigate = useNavigate();
@@ -55,6 +56,11 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   const [removedFiles, setRemovedFiles] = useState([]);
   const [editFileError, setEditFileError] = useState("");
   const [showEditErrors, setShowEditErrors] = useState({ title: false, content: false });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteCommentConfirm, setShowDeleteCommentConfirm] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState(null);
+  const [showDeleteReplyConfirm, setShowDeleteReplyConfirm] = useState(false);
+  const [replyToDelete, setReplyToDelete] = useState(null);
   
   const isOwner = authUser?._id === discussion.author._id;
   const isLiked = discussion.likes?.includes(authUser?._id);
@@ -284,6 +290,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["discussions"] });
+      setShowDeleteConfirm(false);
       toast.success("Discussion deleted successfully");
       if (isDetailView) {
         navigate("/forums");
@@ -371,6 +378,8 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["discussions"] });
       queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
+      setShowDeleteCommentConfirm(false);
+      setCommentToDelete(null);
       toast.success("Comment deleted successfully");
     },
     onError: (error) => {
@@ -459,6 +468,8 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["discussions"] });
       queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
+      setShowDeleteReplyConfirm(false);
+      setReplyToDelete(null);
       toast.success("Reply deleted successfully");
     },
     onError: (error) => {
@@ -709,11 +720,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                 <Edit size={18} />
               </button>
               <button
-                onClick={() => {
-                  if (window.confirm("Are you sure you want to delete this discussion?")) {
-                    deleteDiscussion();
-                  }
-                }}
+                onClick={() => setShowDeleteConfirm(true)}
                 disabled={isDeletingDiscussion}
                 className="text-red-600 hover:bg-red-50 p-2 rounded"
               >
@@ -1228,12 +1235,15 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                                 <Edit size={12} />
                               </button>
                               <button
-                                onClick={() => deleteComment(comment._id)}
+                                onClick={() => {
+                                  setCommentToDelete(comment._id);
+                                  setShowDeleteCommentConfirm(true);
+                                }}
                                 disabled={isDeletingComment}
                                 className="p-1 text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
                                 title="Delete comment"
                               >
-                                {isDeletingComment ? (
+                                {isDeletingComment && commentToDelete === comment._id ? (
                                   <Loader className="animate-spin" size={12} />
                                 ) : (
                                   <Trash2 size={12} />
@@ -1356,12 +1366,15 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                                           <Edit size={10} />
                                         </button>
                                         <button
-                                          onClick={() => deleteReply({ commentId: comment._id, replyId: reply._id })}
+                                          onClick={() => {
+                                            setReplyToDelete({ commentId: comment._id, replyId: reply._id });
+                                            setShowDeleteReplyConfirm(true);
+                                          }}
                                           disabled={isDeletingReply}
                                           className="p-1 text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
                                           title="Delete reply"
                                         >
-                                          {isDeletingReply ? (
+                                          {isDeletingReply && replyToDelete?.replyId === reply._id ? (
                                             <Loader className="animate-spin" size={10} />
                                           ) : (
                                             <Trash2 size={10} />
@@ -1529,6 +1542,54 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
           )}
         </div>
       )}
+
+      {/* Delete Discussion Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => deleteDiscussion()}
+        title="Delete Discussion"
+        message="Are you sure you want to delete this discussion? This action cannot be undone and all comments will be removed."
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        isLoading={isDeletingDiscussion}
+        loadingText="Deleting..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
+
+      {/* Delete Comment Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteCommentConfirm}
+        onClose={() => {
+          setShowDeleteCommentConfirm(false);
+          setCommentToDelete(null);
+        }}
+        onConfirm={() => deleteComment(commentToDelete)}
+        title="Delete Comment"
+        message="Are you sure you want to delete this comment? This action cannot be undone."
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        isLoading={isDeletingComment}
+        loadingText="Deleting..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
+
+      {/* Delete Reply Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteReplyConfirm}
+        onClose={() => {
+          setShowDeleteReplyConfirm(false);
+          setReplyToDelete(null);
+        }}
+        onConfirm={() => deleteReply(replyToDelete)}
+        title="Delete Reply"
+        message="Are you sure you want to delete this reply? This action cannot be undone."
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        isLoading={isDeletingReply}
+        loadingText="Deleting..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
     </div>
   );
 };

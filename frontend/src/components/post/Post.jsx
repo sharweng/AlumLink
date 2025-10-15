@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import PostAction from "./PostAction"
 import { formatDistanceToNow } from "date-fns"
+import ConfirmModal from "../common/ConfirmModal"
 
 const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   const { postId } = useParams()
@@ -50,6 +51,11 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   const [imageMaxHeight, setImageMaxHeight] = useState(null)
   const [isImageTall, setIsImageTall] = useState(false)
   const [selectedImageIndex, setSelectedImageIndex] = useState(null)
+  const [showDeletePostConfirm, setShowDeletePostConfirm] = useState(false)
+  const [showDeleteCommentConfirm, setShowDeleteCommentConfirm] = useState(false)
+  const [commentToDelete, setCommentToDelete] = useState(null)
+  const [showDeleteReplyConfirm, setShowDeleteReplyConfirm] = useState(false)
+  const [replyToDelete, setReplyToDelete] = useState(null)
   const fileInputRef = useRef(null)
   const imageContainerRef = useRef(null)
   const isOwner = authUser._id === post.author._id
@@ -188,6 +194,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] })
       queryClient.invalidateQueries({ queryKey: ["post", postId] })
+      setShowDeletePostConfirm(false)
       toast.success("Post deleted successfully")
     },
     onError: (error) => {
@@ -291,6 +298,8 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] })
       queryClient.invalidateQueries({ queryKey: ["post", post._id] })
+      setShowDeleteCommentConfirm(false)
+      setCommentToDelete(null)
       toast.success("Comment deleted successfully")
     },
     onError: (error) => {
@@ -382,6 +391,8 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] })
       queryClient.invalidateQueries({ queryKey: ["post", post._id] })
+      setShowDeleteReplyConfirm(false)
+      setReplyToDelete(null)
       toast.success("Reply deleted successfully")
     },
     onError: (error) => {
@@ -448,8 +459,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   })
 
   const handleDeletePost = () => {
-    if(!window.confirm("Are you sure you want to delete this post?")) return
-    deletePost()
+    setShowDeletePostConfirm(true)
   }
 
   const handleEditPost = () => {
@@ -767,11 +777,11 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
               <>
                 {post.images.length === 1 ? (
                   // Single image - Facebook style
-                  <div ref={imageContainerRef} className="relative w-full bg-gray-100">
+                  <div ref={imageContainerRef} className="relative w-full bg-gray-100 justify-center items-center flex">
                     <img 
                       src={post.images[0]} 
                       alt="Post image" 
-                      className="w-full h-auto object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                      className="h-auto object-contain cursor-pointer hover:opacity-90 transition-opacity"
                       style={{ maxHeight: '600px' }}
                       onClick={() => setSelectedImageIndex(0)}
                       onLoad={(e) => {
@@ -968,12 +978,15 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                   <Edit size={12} />
                                 </button>
                                 <button
-                                  onClick={() => removeComment(comment._id)}
+                                  onClick={() => {
+                                    setCommentToDelete(comment._id)
+                                    setShowDeleteCommentConfirm(true)
+                                  }}
                                   disabled={isRemovingComment}
                                   className="p-1 text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
                                   title="Delete comment"
                                 >
-                                  {isRemovingComment ? (
+                                  {isRemovingComment && commentToDelete === comment._id ? (
                                     <Loader className="animate-spin" size={12} />
                                   ) : (
                                     <Trash2 size={12} />
@@ -1110,15 +1123,14 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                           </button>
                                           <button
                                             onClick={() => {
-                                              if (window.confirm("Are you sure you want to delete this reply?")) {
-                                                deleteReply({ commentId: comment._id, replyId: reply._id })
-                                              }
+                                              setReplyToDelete({ commentId: comment._id, replyId: reply._id })
+                                              setShowDeleteReplyConfirm(true)
                                             }}
                                             disabled={isDeletingReply}
                                             className="p-1 text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
                                             title="Delete reply"
                                           >
-                                            {isDeletingReply ? (
+                                            {isDeletingReply && replyToDelete?.replyId === reply._id ? (
                                               <Loader className="animate-spin" size={10} />
                                             ) : (
                                               <Trash2 size={10} />
@@ -1306,6 +1318,54 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
           )}
         </div>
       )}
+
+      {/* Delete Post Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeletePostConfirm}
+        onClose={() => setShowDeletePostConfirm(false)}
+        onConfirm={() => deletePost()}
+        title="Delete Post"
+        message="Are you sure you want to delete this post? This action cannot be undone."
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        isLoading={isDeletingPost}
+        loadingText="Deleting..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
+
+      {/* Delete Comment Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteCommentConfirm}
+        onClose={() => {
+          setShowDeleteCommentConfirm(false)
+          setCommentToDelete(null)
+        }}
+        onConfirm={() => removeComment(commentToDelete)}
+        title="Delete Comment"
+        message="Are you sure you want to delete this comment? This action cannot be undone."
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        isLoading={isRemovingComment}
+        loadingText="Deleting..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
+
+      {/* Delete Reply Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteReplyConfirm}
+        onClose={() => {
+          setShowDeleteReplyConfirm(false)
+          setReplyToDelete(null)
+        }}
+        onConfirm={() => deleteReply(replyToDelete)}
+        title="Delete Reply"
+        message="Are you sure you want to delete this reply? This action cannot be undone."
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        isLoading={isDeletingReply}
+        loadingText="Deleting..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
     </div>
   )
 }
