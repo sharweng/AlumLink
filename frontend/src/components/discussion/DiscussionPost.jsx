@@ -20,7 +20,9 @@ import {
   Image as ImageIcon,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  ChevronRight as ChevronRightIcon
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -55,6 +57,14 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   
   const isOwner = authUser?._id === discussion.author._id;
   const isLiked = discussion.likes?.includes(authUser?._id);
+
+  // Format number with K notation (e.g., 1240 -> 1.2K)
+  const formatCount = (count) => {
+    if (count >= 1000) {
+      return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+    }
+    return count;
+  };
 
   // Auto-expand comment if commentIdToExpand is provided
   useEffect(() => {
@@ -914,8 +924,6 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
           <>
             {/* Discussion Content */}
             <p className="text-gray-700 whitespace-pre-wrap mb-4">{discussion.content}</p>
-
-            {/* Images - Full view in detail, count in list */}
           </>
         )}
 
@@ -987,7 +995,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
           className={`flex items-center gap-2 ${isLiked ? 'text-red-500' : 'text-gray-600'} hover:text-red-500 transition-colors`}
         >
           <Heart size={20} fill={isLiked ? 'currentColor' : 'none'} />
-          <span className="text-sm min-w-[20px] text-left">{discussion.likes?.length || 0}</span>
+          <span className="text-sm min-w-[20px] text-left">{formatCount(discussion.likes?.length || 0)}</span>
         </button>
         
         <button
@@ -995,7 +1003,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
           className="flex items-center gap-2 text-gray-600 hover:text-primary transition-colors"
         >
           <MessageCircle size={20} />
-          <span className="text-sm min-w-[20px] text-left">{getTotalCommentCount()}</span>
+          <span className="text-sm min-w-[20px] text-left">{formatCount(getTotalCommentCount())}</span>
         </button>
         
         <button
@@ -1013,11 +1021,11 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
 
       {/* Comments Section */}
       {showComments && (
-        <div className="mt-4 pt-4 border-t border-gray-200 px-4 pb-4">
+        <div className="pt-4 border-t border-gray-200 px-4 pb-4">
           {/* Sort Options */}
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">
-              {getTotalCommentCount()} {getTotalCommentCount() === 1 ? 'Comment' : 'Comments'}
+              {formatCount(getTotalCommentCount())} {getTotalCommentCount() === 1 ? 'Comment' : 'Comments'}
             </h3>
             <select
               value={commentSortOrder}
@@ -1157,14 +1165,14 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                               className={`flex items-center gap-1 text-xs ${comment.likes?.includes(authUser?._id) ? 'text-red-500' : 'text-gray-600'} hover:text-red-500 transition-colors`}
                             >
                               <Heart size={14} fill={comment.likes?.includes(authUser?._id) ? 'currentColor' : 'none'} />
-                              <span className="min-w-[16px] text-left">{comment.likes?.length || 0}</span>
+                              <span className="min-w-[16px] text-left">{formatCount(comment.likes?.length || 0)}</span>
                             </button>
                             <button
                               onClick={() => dislikeComment(comment._id)}
                               className={`flex items-center gap-1 text-xs ${comment.dislikes?.includes(authUser?._id) ? 'text-blue-500' : 'text-gray-600'} hover:text-blue-500 transition-colors`}
                             >
                               <HeartOff size={14} fill={comment.dislikes?.includes(authUser?._id) ? 'currentColor' : 'none'} />
-                              <span className="min-w-[16px] text-left">{comment.dislikes?.length || 0}</span>
+                              <span className="min-w-[16px] text-left">{formatCount(comment.dislikes?.length || 0)}</span>
                             </button>
                             <button
                               onClick={() => handleReplyToComment(comment._id, comment.user?.username)}
@@ -1179,8 +1187,12 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                               onClick={() => toggleReplies(comment._id)}
                               className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1 mt-1"
                             >
-                              {expandedComments.has(comment._id) ? '▼ ' : '▶ '} 
-                              {comment.replies.length} {comment.replies.length === 1 ? 'reply' : 'replies'}
+                              {expandedComments.has(comment._id) ? (
+                                <ChevronDown size={14} />
+                              ) : (
+                                <ChevronRightIcon size={14} />
+                              )}
+                              {formatCount(comment.replies.length)} {comment.replies.length === 1 ? 'reply' : 'replies'}
                             </button>
                           )}
                         </>
