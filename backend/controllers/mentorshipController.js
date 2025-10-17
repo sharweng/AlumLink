@@ -227,6 +227,18 @@ export const updateMentorship = async (req, res) => {
             mentorship.status = status;
             if (status === "completed") {
                 mentorship.endDate = new Date();
+                
+                // Create notification for the other party about mentorship ending
+                const otherUserId = mentorship.mentor.toString() === req.user._id.toString()
+                    ? mentorship.mentee
+                    : mentorship.mentor;
+                
+                await Notification.create({
+                    recipient: otherUserId,
+                    type: "mentorshipEnded",
+                    relatedUser: req.user._id,
+                    relatedMentorship: mentorshipId,
+                });
             }
         }
         
@@ -415,7 +427,25 @@ export const updateSession = async (req, res) => {
         if (meetingLink !== undefined) session.meetingLink = meetingLink;
         if (location !== undefined) session.location = location;
         if (agenda !== undefined) session.agenda = agenda;
-        if (status) session.status = status;
+        if (status) {
+            const previousStatus = session.status;
+            session.status = status;
+            
+            // If marking as completed, notify the other party
+            if (status === "completed" && previousStatus !== "completed") {
+                const isMentor = session.mentorship.mentor.toString() === req.user._id.toString();
+                const otherUserId = isMentor ? session.mentorship.mentee : session.mentorship.mentor;
+                
+                await Notification.create({
+                    recipient: otherUserId,
+                    type: "sessionCompleted",
+                    relatedUser: req.user._id,
+                    relatedSession: session._id,
+                    relatedMentorship: session.mentorship._id,
+                    metadata: { markedBy: isMentor ? "mentor" : "mentee" },
+                });
+            }
+        }
         if (notes !== undefined) session.notes = notes;
         if (actionItems) session.actionItems = actionItems;
         
@@ -466,10 +496,10 @@ export const confirmSession = async (req, res) => {
         if (session.confirmedByMentor && session.confirmedByMentee) {
             session.status = "scheduled";
             
-            // Notify the creator that session is confirmed
+            // Notify the creator that session is confirmed by both parties
             await Notification.create({
                 recipient: session.createdBy,
-                type: "sessionScheduled",
+                type: "sessionConfirmed",
                 relatedUser: req.user._id,
                 relatedSession: session._id,
                 relatedMentorship: session.mentorship._id,
@@ -534,10 +564,11 @@ export const cancelSession = async (req, res) => {
             
             await Notification.create({
                 recipient: otherUserId,
-                type: "sessionScheduled",
+                type: "sessionCancelled",
                 relatedUser: req.user._id,
                 relatedSession: session._id,
                 relatedMentorship: session.mentorship._id,
+                metadata: { reason: reason || "No reason provided" },
             });
             
             const populatedSession = await MentorshipSession.findById(session._id)
@@ -564,10 +595,11 @@ export const cancelSession = async (req, res) => {
                 // Notify mentee about cancellation
                 await Notification.create({
                     recipient: session.mentorship.mentee._id,
-                    type: "sessionScheduled",
+                    type: "sessionCancelled",
                     relatedUser: req.user._id,
                     relatedSession: session._id,
                     relatedMentorship: session.mentorship._id,
+                    metadata: { reason: reason || "No reason provided", cancelledBy: "mentor" },
                 });
                 
                 const populatedSession = await MentorshipSession.findById(session._id)
@@ -595,10 +627,11 @@ export const cancelSession = async (req, res) => {
                     // Notify the mentee that cancellation is approved
                     await Notification.create({
                         recipient: requestedBy,
-                        type: "sessionScheduled",
+                        type: "sessionCancelled",
                         relatedUser: req.user._id,
                         relatedSession: session._id,
                         relatedMentorship: session.mentorship._id,
+                        metadata: { reason: reason || "No reason provided", status: "approved" },
                     });
                     
                     const populatedSession = await MentorshipSession.findById(session._id)
@@ -622,10 +655,11 @@ export const cancelSession = async (req, res) => {
                 // Notify mentor about cancel request
                 await Notification.create({
                     recipient: session.mentorship.mentor._id,
-                    type: "sessionScheduled",
+                    type: "sessionCancelRequest",
                     relatedUser: req.user._id,
                     relatedSession: session._id,
                     relatedMentorship: session.mentorship._id,
+                    metadata: { reason: reason || "No reason provided" },
                 });
                 
                 const populatedSession = await MentorshipSession.findById(session._id)
@@ -651,10 +685,11 @@ export const cancelSession = async (req, res) => {
         
         await Notification.create({
             recipient: otherUserId,
-            type: "sessionScheduled",
+            type: "sessionCancelled",
             relatedUser: req.user._id,
             relatedSession: session._id,
             relatedMentorship: session.mentorship._id,
+            metadata: { reason: reason || "No reason provided" },
         });
         
         const populatedSession = await MentorshipSession.findById(session._id)
@@ -700,6 +735,23 @@ export const addSessionFeedback = async (req, res) => {
         }
         
         await session.save();
+        
+        // Notify the other party about feedback
+        const feedbackIsMentor = role === "mentor";
+        const otherUserId = feedbackIsMentor ? session.mentorship.mentee : session.mentorship.mentor;
+        
+        await Notification.create({
+            recipient: otherUserId,
+            type: "sessionFeedback",
+            relatedUser: req.user._id,
+            relatedSession: session._id,
+            relatedMentorship: session.mentorship._id,
+            metadata: { 
+                role: role,
+                hasRating: !!rating,
+                rating: rating || null 
+            },
+        });
         
         const populatedSession = await MentorshipSession.findById(session._id)
             .populate({

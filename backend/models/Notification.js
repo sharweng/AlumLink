@@ -9,7 +9,7 @@ const notificationSchema = new mongoose.Schema({
     type: {
         type: String,
         required: true,
-        enum: ["like", "comment", "linkAccepted", "jobApplication", "jobApplicationCancelled", "jobUpdate", "discussionLike", "discussionComment", "discussionReply", "discussionMention", "discussionCommentLike", "discussionCommentDislike", "postReply", "postCommentLike", "postCommentDislike", "eventRSVP", "eventInterested", "eventReminder", "eventUpdate", "eventCancelled", "mentorshipRequest", "mentorshipAccepted", "mentorshipDeclined", "sessionScheduled"],
+        enum: ["like", "comment", "linkAccepted", "jobApplication", "jobApplicationCancelled", "jobUpdate", "discussionLike", "discussionComment", "discussionReply", "discussionMention", "discussionCommentLike", "discussionCommentDislike", "postReply", "postCommentLike", "postCommentDislike", "eventRSVP", "eventInterested", "eventReminder", "eventUpdate", "eventCancelled", "mentorshipRequest", "mentorshipAccepted", "mentorshipDeclined", "mentorshipEnded", "sessionScheduled", "sessionConfirmed", "sessionCancelled", "sessionCancelRequest", "sessionCompleted", "sessionFeedback"],
     },
     relatedUser: {
         type: mongoose.Schema.Types.ObjectId,

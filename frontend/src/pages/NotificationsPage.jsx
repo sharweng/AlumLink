@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { axiosInstance } from '../lib/axios'
 import toast from 'react-hot-toast'
-import { ExternalLink, Eye, Heart, MessageSquare, Trash2, UserPlus, CheckCircle2, Briefcase, X, AtSign, Reply, HeartOff, Calendar, Bell, XCircle, Star } from 'lucide-react'
+import { ExternalLink, Eye, Heart, MessageSquare, Trash2, UserPlus, CheckCircle2, Briefcase, X, AtSign, Reply, HeartOff, Calendar, Bell, XCircle, Star, BookOpen, Video, UserX, MessageCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import Sidebar from '../components/Sidebar'
@@ -69,6 +69,9 @@ const NotificationsPage = () => {
     } else if (activeTab === 'events') {
       // Events tab: notifications with relatedEvent
       filtered = notifications.filter(notification => notification.relatedEvent)
+    } else if (activeTab === 'mentorship') {
+      // Mentorship tab: notifications with relatedMentorship or relatedSession
+      filtered = notifications.filter(notification => notification.relatedMentorship || notification.relatedSession)
     } else if (activeTab === 'all') {
       // All tab: exclude job post likes and comments
       filtered = notifications.filter(notification => 
@@ -127,6 +130,14 @@ const NotificationsPage = () => {
         filtered = filtered.filter(n => n.type === 'eventUpdate')
       } else if (filter === 'eventCancelled') {
         filtered = filtered.filter(n => n.type === 'eventCancelled')
+      } else if (filter === 'mentorshipRequest') {
+        filtered = filtered.filter(n => n.type === 'mentorshipRequest' || n.type === 'mentorshipAccepted' || n.type === 'mentorshipDeclined' || n.type === 'mentorshipEnded')
+      } else if (filter === 'sessionScheduled') {
+        filtered = filtered.filter(n => n.type === 'sessionScheduled' || n.type === 'sessionConfirmed' || n.type === 'sessionCancelled' || n.type === 'sessionCancelRequest')
+      } else if (filter === 'sessionCompleted') {
+        filtered = filtered.filter(n => n.type === 'sessionCompleted')
+      } else if (filter === 'sessionFeedback') {
+        filtered = filtered.filter(n => n.type === 'sessionFeedback')
       } else {
         filtered = filtered.filter(n => n.type === filter)
       }
@@ -179,6 +190,26 @@ const NotificationsPage = () => {
         return <Calendar className='text-orange-500' />
       case "eventCancelled":
         return <XCircle className='text-red-500' />
+      case "mentorshipRequest":
+        return <BookOpen className='text-blue-500' />
+      case "mentorshipAccepted":
+        return <CheckCircle2 className='text-green-500' />
+      case "mentorshipDeclined":
+        return <X className='text-red-500' />
+      case "mentorshipEnded":
+        return <UserX className='text-gray-500' />
+      case "sessionScheduled":
+        return <Calendar className='text-blue-500' />
+      case "sessionConfirmed":
+        return <CheckCircle2 className='text-green-500' />
+      case "sessionCancelled":
+        return <XCircle className='text-red-500' />
+      case "sessionCancelRequest":
+        return <Bell className='text-yellow-500' />
+      case "sessionCompleted":
+        return <Video className='text-purple-500' />
+      case "sessionFeedback":
+        return <MessageCircle className='text-blue-500' />
       default:
         return null
     }
@@ -381,6 +412,130 @@ const NotificationsPage = () => {
 				return (
 					<span>
 						An event you're attending has been cancelled
+					</span>
+				);
+			case "mentorshipRequest":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						requested you as a mentor
+					</span>
+				);
+			case "mentorshipAccepted":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						accepted your mentorship request
+					</span>
+				);
+			case "mentorshipDeclined":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						declined your mentorship request
+					</span>
+				);
+			case "mentorshipEnded":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						ended your mentorship relationship
+					</span>
+				);
+			case "sessionScheduled":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						proposed a new mentorship session
+					</span>
+				);
+			case "sessionConfirmed":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						confirmed the mentorship session
+					</span>
+				);
+			case "sessionCancelled":
+				const cancelledBy = notification.metadata?.cancelledBy;
+				const cancelStatus = notification.metadata?.status;
+				return (
+					<span>
+						{cancelStatus === 'approved' ? (
+							<>
+								<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+									{notification.relatedUser.name}
+								</Link>{" "}
+								approved your session cancellation request
+							</>
+						) : cancelledBy === 'mentor' ? (
+							<>
+								<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+									{notification.relatedUser.name}
+								</Link>{" "}
+								cancelled the mentorship session
+							</>
+						) : (
+							<>
+								<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+									{notification.relatedUser.name}
+								</Link>{" "}
+								cancelled the mentorship session
+							</>
+						)}
+						{notification.metadata?.reason && (
+							<span className="block text-xs text-gray-600 mt-1">
+								Reason: {notification.metadata.reason}
+							</span>
+						)}
+					</span>
+				);
+			case "sessionCancelRequest":
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						requested to cancel the mentorship session
+						{notification.metadata?.reason && (
+							<span className="block text-xs text-gray-600 mt-1">
+								Reason: {notification.metadata.reason}
+							</span>
+						)}
+					</span>
+				);
+			case "sessionCompleted":
+				const markedBy = notification.metadata?.markedBy;
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						marked your mentorship session as completed
+					</span>
+				);
+			case "sessionFeedback":
+				const feedbackRole = notification.metadata?.role;
+				const hasRating = notification.metadata?.hasRating;
+				const rating = notification.metadata?.rating;
+				return (
+					<span>
+						<Link to={`/profile/${notification.relatedUser.username}`} className='font-bold'>
+							{notification.relatedUser.name}
+						</Link>{" "}
+						{feedbackRole === "mentor" ? "left feedback" : `rated the session${hasRating && rating ? ` (${rating}★)` : ''} and left feedback`}
 					</span>
 				);
 			default:
@@ -607,276 +762,19 @@ const NotificationsPage = () => {
 									>
 										Events
 									</button>
-								</div>
-
-								{/* Notification Type Filters */}
-								<div className='flex space-x-2 mb-4 flex-wrap gap-y-2'>
 									<button
-										onClick={() => setFilter('all')}
-										className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-											filter === 'all'
-												? 'bg-blue-500 text-white'
-												: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+										onClick={() => {
+											setActiveTab('mentorship')
+											setFilter('all')
+										}}
+										className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+											activeTab === 'mentorship'
+												? 'bg-white text-gray-900 shadow-sm'
+												: 'text-gray-600 hover:text-gray-900'
 										}`}
 									>
-										All
+										Mentorship
 									</button>
-									
-					{/* Combined filters for "All" tab */}
-					{activeTab === 'all' && (
-						<>
-							<button
-								onClick={() => setFilter('like')}
-								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-									filter === 'like'
-										? 'bg-red-500 text-white'
-										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-								}`}
-							>
-								Likes
-							</button>
-							<button
-								onClick={() => setFilter('comment')}
-								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-									filter === 'comment'
-										? 'bg-green-500 text-white'
-										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-								}`}
-							>
-								Comments
-							</button>
-							<button
-								onClick={() => setFilter('application')}
-								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-									filter === 'application'
-										? 'bg-blue-500 text-white'
-										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-								}`}
-							>
-								Applications
-							</button>
-							<button
-								onClick={() => setFilter('link')}
-								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-									filter === 'link'
-										? 'bg-purple-500 text-white'
-										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-								}`}
-							>
-								Links
-							</button>
-							<button
-								onClick={() => setFilter('eventRSVP')}
-								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-									filter === 'eventRSVP'
-										? 'bg-green-500 text-white'
-										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-								}`}
-							>
-								Going
-							</button>
-							<button
-								onClick={() => setFilter('eventInterested')}
-								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-									filter === 'eventInterested'
-										? 'bg-yellow-500 text-white'
-										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-								}`}
-							>
-								Interested
-							</button>
-							<button
-								onClick={() => setFilter('eventReminder')}
-								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-									filter === 'eventReminder'
-										? 'bg-blue-500 text-white'
-										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-								}`}
-							>
-								Reminders
-							</button>
-							<button
-								onClick={() => setFilter('eventUpdate')}
-								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-									filter === 'eventUpdate'
-										? 'bg-orange-500 text-white'
-										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-								}`}
-							>
-								Updates
-							</button>
-							<button
-								onClick={() => setFilter('eventCancelled')}
-								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-									filter === 'eventCancelled'
-										? 'bg-red-500 text-white'
-										: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-								}`}
-							>
-								Cancelled
-							</button>
-						</>
-					)}									{/* Posts tab filters */}
-									{activeTab === 'posts' && (
-										<>
-											<button
-												onClick={() => setFilter('like')}
-												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-													filter === 'like'
-														? 'bg-red-500 text-white'
-														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-												}`}
-											>
-												Likes
-											</button>
-											<button
-												onClick={() => setFilter('comment')}
-												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-													filter === 'comment'
-														? 'bg-green-500 text-white'
-														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-												}`}
-											>
-												Comments
-											</button>
-											<button
-												onClick={() => setFilter('postReply')}
-												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-													filter === 'postReply'
-														? 'bg-blue-500 text-white'
-														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-												}`}
-											>
-												Replies
-											</button>
-											<button
-												onClick={() => setFilter('postMention')}
-												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-													filter === 'postMention'
-														? 'bg-purple-500 text-white'
-														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-												}`}
-											>
-												Mentions
-											</button>
-										</>
-									)}
-
-									{/* Jobs tab filters */}
-									{activeTab === 'jobs' && (
-										<button
-											onClick={() => setFilter('application')}
-											className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-												filter === 'application'
-													? 'bg-blue-500 text-white'
-													: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-											}`}
-										>
-											Applications
-										</button>
-									)}
-
-									{/* Forums tab filters */}
-									{activeTab === 'forums' && (
-										<>
-											<button
-												onClick={() => setFilter('discussionLike')}
-												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-													filter === 'discussionLike'
-														? 'bg-red-500 text-white'
-														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-												}`}
-											>
-												Likes
-											</button>
-											<button
-												onClick={() => setFilter('discussionComment')}
-												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-													filter === 'discussionComment'
-														? 'bg-green-500 text-white'
-														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-												}`}
-											>
-												Comments
-											</button>
-											<button
-												onClick={() => setFilter('discussionReply')}
-												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-													filter === 'discussionReply'
-														? 'bg-blue-500 text-white'
-														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-												}`}
-											>
-												Replies
-											</button>
-											<button
-												onClick={() => setFilter('discussionMention')}
-												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-													filter === 'discussionMention'
-														? 'bg-purple-500 text-white'
-														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-												}`}
-											>
-												Mentions
-											</button>
-										</>
-									)}
-
-									{/* Events tab filters */}
-									{activeTab === 'events' && (
-										<>
-											<button
-												onClick={() => setFilter('eventRSVP')}
-												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-													filter === 'eventRSVP'
-														? 'bg-green-500 text-white'
-														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-												}`}
-											>
-												Going
-											</button>
-											<button
-												onClick={() => setFilter('eventInterested')}
-												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-													filter === 'eventInterested'
-														? 'bg-yellow-500 text-white'
-														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-												}`}
-											>
-												Interested
-											</button>
-											<button
-												onClick={() => setFilter('eventReminder')}
-												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-													filter === 'eventReminder'
-														? 'bg-blue-500 text-white'
-														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-												}`}
-											>
-												Reminders
-											</button>
-											<button
-												onClick={() => setFilter('eventUpdate')}
-												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-													filter === 'eventUpdate'
-														? 'bg-orange-500 text-white'
-														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-												}`}
-											>
-												Updates
-											</button>
-											<button
-												onClick={() => setFilter('eventCancelled')}
-												className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-													filter === 'eventCancelled'
-														? 'bg-red-500 text-white'
-														: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-												}`}
-											>
-												Cancelled
-											</button>
-										</>
-									)}
 								</div>
 
 					{isLoading ? (
@@ -955,6 +853,8 @@ const NotificationsPage = () => {
 								{activeTab === 'posts' && 'No post notifications yet.'}
 								{activeTab === 'jobs' && 'No job notifications yet.'}
 								{activeTab === 'forums' && 'No forum notifications yet.'}
+								{activeTab === 'events' && 'No event notifications yet.'}
+								{activeTab === 'mentorship' && 'No mentorship notifications yet.'}
 							</p>
 						</div>
 					)}
