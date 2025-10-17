@@ -215,9 +215,14 @@ export const updateMentorship = async (req, res) => {
         ) {
             return res.status(403).json({ message: "Not authorized" });
         }
+
+        // Check if trying to update notes - only mentor can do this
+        if (notes !== undefined && mentorship.mentor.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: "Only mentors can update notes" });
+        }
         
         if (goals) mentorship.goals = goals;
-        if (notes) mentorship.notes = notes;
+        if (notes !== undefined) mentorship.notes = notes;
         if (status) {
             mentorship.status = status;
             if (status === "completed") {

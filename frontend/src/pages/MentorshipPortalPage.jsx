@@ -11,18 +11,15 @@ import Sidebar from "../components/Sidebar";
 const MentorshipPortalPage = () => {
     const [activeTab, setActiveTab] = useState("browse"); // browse, myMentorships, sessions
     const [searchQuery, setSearchQuery] = useState("");
-    const [filterExpertise, setFilterExpertise] = useState("");
 
     const queryClient = useQueryClient();
     const authUser = queryClient.getQueryData(["authUser"]);
 
     // Fetch all mentors
     const { data: mentors, isLoading: loadingMentors } = useQuery({
-        queryKey: ["mentors", filterExpertise],
+        queryKey: ["mentors"],
         queryFn: async () => {
-            const res = await axiosInstance.get("/mentorships/mentors", {
-                params: { expertise: filterExpertise || undefined },
-            });
+            const res = await axiosInstance.get("/mentorships/mentors");
             return res.data;
         },
     });
@@ -45,25 +42,22 @@ const MentorshipPortalPage = () => {
         },
     });
 
-    const filteredMentors = mentors?.filter((mentor) => {
-        // Don't show the current user in the browse list
+        const filteredMentors = mentors?.filter((mentor) => {
+        // Skip own profile
         if (mentor._id === authUser._id) return false;
-        
-        // Filter by expertise if selected
-        if (filterExpertise && !mentor.mentorExpertise?.includes(filterExpertise)) {
-            return false;
-        }
-        
+
         // Filter by search query
         if (searchQuery) {
             const searchLower = searchQuery.toLowerCase();
-            return (
-                mentor.name.toLowerCase().includes(searchLower) ||
-                mentor.mentorBio.toLowerCase().includes(searchLower) ||
-                mentor.mentorExpertise.some((exp) => exp.toLowerCase().includes(searchLower))
-            );
+            const matchesName = mentor.name.toLowerCase().includes(searchLower);
+            const matchesHeadline = mentor.headline?.toLowerCase().includes(searchLower);
+            const matchesExpertise = mentor.mentorExpertise.some((exp) => exp.toLowerCase().includes(searchLower));
+
+            if (!matchesName && !matchesHeadline && !matchesExpertise) {
+                return false;
+            }
         }
-        
+
         return true;
     });
 
@@ -177,32 +171,15 @@ const MentorshipPortalPage = () => {
                 <div>
                     {/* Search and Filters */}
                     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                        <div className="flex flex-col md:flex-row gap-4">
-                            <div className="flex-1 relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                                <input
-                                    type="text"
-                                    placeholder="Search mentors by name or expertise..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                                />
-                            </div>
-                            <select
-                                value={filterExpertise}
-                                onChange={(e) => setFilterExpertise(e.target.value)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                            >
-                                <option value="">All Expertise</option>
-                                <option value="Software Engineering">Software Engineering</option>
-                                <option value="Product Management">Product Management</option>
-                                <option value="Data Science">Data Science</option>
-                                <option value="Design">Design</option>
-                                <option value="Marketing">Marketing</option>
-                                <option value="Business">Business</option>
-                                <option value="Finance">Finance</option>
-                                <option value="Entrepreneurship">Entrepreneurship</option>
-                            </select>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                            <input
+                                type="text"
+                                placeholder="Search mentors by name or expertise..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            />
                         </div>
                     </div>
 
@@ -263,16 +240,21 @@ const MentorshipPortalPage = () => {
                                 </div>
                             )}
 
-                            {activeMentorships?.length > 0 && (
-                                <div>
-                                    <h2 className="text-xl font-semibold mb-4">Active Mentorships</h2>
+                            <div>
+                                <h2 className="text-xl font-semibold mb-4">Active Mentorships</h2>
+                                {activeMentorships?.length > 0 ? (
                                     <div className="grid grid-cols-1 gap-4">
                                         {activeMentorships.map((mentorship) => (
                                             <MentorshipCard key={mentorship._id} mentorship={mentorship} authUser={authUser} />
                                         ))}
                                     </div>
-                                </div>
-                            )}
+                                ) : (
+                                    <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                                        <Award size={48} className="mx-auto text-gray-400 mb-3" />
+                                        <p className="text-gray-600">No active mentorships</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -295,8 +277,7 @@ const MentorshipPortalPage = () => {
                         <div className="space-y-6">
                             {pendingSessions?.length > 0 && (
                                 <div>
-                                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                                        <Clock className="text-yellow-600" />
+                                    <h2 className="text-xl font-semibold mb-4">
                                         Pending Sessions (Awaiting Confirmation)
                                     </h2>
                                     <div className="grid grid-cols-1 gap-4">
@@ -312,9 +293,9 @@ const MentorshipPortalPage = () => {
                                 </div>
                             )}
 
-                            {upcomingSessions?.length > 0 && (
-                                <div>
-                                    <h2 className="text-xl font-semibold mb-4">Upcoming Sessions</h2>
+                            <div>
+                                <h2 className="text-xl font-semibold mb-4">Upcoming Sessions</h2>
+                                {upcomingSessions?.length > 0 ? (
                                     <div className="grid grid-cols-1 gap-4">
                                         {upcomingSessions.map((session) => (
                                             <SessionCard 
@@ -325,27 +306,33 @@ const MentorshipPortalPage = () => {
                                             />
                                         ))}
                                     </div>
-                                </div>
-                            )}
+                                ) : (
+                                    <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                                        <Calendar size={48} className="mx-auto text-gray-400 mb-3" />
+                                        <p className="text-gray-600">No upcoming sessions</p>
+                                    </div>
+                                )}
+                            </div>
 
                             <div>
                                 <h2 className="text-xl font-semibold mb-4">Past Sessions</h2>
-                                <div className="grid grid-cols-1 gap-4">
-                                    {pastSessions && pastSessions.length > 0 ? (
-                                        pastSessions.map((session) => (
+                                {pastSessions?.length > 0 ? (
+                                    <div className="grid grid-cols-1 gap-4">
+                                        {pastSessions.map((session) => (
                                             <SessionCard 
                                                 key={session._id} 
                                                 session={session} 
                                                 mentorship={session.mentorship}
                                                 authUser={authUser} 
                                             />
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-8 text-gray-500">
-                                            <p>No past sessions yet</p>
-                                        </div>
-                                    )}
-                                </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                                        <Calendar size={48} className="mx-auto text-gray-400 mb-3" />
+                                        <p className="text-gray-600">No past sessions yet</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

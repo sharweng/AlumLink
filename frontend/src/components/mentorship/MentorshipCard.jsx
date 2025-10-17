@@ -3,13 +3,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { axiosInstance } from "../../lib/axios";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
-import { Check, X, Calendar, Target, FileText, Plus } from "lucide-react";
+import { Check, X, Calendar, Target, FileText, Plus, UserX } from "lucide-react";
 import CreateSessionModal from "./CreateSessionModal";
 
 const MentorshipCard = ({ mentorship, authUser }) => {
     const [showNoteModal, setShowNoteModal] = useState(false);
     const [notes, setNotes] = useState(mentorship.notes || "");
     const [showCreateSession, setShowCreateSession] = useState(false);
+    const [showEndMentorshipModal, setShowEndMentorshipModal] = useState(false);
 
     const queryClient = useQueryClient();
     const isMentor = mentorship.mentor._id === authUser._id;
@@ -40,6 +41,21 @@ const MentorshipCard = ({ mentorship, authUser }) => {
         },
         onError: (error) => {
             toast.error(error.response?.data?.message || "Failed to update notes");
+        },
+    });
+
+    const { mutate: endMentorship, isPending: ending } = useMutation({
+        mutationFn: async () => {
+            const res = await axiosInstance.put(`/mentorships/${mentorship._id}`, { status: "completed" });
+            return res.data;
+        },
+        onSuccess: () => {
+            toast.success("Mentorship ended successfully!");
+            setShowEndMentorshipModal(false);
+            queryClient.invalidateQueries(["myMentorships"]);
+        },
+        onError: (error) => {
+            toast.error(error.response?.data?.message || "Failed to end mentorship");
         },
     });
 
@@ -138,12 +154,22 @@ const MentorshipCard = ({ mentorship, authUser }) => {
                                 <Calendar size={18} />
                                 Schedule Session
                             </button>
+                            {isMentor && (
+                                <button
+                                    onClick={() => setShowNoteModal(true)}
+                                    className="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition flex items-center gap-2"
+                                >
+                                    <FileText size={18} />
+                                    Notes
+                                </button>
+                            )}
                             <button
-                                onClick={() => setShowNoteModal(true)}
-                                className="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition flex items-center gap-2"
+                                onClick={() => setShowEndMentorshipModal(true)}
+                                className="bg-red-100 text-red-700 py-2 px-4 rounded-lg hover:bg-red-200 transition flex items-center gap-2"
+                                title="End mentorship relationship"
                             >
-                                <FileText size={18} />
-                                Notes
+                                <UserX size={18} />
+                                End Mentorship
                             </button>
                         </>
                     )}
@@ -196,6 +222,59 @@ const MentorshipCard = ({ mentorship, authUser }) => {
                     mentorship={mentorship}
                     onClose={() => setShowCreateSession(false)}
                 />
+            )}
+
+            {/* End Mentorship Confirmation Modal */}
+            {showEndMentorshipModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-md w-full">
+                        <div className="border-b px-6 py-4">
+                            <h2 className="text-xl font-bold text-gray-900">End Mentorship</h2>
+                        </div>
+
+                        <div className="p-6">
+                            <div className="mb-6">
+                                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <UserX className="text-red-600" size={24} />
+                                </div>
+                                <p className="text-center text-gray-700 mb-2">
+                                    Are you sure you want to end this mentorship with{" "}
+                                    <span className="font-semibold">{otherUser.name}</span>?
+                                </p>
+                                <p className="text-center text-sm text-gray-500">
+                                    This will mark the mentorship as completed. You can still view past sessions and feedback.
+                                </p>
+                            </div>
+
+                            <div className="flex gap-3 justify-end">
+                                <button
+                                    onClick={() => setShowEndMentorshipModal(false)}
+                                    disabled={ending}
+                                    className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => endMentorship()}
+                                    disabled={ending}
+                                    className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:bg-gray-400 flex items-center gap-2"
+                                >
+                                    {ending ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                            Ending...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <UserX size={16} />
+                                            End Mentorship
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </>
     );
