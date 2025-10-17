@@ -9,9 +9,47 @@ const SessionCard = ({ session, mentorship, authUser }) => {
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
     const [feedback, setFeedback] = useState("");
     const [rating, setRating] = useState(5);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [cancelReason, setCancelReason] = useState("");
 
     const queryClient = useQueryClient();
     const isMentor = mentorship.mentor._id === authUser._id;
+    const needsMyConfirmation = isMentor ? !session.confirmedByMentor : !session.confirmedByMentee;
+    const otherPartyConfirmed = isMentor ? session.confirmedByMentee : session.confirmedByMentor;
+
+    const { mutate: confirmSession, isPending: confirming } = useMutation({
+        mutationFn: async () => {
+            const res = await axiosInstance.put(`/mentorships/sessions/${session._id}/confirm`);
+            return res.data;
+        },
+        onSuccess: () => {
+            toast.success("Session confirmed!");
+            queryClient.invalidateQueries(["sessions"]);
+            queryClient.invalidateQueries(["mentorshipSessions"]);
+        },
+        onError: (error) => {
+            toast.error(error.response?.data?.message || "Failed to confirm session");
+        },
+    });
+
+    const { mutate: cancelSession, isPending: cancelling } = useMutation({
+        mutationFn: async () => {
+            const res = await axiosInstance.put(`/mentorships/sessions/${session._id}/cancel`, {
+                reason: cancelReason.trim() || undefined,
+            });
+            return res.data;
+        },
+        onSuccess: () => {
+            toast.success("Session cancelled");
+            setShowCancelModal(false);
+            setCancelReason("");
+            queryClient.invalidateQueries(["sessions"]);
+            queryClient.invalidateQueries(["mentorshipSessions"]);
+        },
+        onError: (error) => {
+            toast.error(error.response?.data?.message || "Failed to cancel session");
+        },
+    });
 
     const { mutate: markComplete, isPending: completing } = useMutation({
         mutationFn: async () => {
@@ -49,6 +87,7 @@ const SessionCard = ({ session, mentorship, authUser }) => {
     });
 
     const statusColors = {
+        pending: "bg-yellow-100 text-yellow-800",
         scheduled: "bg-blue-100 text-blue-800",
         completed: "bg-green-100 text-green-800",
         cancelled: "bg-red-100 text-red-800",
@@ -170,15 +209,100 @@ const SessionCard = ({ session, mentorship, authUser }) => {
                     </div>
                 )}
 
+                {/* Confirmation Status for Pending Sessions */}
+                {session.status === "pending" && (
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm font-medium text-yellow-800 mb-2">
+                            ⏳ Session Confirmation Needed
+                        </p>
+                        <div className="space-y-1 text-xs text-gray-600">
+                            <p className="flex items-center gap-2">
+                                {session.confirmedByMentor ? (
+                                    <CheckCircle size={14} className="text-green-600" />
+                                ) : (
+                                    <Clock size={14} className="text-gray-400" />
+                                )}
+                                <span>Mentor: {session.confirmedByMentor ? "Confirmed" : "Pending"}</span>
+                            </p>
+                            <p className="flex items-center gap-2">
+                                {session.confirmedByMentee ? (
+                                    <CheckCircle size={14} className="text-green-600" />
+                                ) : (
+                                    <Clock size={14} className="text-gray-400" />
+                                )}
+                                <span>Mentee: {session.confirmedByMentee ? "Confirmed" : "Pending"}</span>
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex gap-2">
+                    {session.status === "pending" && needsMyConfirmation && (
+                        <>
+                            <button
+                                onClick={() => confirmSession()}
+                                disabled={confirming}
+                                className="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary-dark transition flex items-center justify-center gap-2 disabled:bg-gray-400"
+                            >
+                                <CheckCircle size={18} />
+                                {confirming ? "Confirming..." : "Confirm Session"}
+                            </button>
+                            <button
+                                onClick={() => setShowCancelModal(true)}
+                                disabled={cancelling}
+                                className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition flex items-center justify-center gap-2 disabled:bg-gray-400"
+                            >
+                                <X size={18} />
+                                {cancelling ? "Cancelling..." : "Decline"}
+                            </button>
+                        </>
+                    )}
+
+                    {session.status === "pending" && !needsMyConfirmation && (
+                        <>
+                            <div className="flex-1 bg-gray-100 text-gray-600 py-2 px-4 rounded-lg text-center text-sm">
+                                Waiting for {otherPartyConfirmed ? "system" : (isMentor ? "mentee" : "mentor")} confirmation
+                            </div>
+                            <button
+                                onClick={() => setShowCancelModal(true)}
+                                disabled={cancelling}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center justify-center gap-2 disabled:bg-gray-400"
+                            >
+                                <X size={18} />
+                                Cancel
+                            </button>
+                        </>
+                    )}
+
                     {canComplete && (
+                        <>
+                            <button
+                                onClick={() => markComplete()}
+                                disabled={completing}
+                                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2 disabled:bg-gray-400"
+                            >
+                                <CheckCircle size={18} />
+                                Mark Complete
+                            </button>
+                            <button
+                                onClick={() => setShowCancelModal(true)}
+                                disabled={cancelling}
+                                className="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                <X size={18} />
+                                Cancel
+                            </button>
+                        </>
+                    )}
+
+                    {session.status === "scheduled" && !canComplete && (
                         <button
-                            onClick={() => markComplete()}
-                            disabled={completing}
-                            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2 disabled:bg-gray-400"
+                            onClick={() => setShowCancelModal(true)}
+                            disabled={cancelling}
+                            className="flex-1 border border-red-600 text-red-600 py-2 px-4 rounded-lg hover:bg-red-50 transition flex items-center justify-center gap-2 disabled:opacity-50"
                         >
-                            <CheckCircle size={18} />
-                            Mark Complete
+                            <X size={18} />
+                            Cancel Session
                         </button>
                     )}
 
@@ -252,6 +376,59 @@ const SessionCard = ({ session, mentorship, authUser }) => {
                                     className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition disabled:bg-gray-400"
                                 >
                                     {submitting ? "Submitting..." : "Submit Feedback"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Cancel Session Modal */}
+            {showCancelModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-lg w-full">
+                        <div className="border-b px-6 py-4 flex justify-between items-center">
+                            <h2 className="text-xl font-bold">Cancel Session</h2>
+                            <button onClick={() => setShowCancelModal(false)} className="text-gray-500 hover:text-gray-700">
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <p className="text-gray-700">
+                                Are you sure you want to cancel this session? The other party will be notified.
+                            </p>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-2">
+                                    Reason for cancellation <span className="text-gray-500 font-normal">(optional)</span>
+                                </label>
+                                <textarea
+                                    value={cancelReason}
+                                    onChange={(e) => setCancelReason(e.target.value)}
+                                    placeholder="Let them know why you're cancelling..."
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                                    rows={3}
+                                />
+                            </div>
+
+                            <div className="flex gap-3 justify-end">
+                                <button
+                                    onClick={() => {
+                                        setShowCancelModal(false);
+                                        setCancelReason("");
+                                    }}
+                                    disabled={cancelling}
+                                    className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+                                >
+                                    Keep Session
+                                </button>
+                                <button
+                                    onClick={() => cancelSession()}
+                                    disabled={cancelling}
+                                    className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:bg-gray-400"
+                                >
+                                    {cancelling ? "Cancelling..." : "Cancel Session"}
                                 </button>
                             </div>
                         </div>

@@ -11,6 +11,8 @@ import {
     getSessions,
     getSessionById,
     updateSession,
+    confirmSession,
+    cancelSession,
     addSessionFeedback,
     deleteSession,
     getMentorshipProgress,
@@ -30,6 +32,8 @@ router.post("/sessions", protectRoute, createSession);
 router.get("/sessions", protectRoute, getSessions);
 router.get("/sessions/:sessionId", protectRoute, getSessionById);
 router.put("/sessions/:sessionId", protectRoute, updateSession);
+router.put("/sessions/:sessionId/confirm", protectRoute, confirmSession);
+router.put("/sessions/:sessionId/cancel", protectRoute, cancelSession);
 router.post("/sessions/:sessionId/feedback", protectRoute, addSessionFeedback);
 router.delete("/sessions/:sessionId", protectRoute, deleteSession);
 

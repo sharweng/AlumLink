@@ -68,8 +68,10 @@ const MentorshipPortalPage = () => {
     });
 
     const upcomingSessions = sessions?.filter(
-        (session) => session.status === "scheduled" && new Date(session.scheduledDate) > new Date()
+        (session) => (session.status === "pending" || session.status === "scheduled") && new Date(session.scheduledDate) > new Date()
     );
+    
+    const pendingSessions = sessions?.filter((session) => session.status === "pending");
 
     const activeMentorships = myMentorships?.filter((m) => m.status === "accepted");
     const pendingMentorships = myMentorships?.filter((m) => m.status === "pending");
@@ -123,9 +125,9 @@ const MentorshipPortalPage = () => {
                     <div className="bg-yellow-50 rounded-lg p-4">
                         <div className="flex items-center gap-2 text-yellow-600 mb-2">
                             <Clock size={20} />
-                            <span className="font-semibold">Pending</span>
+                            <span className="font-semibold">Pending Sessions</span>
                         </div>
-                        <p className="text-2xl font-bold text-gray-900">{pendingMentorships?.length || 0}</p>
+                        <p className="text-2xl font-bold text-gray-900">{pendingSessions?.length || 0}</p>
                     </div>
                 </div>
             </div>
@@ -287,6 +289,25 @@ const MentorshipPortalPage = () => {
                         </div>
                     ) : (
                         <div className="space-y-6">
+                            {pendingSessions?.length > 0 && (
+                                <div>
+                                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                                        <Clock className="text-yellow-600" />
+                                        Pending Sessions (Awaiting Confirmation)
+                                    </h2>
+                                    <div className="grid grid-cols-1 gap-4">
+                                        {pendingSessions.map((session) => (
+                                            <SessionCard 
+                                                key={session._id} 
+                                                session={session} 
+                                                mentorship={session.mentorship}
+                                                authUser={authUser} 
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {upcomingSessions?.length > 0 && (
                                 <div>
                                     <h2 className="text-xl font-semibold mb-4">Upcoming Sessions</h2>

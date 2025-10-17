@@ -265,6 +265,8 @@ export const createSession = async (req, res) => {
             return res.status(400).json({ message: "Mentorship is not active" });
         }
         
+        const isMentor = mentorship.mentor.toString() === req.user._id.toString();
+        
         const session = await MentorshipSession.create({
             mentorship: mentorshipId,
             title,
@@ -274,6 +276,10 @@ export const createSession = async (req, res) => {
             meetingLink: meetingLink || "",
             location: location || "",
             agenda: agenda || "",
+            createdBy: req.user._id,
+            confirmedByMentor: isMentor,
+            confirmedByMentee: !isMentor,
+            status: "pending",
         });
         
         // Create notification for the other party
@@ -283,8 +289,10 @@ export const createSession = async (req, res) => {
         
         await Notification.create({
             recipient: otherUserId,
-            type: "mentorshipSession",
+            type: "sessionScheduled",
             relatedUser: req.user._id,
+            relatedSession: session._id,
+            relatedMentorship: mentorshipId,
         });
         
         const populatedSession = await MentorshipSession.findById(session._id)
@@ -420,6 +428,117 @@ export const updateSession = async (req, res) => {
         res.status(200).json(populatedSession);
     } catch (error) {
         console.error("Error updating session:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+// Confirm session (accept proposed session time)
+export const confirmSession = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        
+        const session = await MentorshipSession.findById(sessionId).populate("mentorship");
+        
+        if (!session) {
+            return res.status(404).json({ message: "Session not found" });
+        }
+        
+        const isMentor = session.mentorship.mentor.toString() === req.user._id.toString();
+        const isMentee = session.mentorship.mentee.toString() === req.user._id.toString();
+        
+        if (!isMentor && !isMentee) {
+            return res.status(403).json({ message: "Not authorized" });
+        }
+        
+        // Set confirmation based on user role
+        if (isMentor) {
+            session.confirmedByMentor = true;
+        } else {
+            session.confirmedByMentee = true;
+        }
+        
+        // If both parties confirmed, change status to scheduled
+        if (session.confirmedByMentor && session.confirmedByMentee) {
+            session.status = "scheduled";
+            
+            // Notify the creator that session is confirmed
+            await Notification.create({
+                recipient: session.createdBy,
+                type: "sessionScheduled",
+                relatedUser: req.user._id,
+                relatedSession: session._id,
+                relatedMentorship: session.mentorship._id,
+            });
+        }
+        
+        await session.save();
+        
+        const populatedSession = await MentorshipSession.findById(session._id)
+            .populate({
+                path: "mentorship",
+                populate: [
+                    { path: "mentor", select: "name username profilePicture headline" },
+                    { path: "mentee", select: "name username profilePicture headline" },
+                ],
+            });
+        
+        res.status(200).json(populatedSession);
+    } catch (error) {
+        console.error("Error confirming session:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+// Cancel/Decline session
+export const cancelSession = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const { reason } = req.body;
+        
+        const session = await MentorshipSession.findById(sessionId).populate("mentorship");
+        
+        if (!session) {
+            return res.status(404).json({ message: "Session not found" });
+        }
+        
+        const isMentor = session.mentorship.mentor.toString() === req.user._id.toString();
+        const isMentee = session.mentorship.mentee.toString() === req.user._id.toString();
+        
+        if (!isMentor && !isMentee) {
+            return res.status(403).json({ message: "Not authorized" });
+        }
+        
+        // Update session status to cancelled
+        session.status = "cancelled";
+        if (reason) {
+            session.notes = reason;
+        }
+        
+        await session.save();
+        
+        // Notify the other party about cancellation
+        const otherUserId = isMentor ? session.mentorship.mentee : session.mentorship.mentor;
+        
+        await Notification.create({
+            recipient: otherUserId,
+            type: "sessionScheduled",
+            relatedUser: req.user._id,
+            relatedSession: session._id,
+            relatedMentorship: session.mentorship._id,
+        });
+        
+        const populatedSession = await MentorshipSession.findById(session._id)
+            .populate({
+                path: "mentorship",
+                populate: [
+                    { path: "mentor", select: "name username profilePicture headline" },
+                    { path: "mentee", select: "name username profilePicture headline" },
+                ],
+            });
+        
+        res.status(200).json(populatedSession);
+    } catch (error) {
+        console.error("Error cancelling session:", error);
         res.status(500).json({ message: "Server error" });
     }
 };

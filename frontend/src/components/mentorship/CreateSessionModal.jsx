@@ -32,6 +32,7 @@ const CreateSessionModal = ({ mentorship, onClose }) => {
         onSuccess: () => {
             toast.success("Session scheduled successfully!");
             queryClient.invalidateQueries(["sessions"]);
+            queryClient.invalidateQueries(["mentorshipSessions"]);
             onClose();
         },
         onError: (error) => {
@@ -52,13 +53,12 @@ const CreateSessionModal = ({ mentorship, onClose }) => {
         setErrors(newErrors);
         
         if (newErrors.title || newErrors.scheduledDate || newErrors.meetingLink || newErrors.location) {
-            toast.error("Please fill in all required fields");
             return;
         }
 
         const selectedDate = new Date(formData.scheduledDate);
         if (selectedDate < new Date()) {
-            toast.error("Please select a future date and time");
+            setErrors({ ...newErrors, scheduledDate: true });
             return;
         }
 
@@ -151,7 +151,11 @@ const CreateSessionModal = ({ mentorship, onClose }) => {
                                 }`}
                             />
                             {errors.scheduledDate && (
-                                <p className="text-red-500 text-sm mt-1">Date and time is required</p>
+                                <p className="text-red-500 text-sm mt-1">
+                                    {formData.scheduledDate && new Date(formData.scheduledDate) < new Date()
+                                        ? "Please select a future date and time"
+                                        : "Date and time is required"}
+                                </p>
                             )}
                         </div>
 

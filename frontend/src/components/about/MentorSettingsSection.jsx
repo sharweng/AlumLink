@@ -18,6 +18,7 @@ const MentorSettingsSection = ({ userData, isOwnProfile }) => {
         mentorBio: false,
         mentorExpertise: false,
     });
+    const [showDeactivateModal, setShowDeactivateModal] = useState(false);
 
     const queryClient = useQueryClient();
 
@@ -43,12 +44,15 @@ const MentorSettingsSection = ({ userData, isOwnProfile }) => {
             setFormData({ ...formData, isMentor: true });
             setIsEditing(true);
         } else {
-            // Turning off mentor mode
-            if (window.confirm("Are you sure you want to deactivate your mentor profile?")) {
-                setFormData({ ...formData, isMentor: false });
-                toggleMentorStatus();
-            }
+            // Turning off mentor mode - show modal
+            setShowDeactivateModal(true);
         }
+    };
+
+    const handleDeactivate = () => {
+        setFormData({ ...formData, isMentor: false });
+        setShowDeactivateModal(false);
+        toggleMentorStatus();
     };
 
     const handleSave = () => {
@@ -61,7 +65,6 @@ const MentorSettingsSection = ({ userData, isOwnProfile }) => {
             setErrors(newErrors);
             
             if (newErrors.mentorBio || newErrors.mentorExpertise) {
-                toast.error("Please fill in all required fields");
                 return;
             }
         }
@@ -335,6 +338,54 @@ const MentorSettingsSection = ({ userData, isOwnProfile }) => {
                     <p className="text-sm text-gray-500">
                         Enable the toggle above to set up your mentor profile
                     </p>
+                </div>
+            )}
+
+            {/* Deactivate Mentor Modal */}
+            {showDeactivateModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-md w-full">
+                        <div className="border-b px-6 py-4 flex justify-between items-center">
+                            <h2 className="text-xl font-bold">Deactivate Mentor Profile</h2>
+                            <button 
+                                onClick={() => setShowDeactivateModal(false)} 
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <p className="text-gray-700">
+                                Are you sure you want to deactivate your mentor profile? This will:
+                            </p>
+                            <ul className="list-disc list-inside space-y-2 text-gray-600 text-sm">
+                                <li>Remove you from the mentor browse list</li>
+                                <li>Prevent new mentorship requests</li>
+                                <li>Keep your existing mentorships active</li>
+                            </ul>
+                            <p className="text-sm text-gray-500">
+                                You can reactivate your mentor profile at any time.
+                            </p>
+
+                            <div className="flex gap-3 justify-end pt-4 border-t">
+                                <button
+                                    onClick={() => setShowDeactivateModal(false)}
+                                    disabled={isPending}
+                                    className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDeactivate}
+                                    disabled={isPending}
+                                    className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:bg-gray-400"
+                                >
+                                    {isPending ? "Deactivating..." : "Deactivate"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

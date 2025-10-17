@@ -30,10 +30,23 @@ const mentorshipSessionSchema = new mongoose.Schema({
         type: String, // For in-person meetings
         default: "",
     },
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+    },
+    confirmedByMentor: {
+        type: Boolean,
+        default: false,
+    },
+    confirmedByMentee: {
+        type: Boolean,
+        default: false,
+    },
     status: {
         type: String,
-        enum: ["scheduled", "completed", "cancelled", "rescheduled"],
-        default: "scheduled",
+        enum: ["pending", "scheduled", "completed", "cancelled", "rescheduled"],
+        default: "pending",
     },
     agenda: {
         type: String,
