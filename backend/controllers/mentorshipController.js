@@ -495,29 +495,154 @@ export const cancelSession = async (req, res) => {
         const { sessionId } = req.params;
         const { reason } = req.body;
         
-        const session = await MentorshipSession.findById(sessionId).populate("mentorship");
+        const session = await MentorshipSession.findById(sessionId).populate({
+            path: "mentorship",
+            populate: [
+                { path: "mentor", select: "_id name username" },
+                { path: "mentee", select: "_id name username" }
+            ]
+        });
         
         if (!session) {
             return res.status(404).json({ message: "Session not found" });
         }
         
-        const isMentor = session.mentorship.mentor.toString() === req.user._id.toString();
-        const isMentee = session.mentorship.mentee.toString() === req.user._id.toString();
+        const isMentor = session.mentorship.mentor._id.toString() === req.user._id.toString();
+        const isMentee = session.mentorship.mentee._id.toString() === req.user._id.toString();
         
         if (!isMentor && !isMentee) {
             return res.status(403).json({ message: "Not authorized" });
         }
         
-        // Update session status to cancelled
-        session.status = "cancelled";
-        if (reason) {
-            session.notes = reason;
+        // If session is pending (not yet confirmed by both), cancel directly
+        if (session.status === "pending") {
+            session.status = "cancelled";
+            session.cancelRequestedBy = req.user._id;
+            if (reason) {
+                session.cancelReason = reason;
+            }
+            
+            await session.save({ validateBeforeSave: false });
+            
+            // Notify the other party about cancellation
+            const otherUserId = isMentor ? session.mentorship.mentee._id : session.mentorship.mentor._id;
+            
+            await Notification.create({
+                recipient: otherUserId,
+                type: "sessionScheduled",
+                relatedUser: req.user._id,
+                relatedSession: session._id,
+                relatedMentorship: session.mentorship._id,
+            });
+            
+            const populatedSession = await MentorshipSession.findById(session._id)
+                .populate("mentorship")
+                .populate("createdBy", "name username profilePicture")
+                .populate("cancelRequestedBy", "name username profilePicture");
+            
+            return res.status(200).json(populatedSession);
         }
         
-        await session.save();
+        // If session is scheduled (both confirmed)
+        if (session.status === "scheduled") {
+            // Mentors can cancel directly, mentees need approval
+            if (isMentor) {
+                // Mentor cancels directly
+                session.status = "cancelled";
+                session.cancelRequestedBy = req.user._id;
+                if (reason) {
+                    session.cancelReason = reason;
+                }
+                
+                await session.save({ validateBeforeSave: false });
+                
+                // Notify mentee about cancellation
+                await Notification.create({
+                    recipient: session.mentorship.mentee._id,
+                    type: "sessionScheduled",
+                    relatedUser: req.user._id,
+                    relatedSession: session._id,
+                    relatedMentorship: session.mentorship._id,
+                });
+                
+                const populatedSession = await MentorshipSession.findById(session._id)
+                    .populate("mentorship")
+                    .populate("createdBy", "name username profilePicture")
+                    .populate("cancelRequestedBy", "name username profilePicture");
+                
+                return res.status(200).json(populatedSession);
+            }
+            
+            // Mentee cancellation requires mentor approval
+            if (session.cancelRequestedBy) {
+                const requestedBy = session.cancelRequestedBy.toString();
+                const currentUser = req.user._id.toString();
+                
+                // If mentor is approving the mentee's cancel request
+                if (requestedBy !== currentUser && isMentor) {
+                    session.status = "cancelled";
+                    if (reason) {
+                        session.cancelReason = (session.cancelReason ? session.cancelReason + " | " : "") + reason;
+                    }
+                    
+                    await session.save({ validateBeforeSave: false });
+                    
+                    // Notify the mentee that cancellation is approved
+                    await Notification.create({
+                        recipient: requestedBy,
+                        type: "sessionScheduled",
+                        relatedUser: req.user._id,
+                        relatedSession: session._id,
+                        relatedMentorship: session.mentorship._id,
+                    });
+                    
+                    const populatedSession = await MentorshipSession.findById(session._id)
+                        .populate("mentorship")
+                        .populate("createdBy", "name username profilePicture")
+                        .populate("cancelRequestedBy", "name username profilePicture");
+                    
+                    return res.status(200).json(populatedSession);
+                } else if (requestedBy === currentUser) {
+                    return res.status(400).json({ message: "You already requested to cancel this session" });
+                }
+            } else {
+                // Mentee's first cancel request - save the request
+                session.cancelRequestedBy = req.user._id;
+                if (reason) {
+                    session.cancelReason = reason;
+                }
+                
+                await session.save({ validateBeforeSave: false });
+                
+                // Notify mentor about cancel request
+                await Notification.create({
+                    recipient: session.mentorship.mentor._id,
+                    type: "sessionScheduled",
+                    relatedUser: req.user._id,
+                    relatedSession: session._id,
+                    relatedMentorship: session.mentorship._id,
+                });
+                
+                const populatedSession = await MentorshipSession.findById(session._id)
+                    .populate("mentorship")
+                    .populate("createdBy", "name username profilePicture")
+                    .populate("cancelRequestedBy", "name username profilePicture");
+                
+                return res.status(200).json(populatedSession);
+            }
+        }
+        
+        // For other statuses, allow direct cancel
+        session.status = "cancelled";
+        session.cancelRequestedBy = req.user._id;
+        if (reason) {
+            session.cancelReason = reason;
+        }
+        
+        await session.save({ validateBeforeSave: false });
         
         // Notify the other party about cancellation
-        const otherUserId = isMentor ? session.mentorship.mentee : session.mentorship.mentor;
+        const otherUserId = isMentor ? session.mentorship.mentee._id : session.mentorship.mentor._id;
         
         await Notification.create({
             recipient: otherUserId,

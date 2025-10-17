@@ -237,13 +237,35 @@ const SessionCard = ({ session, mentorship, authUser }) => {
                     </div>
                 )}
 
+                {/* Cancel Request Status for Scheduled Sessions */}
+                {session.status === "scheduled" && session.cancelRequestedBy && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm font-medium text-red-800 mb-2">
+                            🚫 Cancellation Request Pending
+                        </p>
+                        <p className="text-xs text-gray-700 mb-2">
+                            {session.cancelRequestedBy._id === authUser._id ? (
+                                <>You have requested to cancel this session. Waiting for mentor approval.</>
+                            ) : (
+                                <>Mentee has requested to cancel this session.</>
+                            )}
+                        </p>
+                        {session.cancelReason && (
+                            <div className="mt-2 p-2 bg-white rounded border border-red-100">
+                                <p className="text-xs font-medium text-gray-600">Reason:</p>
+                                <p className="text-xs text-gray-700">{session.cancelReason}</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <div className="flex gap-2">
                     {session.status === "pending" && needsMyConfirmation && (
                         <>
                             <button
                                 onClick={() => confirmSession()}
                                 disabled={confirming}
-                                className="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary-dark transition flex items-center justify-center gap-2 disabled:bg-gray-400"
+                                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2 disabled:bg-gray-400"
                             >
                                 <CheckCircle size={18} />
                                 {confirming ? "Confirming..." : "Confirm Session"}
@@ -275,7 +297,7 @@ const SessionCard = ({ session, mentorship, authUser }) => {
                         </>
                     )}
 
-                    {canComplete && (
+                    {canComplete && !session.cancelRequestedBy && (
                         <>
                             <button
                                 onClick={() => markComplete()}
@@ -291,20 +313,41 @@ const SessionCard = ({ session, mentorship, authUser }) => {
                                 className="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition flex items-center justify-center gap-2 disabled:opacity-50"
                             >
                                 <X size={18} />
-                                Cancel
+                                {isMentor ? "Cancel" : "Request Cancel"}
                             </button>
                         </>
                     )}
 
-                    {session.status === "scheduled" && !canComplete && (
+                    {session.status === "scheduled" && !canComplete && !session.cancelRequestedBy && (
                         <button
                             onClick={() => setShowCancelModal(true)}
                             disabled={cancelling}
                             className="flex-1 border border-red-600 text-red-600 py-2 px-4 rounded-lg hover:bg-red-50 transition flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                             <X size={18} />
-                            Cancel Session
+                            {isMentor ? "Cancel Session" : "Request Cancellation"}
                         </button>
+                    )}
+
+                    {/* Mentor Approves Mentee's Cancel Request */}
+                    {session.status === "scheduled" && session.cancelRequestedBy && isMentor && session.cancelRequestedBy._id !== authUser._id && (
+                        <>
+                            <button
+                                onClick={() => cancelSession()}
+                                disabled={cancelling}
+                                className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition flex items-center justify-center gap-2 disabled:bg-gray-400"
+                            >
+                                <CheckCircle size={18} />
+                                {cancelling ? "Approving..." : "Approve Cancellation"}
+                            </button>
+                        </>
+                    )}
+
+                    {/* Mentee Waiting for Mentor Approval */}
+                    {session.status === "scheduled" && session.cancelRequestedBy && !isMentor && session.cancelRequestedBy._id === authUser._id && (
+                        <div className="flex-1 bg-gray-100 text-gray-600 py-2 px-4 rounded-lg text-center text-sm">
+                            Waiting for mentor to approve cancellation
+                        </div>
                     )}
 
                     {session.status === "completed" && !hasFeedback && (
@@ -389,7 +432,11 @@ const SessionCard = ({ session, mentorship, authUser }) => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-lg max-w-lg w-full">
                         <div className="border-b px-6 py-4 flex justify-between items-center">
-                            <h2 className="text-xl font-bold">Cancel Session</h2>
+                            <h2 className="text-xl font-bold">
+                                {session.status === "pending" ? "Cancel Session" : 
+                                 session.cancelRequestedBy && isMentor && session.cancelRequestedBy._id !== authUser._id ? "Approve Cancellation" :
+                                 isMentor ? "Cancel Session" : "Request Cancellation"}
+                            </h2>
                             <button onClick={() => setShowCancelModal(false)} className="text-gray-500 hover:text-gray-700">
                                 <X size={24} />
                             </button>
@@ -397,7 +444,15 @@ const SessionCard = ({ session, mentorship, authUser }) => {
 
                         <div className="p-6 space-y-4">
                             <p className="text-gray-700">
-                                Are you sure you want to cancel this session? The other party will be notified.
+                                {session.status === "pending" ? (
+                                    "Are you sure you want to cancel this session? The other party will be notified."
+                                ) : session.cancelRequestedBy && isMentor && session.cancelRequestedBy._id !== authUser._id ? (
+                                    "The mentee has requested to cancel this session. Do you approve?"
+                                ) : isMentor ? (
+                                    "Are you sure you want to cancel this session? The mentee will be notified immediately."
+                                ) : (
+                                    "This will send a cancellation request to the mentor. They need to approve before the session is cancelled."
+                                )}
                             </p>
 
                             <div>
@@ -422,14 +477,17 @@ const SessionCard = ({ session, mentorship, authUser }) => {
                                     disabled={cancelling}
                                     className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
                                 >
-                                    Keep Session
+                                    {session.cancelRequestedBy && isMentor && session.cancelRequestedBy._id !== authUser._id ? "Reject" : "Keep Session"}
                                 </button>
                                 <button
                                     onClick={() => cancelSession()}
                                     disabled={cancelling}
                                     className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:bg-gray-400"
                                 >
-                                    {cancelling ? "Cancelling..." : "Cancel Session"}
+                                    {cancelling ? "Processing..." : 
+                                     session.status === "pending" ? "Cancel Session" :
+                                     session.cancelRequestedBy && isMentor && session.cancelRequestedBy._id !== authUser._id ? "Approve Cancellation" :
+                                     isMentor ? "Cancel Session" : "Request Cancellation"}
                                 </button>
                             </div>
                         </div>

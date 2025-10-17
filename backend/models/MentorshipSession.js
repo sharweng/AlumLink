@@ -48,6 +48,15 @@ const mentorshipSessionSchema = new mongoose.Schema({
         enum: ["pending", "scheduled", "completed", "cancelled", "rescheduled"],
         default: "pending",
     },
+    cancelRequestedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+    },
+    cancelReason: {
+        type: String,
+        default: "",
+    },
     agenda: {
         type: String,
         default: "",
