@@ -68,10 +68,14 @@ const MentorshipPortalPage = () => {
     });
 
     const upcomingSessions = sessions?.filter(
-        (session) => (session.status === "pending" || session.status === "scheduled") && new Date(session.scheduledDate) > new Date()
+        (session) => session.status === "scheduled" && new Date(session.scheduledDate) > new Date()
     );
     
     const pendingSessions = sessions?.filter((session) => session.status === "pending");
+    
+    const pastSessions = sessions?.filter(
+        (session) => session.status === "completed" || (session.status === "scheduled" && new Date(session.scheduledDate) <= new Date())
+    );
 
     const activeMentorships = myMentorships?.filter((m) => m.status === "accepted");
     const pendingMentorships = myMentorships?.filter((m) => m.status === "pending");
@@ -327,16 +331,20 @@ const MentorshipPortalPage = () => {
                             <div>
                                 <h2 className="text-xl font-semibold mb-4">Past Sessions</h2>
                                 <div className="grid grid-cols-1 gap-4">
-                                    {sessions
-                                        ?.filter((session) => session.status === "completed")
-                                        .map((session) => (
+                                    {pastSessions && pastSessions.length > 0 ? (
+                                        pastSessions.map((session) => (
                                             <SessionCard 
                                                 key={session._id} 
                                                 session={session} 
                                                 mentorship={session.mentorship}
                                                 authUser={authUser} 
                                             />
-                                        ))}
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-8 text-gray-500">
+                                            <p>No past sessions yet</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

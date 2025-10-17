@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { axiosInstance } from "../../lib/axios";
 import toast from "react-hot-toast";
-import { Calendar, Clock, Video, MapPin, CheckCircle, FileText, Star, X } from "lucide-react";
+import { Calendar, Clock, Video, MapPin, CheckCircle, FileText, Star, X, Edit2, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { Link } from "react-router-dom";
 import VideoCallModal from "./VideoCallModal";
 
 const SessionCard = ({ session, mentorship, authUser }) => {
@@ -13,11 +14,26 @@ const SessionCard = ({ session, mentorship, authUser }) => {
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [cancelReason, setCancelReason] = useState("");
     const [showVideoCall, setShowVideoCall] = useState(false);
+    const [isEditingFeedback, setIsEditingFeedback] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const queryClient = useQueryClient();
     const isMentor = mentorship.mentor._id === authUser._id;
     const needsMyConfirmation = isMentor ? !session.confirmedByMentor : !session.confirmedByMentee;
     const otherPartyConfirmed = isMentor ? session.confirmedByMentee : session.confirmedByMentor;
+
+    // Load existing feedback when editing
+    useEffect(() => {
+        if (isEditingFeedback && session.feedback) {
+            const existingFeedback = isMentor 
+                ? session.feedback.mentorFeedback 
+                : session.feedback.menteeFeedback;
+            setFeedback(existingFeedback || "");
+            if (!isMentor && session.feedback.rating) {
+                setRating(session.feedback.rating);
+            }
+        }
+    }, [isEditingFeedback, session.feedback, isMentor]);
 
     const { mutate: confirmSession, isPending: confirming } = useMutation({
         mutationFn: async () => {
@@ -63,7 +79,7 @@ const SessionCard = ({ session, mentorship, authUser }) => {
         onSuccess: () => {
             toast.success("Session marked as completed!");
             queryClient.invalidateQueries(["sessions"]);
-            setShowFeedbackModal(true);
+            queryClient.invalidateQueries(["mentorshipSessions"]);
         },
         onError: (error) => {
             toast.error(error.response?.data?.message || "Failed to update session");
@@ -74,17 +90,40 @@ const SessionCard = ({ session, mentorship, authUser }) => {
         mutationFn: async () => {
             const res = await axiosInstance.post(`/mentorships/sessions/${session._id}/feedback`, {
                 feedback,
-                rating,
+                rating: !isMentor ? rating : undefined, // Only send rating if mentee
+                role: isMentor ? "mentor" : "mentee",
             });
             return res.data;
         },
         onSuccess: () => {
-            toast.success("Feedback submitted successfully!");
+            toast.success(isEditingFeedback ? "Feedback updated successfully!" : "Feedback submitted successfully!");
             setShowFeedbackModal(false);
+            setFeedback("");
+            setRating(5);
+            setIsEditingFeedback(false);
             queryClient.invalidateQueries(["sessions"]);
+            queryClient.invalidateQueries(["mentorshipSessions"]);
         },
         onError: (error) => {
             toast.error(error.response?.data?.message || "Failed to submit feedback");
+        },
+    });
+
+    const { mutate: deleteFeedback, isPending: deleting } = useMutation({
+        mutationFn: async () => {
+            const res = await axiosInstance.delete(`/mentorships/sessions/${session._id}/feedback`, {
+                data: { role: isMentor ? "mentor" : "mentee" }
+            });
+            return res.data;
+        },
+        onSuccess: () => {
+            toast.success("Feedback deleted successfully!");
+            setShowDeleteConfirm(false);
+            queryClient.invalidateQueries(["sessions"]);
+            queryClient.invalidateQueries(["mentorshipSessions"]);
+        },
+        onError: (error) => {
+            toast.error(error.response?.data?.message || "Failed to delete feedback");
         },
     });
 
@@ -98,7 +137,8 @@ const SessionCard = ({ session, mentorship, authUser }) => {
 
     const hasFeedback = isMentor ? session.feedback?.mentorFeedback : session.feedback?.menteeFeedback;
     const isUpcoming = new Date(session.scheduledDate) > new Date();
-    const canComplete = session.status === "scheduled" && !isUpcoming;
+    const canComplete = isMentor && session.status === "scheduled" && !isUpcoming; // Only mentor can mark complete
+    const canProvideFeedback = session.status === "completed" && !hasFeedback; // Both can provide feedback
 
     return (
         <>
@@ -141,7 +181,7 @@ const SessionCard = ({ session, mentorship, authUser }) => {
                     </div>
 
                     {/* Video Call Button - Only show for scheduled/in-progress virtual sessions */}
-                    {session.meetingLink && session.status !== "cancelled" && (
+                    {session.meetingLink && session.status !== "cancelled" && isUpcoming && (
                         <div className="flex items-center gap-2">
                             <Video size={18} className="text-primary" />
                             <button
@@ -189,22 +229,108 @@ const SessionCard = ({ session, mentorship, authUser }) => {
                     </div>
                 )}
 
-                {session.feedback && (
-                    <div className="bg-blue-50 rounded-lg p-4 mb-4">
-                        <p className="text-sm font-medium mb-2 flex items-center gap-2">
-                            <Star size={16} className="text-yellow-500 fill-yellow-500" />
-                            Rating: {session.feedback.rating}/5
-                        </p>
-                        {session.feedback.mentorFeedback && (
-                            <div className="mb-2">
-                                <p className="text-xs font-medium text-gray-600">Mentor Feedback:</p>
-                                <p className="text-sm text-gray-700">{session.feedback.mentorFeedback}</p>
+                {/* Feedback Section - Separate boxes for Mentor and Mentee */}
+                {session.feedback && (session.feedback.rating || session.feedback.mentorFeedback || session.feedback.menteeFeedback) && (
+                    <div className="space-y-3 mb-4">
+                        {/* Rating Display - Only if mentee has rated */}
+                        {session.feedback.rating && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                <p className="text-sm font-medium flex items-center gap-2 text-yellow-800">
+                                    <Star size={16} className="text-yellow-500 fill-yellow-500" />
+                                    Session Rating: {session.feedback.rating}/5 (by {mentorship.mentee.name})
+                                </p>
                             </div>
                         )}
+
+                        {/* Mentee Feedback Box */}
                         {session.feedback.menteeFeedback && (
-                            <div>
-                                <p className="text-xs font-medium text-gray-600">Mentee Feedback:</p>
-                                <p className="text-sm text-gray-700">{session.feedback.menteeFeedback}</p>
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div className="flex justify-between items-start mb-2">
+                                    <Link 
+                                        to={`/profile/${mentorship.mentee.username}`}
+                                        className="flex items-center gap-2 "
+                                    >
+                                        <img 
+                                            src={mentorship.mentee.profilePicture || "/avatar.png"} 
+                                            alt={mentorship.mentee.name}
+                                            className="w-8 h-8 rounded-full object-cover"
+                                        />
+                                        <div>
+                                            <p className="text-sm font-semibold text-gray-800">
+                                                {mentorship.mentee.name}
+                                            </p>
+                                            <p className="text-xs text-gray-500">@{mentorship.mentee.username} · Mentee</p>
+                                        </div>
+                                    </Link>
+                                    {!isMentor && (
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    setIsEditingFeedback(true);
+                                                    setShowFeedbackModal(true);
+                                                }}
+                                                className="text-blue-600 hover:text-blue-800 transition"
+                                                title="Edit feedback"
+                                            >
+                                                <Edit2 size={14} />
+                                            </button>
+                                            <button
+                                                onClick={() => setShowDeleteConfirm(true)}
+                                                className="text-red-600 hover:text-red-800 transition"
+                                                title="Delete feedback"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                                <p className="text-sm text-gray-700 leading-relaxed">{session.feedback.menteeFeedback}</p>
+                            </div>
+                        )}
+
+                        {/* Mentor Feedback Box */}
+                        {session.feedback.mentorFeedback && (
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <div className="flex justify-between items-start mb-2">
+                                    <Link 
+                                        to={`/profile/${mentorship.mentor.username}`}
+                                        className="flex items-center gap-2 "
+                                    >
+                                        <img 
+                                            src={mentorship.mentor.profilePicture || "/avatar.png"} 
+                                            alt={mentorship.mentor.name}
+                                            className="w-8 h-8 rounded-full object-cover"
+                                        />
+                                        <div>
+                                            <p className="text-sm font-semibold text-gray-800">
+                                                {mentorship.mentor.name}
+                                            </p>
+                                            <p className="text-xs text-gray-500">@{mentorship.mentor.username} · Mentor</p>
+                                        </div>
+                                    </Link>
+                                    {isMentor && (
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    setIsEditingFeedback(true);
+                                                    setShowFeedbackModal(true);
+                                                }}
+                                                className="text-blue-600 hover:text-blue-800 transition"
+                                                title="Edit feedback"
+                                            >
+                                                <Edit2 size={14} />
+                                            </button>
+                                            <button
+                                                onClick={() => setShowDeleteConfirm(true)}
+                                                className="text-red-600 hover:text-red-800 transition"
+                                                title="Delete feedback"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                                <p className="text-sm text-gray-700 leading-relaxed">{session.feedback.mentorFeedback}</p>
                             </div>
                         )}
                     </div>
@@ -350,13 +476,17 @@ const SessionCard = ({ session, mentorship, authUser }) => {
                         </div>
                     )}
 
-                    {session.status === "completed" && !hasFeedback && (
+                    {session.status === "completed" && canProvideFeedback && (
                         <button
                             onClick={() => setShowFeedbackModal(true)}
-                            className="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary-dark transition flex items-center justify-center gap-2"
+                            className={`flex-1 text-white py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 ${
+                                isMentor 
+                                    ? 'bg-primary hover:bg-primary-dark' 
+                                    : 'bg-yellow-600 hover:bg-yellow-700'
+                            }`}
                         >
-                            <FileText size={18} />
-                            Add Feedback
+                            {isMentor ? <FileText size={18} /> : <Star size={18} />}
+                            {isMentor ? 'Add Feedback' : 'Rate & Review Session'}
                         </button>
                     )}
                 </div>
@@ -367,41 +497,64 @@ const SessionCard = ({ session, mentorship, authUser }) => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-lg max-w-lg w-full">
                         <div className="border-b px-6 py-4 flex justify-between items-center">
-                            <h2 className="text-xl font-bold">Session Feedback</h2>
-                            <button onClick={() => setShowFeedbackModal(false)} className="text-gray-500 hover:text-gray-700">
+                            <h2 className="text-xl font-bold">
+                                {isEditingFeedback 
+                                    ? "Edit Feedback" 
+                                    : !isMentor && !session.feedback?.rating 
+                                        ? "Rate & Review Session" 
+                                        : "Session Feedback"
+                                }
+                            </h2>
+                            <button 
+                                onClick={() => {
+                                    setShowFeedbackModal(false);
+                                    setIsEditingFeedback(false);
+                                    setFeedback("");
+                                    setRating(5);
+                                }} 
+                                className="text-gray-500 hover:text-gray-700"
+                            >
                                 <X size={24} />
                             </button>
                         </div>
 
                         <div className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-2">Rating</label>
-                                <div className="flex gap-2">
-                                    {[1, 2, 3, 4, 5].map((num) => (
-                                        <button
-                                            key={num}
-                                            onClick={() => setRating(num)}
-                                            className="focus:outline-none"
-                                        >
-                                            <Star
-                                                size={32}
-                                                className={`${
-                                                    num <= rating
-                                                        ? "text-yellow-500 fill-yellow-500"
-                                                        : "text-gray-300"
-                                                } transition`}
-                                            />
-                                        </button>
-                                    ))}
+                            {/* Rating - Only for mentees */}
+                            {!isMentor && !session.feedback?.rating && (
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">
+                                        Rating <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="flex gap-2">
+                                        {[1, 2, 3, 4, 5].map((num) => (
+                                            <button
+                                                key={num}
+                                                onClick={() => setRating(num)}
+                                                className="focus:outline-none"
+                                            >
+                                                <Star
+                                                    size={32}
+                                                    className={`${
+                                                        num <= rating
+                                                            ? "text-yellow-500 fill-yellow-500"
+                                                            : "text-gray-300"
+                                                    } transition`}
+                                                />
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">Only mentees can rate sessions</p>
                                 </div>
-                            </div>
+                            )}
 
                             <div>
-                                <label className="block text-sm font-medium mb-2">Your Feedback</label>
+                                <label className="block text-sm font-medium mb-2">
+                                    Your Feedback as {isMentor ? "Mentor" : "Mentee"}
+                                </label>
                                 <textarea
                                     value={feedback}
                                     onChange={(e) => setFeedback(e.target.value)}
-                                    placeholder="Share your thoughts about this session..."
+                                    placeholder={`Share your thoughts about this session as ${isMentor ? "the mentor" : "the mentee"}...`}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                     rows={4}
                                 />
@@ -488,6 +641,55 @@ const SessionCard = ({ session, mentorship, authUser }) => {
                                      session.status === "pending" ? "Cancel Session" :
                                      session.cancelRequestedBy && isMentor && session.cancelRequestedBy._id !== authUser._id ? "Approve Cancellation" :
                                      isMentor ? "Cancel Session" : "Request Cancellation"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Feedback Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-md w-full">
+                        <div className="border-b px-6 py-4">
+                            <h2 className="text-xl font-bold">Delete Feedback</h2>
+                        </div>
+
+                        <div className="p-6">
+                            <p className="text-gray-700 mb-6">
+                                Are you sure you want to delete your feedback? This action cannot be undone.
+                                {!isMentor && session.feedback?.rating && (
+                                    <span className="block mt-2 text-sm text-yellow-700 bg-yellow-50 p-2 rounded">
+                                        ⚠️ This will also remove your rating.
+                                    </span>
+                                )}
+                            </p>
+
+                            <div className="flex gap-3 justify-end">
+                                <button
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    disabled={deleting}
+                                    className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => deleteFeedback()}
+                                    disabled={deleting}
+                                    className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:bg-gray-400 flex items-center gap-2"
+                                >
+                                    {deleting ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                            Deleting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Trash2 size={16} />
+                                            Delete Feedback
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </div>

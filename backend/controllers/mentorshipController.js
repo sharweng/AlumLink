@@ -712,6 +712,50 @@ export const addSessionFeedback = async (req, res) => {
     }
 };
 
+// Delete session feedback
+export const deleteSessionFeedback = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const { role } = req.body; // role: "mentor" or "mentee"
+        
+        const session = await MentorshipSession.findById(sessionId).populate("mentorship");
+        
+        if (!session) {
+            return res.status(404).json({ message: "Session not found" });
+        }
+        
+        const isMentor = session.mentorship.mentor.toString() === req.user._id.toString();
+        const isMentee = session.mentorship.mentee.toString() === req.user._id.toString();
+        
+        if ((role === "mentor" && !isMentor) || (role === "mentee" && !isMentee)) {
+            return res.status(403).json({ message: "Not authorized" });
+        }
+        
+        if (role === "mentor") {
+            session.feedback.mentorFeedback = "";
+        } else {
+            session.feedback.menteeFeedback = "";
+            session.feedback.rating = undefined;
+        }
+        
+        await session.save();
+        
+        const populatedSession = await MentorshipSession.findById(session._id)
+            .populate({
+                path: "mentorship",
+                populate: [
+                    { path: "mentor", select: "name username profilePicture headline" },
+                    { path: "mentee", select: "name username profilePicture headline" },
+                ],
+            });
+        
+        res.status(200).json(populatedSession);
+    } catch (error) {
+        console.error("Error deleting session feedback:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
 // Delete session
 export const deleteSession = async (req, res) => {
     try {

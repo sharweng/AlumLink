@@ -14,6 +14,7 @@ import {
     confirmSession,
     cancelSession,
     addSessionFeedback,
+    deleteSessionFeedback,
     deleteSession,
     getMentorshipProgress,
 } from "../controllers/mentorshipController.js";
@@ -35,6 +36,7 @@ router.put("/sessions/:sessionId", protectRoute, updateSession);
 router.put("/sessions/:sessionId/confirm", protectRoute, confirmSession);
 router.put("/sessions/:sessionId/cancel", protectRoute, cancelSession);
 router.post("/sessions/:sessionId/feedback", protectRoute, addSessionFeedback);
+router.delete("/sessions/:sessionId/feedback", protectRoute, deleteSessionFeedback);
 router.delete("/sessions/:sessionId", protectRoute, deleteSession);
 
 // Mentorship parameterized routes - MUST be last
