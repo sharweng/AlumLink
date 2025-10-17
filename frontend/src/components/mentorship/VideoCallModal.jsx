@@ -23,6 +23,7 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser }) => {
     const [client, setClient] = useState(null);
     const [call, setCall] = useState(null);
     const [isConnecting, setIsConnecting] = useState(true);
+    const [showError, setShowError] = useState(false);
 
     // Fetch Stream token
     const { data: tokenData, isLoading: tokenLoading } = useQuery({
@@ -37,6 +38,11 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser }) => {
 
     useEffect(() => {
         if (!isOpen) return;
+
+        // Set a timer to allow showing errors after 10 seconds
+        const errorTimer = setTimeout(() => {
+            setShowError(true);
+        }, 10000);
 
         const initCall = async () => {
             if (!tokenData?.token || !authUser || !callId) {
@@ -83,11 +89,16 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser }) => {
 
                 setClient(videoClient);
                 setCall(callInstance);
+                clearTimeout(errorTimer); // Clear error timer on success
             } catch (error) {
                 console.error("Error joining call:", error);
                 console.error("Error message:", error.message);
                 console.error("Error stack:", error.stack);
-                toast.error(`Could not join the call: ${error.message}`);
+                
+                // Only show error toast if 10 seconds have passed
+                if (showError) {
+                    toast.error(`Could not join the call: ${error.message}`);
+                }
             } finally {
                 setIsConnecting(false);
             }
@@ -97,6 +108,7 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser }) => {
 
         // Cleanup function
         return () => {
+            clearTimeout(errorTimer);
             if (call) {
                 call.leave().catch(console.error);
             }
