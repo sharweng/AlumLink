@@ -76,3 +76,33 @@ export const updateProfile = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 }
+
+export const toggleMentorStatus = async (req, res) => {
+    try {
+        const { isMentor, mentorBio, mentorExpertise, mentorAvailability, maxMentees } = req.body;
+        
+        const updateData = { isMentor };
+        
+        if (isMentor) {
+            // If becoming a mentor, require bio and expertise
+            if (!mentorBio || !mentorExpertise || mentorExpertise.length === 0) {
+                return res.status(400).json({ message: "Mentor bio and expertise are required" });
+            }
+            updateData.mentorBio = mentorBio;
+            updateData.mentorExpertise = mentorExpertise;
+            updateData.mentorAvailability = mentorAvailability || "";
+            updateData.maxMentees = maxMentees || 5;
+        }
+        
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            { $set: updateData },
+            { new: true }
+        ).select("-password");
+        
+        res.json(user);
+    } catch (error) {
+        console.log("Error in toggleMentorStatus userController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}

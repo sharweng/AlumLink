@@ -6,6 +6,7 @@ import AboutSection from "../components/about/AboutSection";
 import ExperienceSection from "../components/about/ExperienceSection";
 import BatchCourseSection from "../components/about/BatchCourseSection";
 import SkillsSection from "../components/about/SkillsSection";
+import MentorSettingsSection from "../components/about/MentorSettingsSection";
 import toast from "react-hot-toast";
 
 const ProfilePage = () => {
@@ -49,6 +50,7 @@ const ProfilePage = () => {
     <div className="max-w-4xl mx-auto p-4">
       <ProfileHeader userData={ userData } isOwnProfile={ isOwnProfile } onSave={ handleSaveHeader } isSaving={isSaving} />
       <AboutSection userData={ userData } isOwnProfile={ isOwnProfile } onSave={ handleSave } />
+      <MentorSettingsSection userData={ userData } isOwnProfile={ isOwnProfile } />
       <ExperienceSection userData={ userData } isOwnProfile={ isOwnProfile } onSave={ handleSave } />
       <BatchCourseSection userData={ userData } />
       <SkillsSection userData={ userData } isOwnProfile={ isOwnProfile } onSave={ handleSave } /> 

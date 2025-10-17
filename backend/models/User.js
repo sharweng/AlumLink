@@ -73,6 +73,24 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: true,
     },
+    // Mentorship fields
+    isMentor: {
+        type: Boolean,
+        default: false,
+    },
+    mentorBio: {
+        type: String,
+        default: "",
+    },
+    mentorExpertise: [String],
+    mentorAvailability: {
+        type: String,
+        default: "",
+    },
+    maxMentees: {
+        type: Number,
+        default: 5,
+    },
 }, { timestamps: true });
 
 const User = mongoose.model("User", userSchema);

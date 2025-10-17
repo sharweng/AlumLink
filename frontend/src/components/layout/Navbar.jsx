@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { axiosInstance } from "../../lib/axios"
-import { Home, User, Users, Bell, LogOut, Search, Briefcase, MessageSquare, Calendar, Shield } from "lucide-react"
+import { Home, User, Users, Bell, LogOut, Search, Briefcase, MessageSquare, Calendar, Shield, Award } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { useState, useRef, useEffect } from "react"
 import SearchResults from "../SearchResults"
@@ -188,11 +188,15 @@ const Navbar = () => {
 									<MessageSquare size={20} />
 									<span className='text-xs hidden md:block'>Forums</span>
 								</Link>
-								<Link to='/events' className='text-neutral flex flex-col items-center'>
-									<Calendar size={20} />
-									<span className='text-xs hidden md:block'>Events</span>
-								</Link>
-								<Link to='/network' className='text-neutral flex flex-col items-center relative'>
+							<Link to='/events' className='text-neutral flex flex-col items-center'>
+								<Calendar size={20} />
+								<span className='text-xs hidden md:block'>Events</span>
+							</Link>
+							<Link to='/mentorship' className='text-neutral flex flex-col items-center'>
+								<Award size={20} />
+								<span className='text-xs hidden md:block'>Mentorship</span>
+							</Link>
+							<Link to='/network' className='text-neutral flex flex-col items-center relative'>
 									<Users size={20} />
 									<span className='text-xs hidden md:block'>My Network</span>
 									{unreadLinkRequestsCount > 0 && (
