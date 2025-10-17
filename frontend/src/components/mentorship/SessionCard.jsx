@@ -4,6 +4,7 @@ import { axiosInstance } from "../../lib/axios";
 import toast from "react-hot-toast";
 import { Calendar, Clock, Video, MapPin, CheckCircle, FileText, Star, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import VideoCallModal from "./VideoCallModal";
 
 const SessionCard = ({ session, mentorship, authUser }) => {
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -11,6 +12,7 @@ const SessionCard = ({ session, mentorship, authUser }) => {
     const [rating, setRating] = useState(5);
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [cancelReason, setCancelReason] = useState("");
+    const [showVideoCall, setShowVideoCall] = useState(false);
 
     const queryClient = useQueryClient();
     const isMentor = mentorship.mentor._id === authUser._id;
@@ -138,17 +140,16 @@ const SessionCard = ({ session, mentorship, authUser }) => {
                         <span className="text-sm text-gray-500">({session.duration} minutes)</span>
                     </div>
 
-                    {session.meetingLink && (
+                    {/* Video Call Button - Only show for scheduled/in-progress virtual sessions */}
+                    {session.meetingLink && session.status !== "cancelled" && (
                         <div className="flex items-center gap-2">
                             <Video size={18} className="text-primary" />
-                            <a
-                                href={session.meetingLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-blue-600 hover:underline"
+                            <button
+                                onClick={() => setShowVideoCall(true)}
+                                className="text-sm text-blue-600 hover:underline font-medium"
                             >
-                                Join Meeting
-                            </a>
+                                Join Video Call
+                            </button>
                         </div>
                     )}
 
@@ -435,6 +436,14 @@ const SessionCard = ({ session, mentorship, authUser }) => {
                     </div>
                 </div>
             )}
+
+            {/* Video Call Modal */}
+            <VideoCallModal
+                isOpen={showVideoCall}
+                onClose={() => setShowVideoCall(false)}
+                callId={session._id}
+                authUser={authUser}
+            />
         </>
     );
 };

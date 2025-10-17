@@ -14,6 +14,7 @@ import discussionRoutes from "./routes/discussionRoute.js"
 import eventRoutes from "./routes/eventRoute.js"
 import adminRoutes from "./routes/adminRoute.js"
 import mentorshipRoutes from "./routes/mentorshipRoute.js"
+import streamRoutes from "./routes/streamRoute.js"
 
 import { connectDB } from "./lib/db.js";
 
@@ -42,6 +43,7 @@ app.use("/api/v1/discussions", discussionRoutes)
 app.use("/api/v1/events", eventRoutes)
 app.use("/api/v1/admin", adminRoutes)
 app.use("/api/v1/mentorships", mentorshipRoutes)
+app.use("/api/v1/stream", streamRoutes)
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
