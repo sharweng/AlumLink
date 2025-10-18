@@ -21,6 +21,8 @@ import EventDetailPage from "./pages/EventDetailPage"
 import EventEditPage from "./pages/EventEditPage"
 import AdminDashboard from "./pages/AdminDashboard"
 import MentorshipPortalPage from "./pages/MentorshipPortalPage"
+import MessagesPage from "./pages/MessagesPage"
+import { SocketProvider } from "./contexts/SocketContext"
 
 function App() {
   const { data: authUser, isLoading } = useQuery({
@@ -41,13 +43,14 @@ function App() {
   if (isLoading) return null
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={ 
-          authUser ? (
-            authUser.role === 'admin' ? <Navigate to="/admin/dashboard" /> : <HomePage />
-          ) : <Navigate to={"/login"} /> 
-        } />
+    <SocketProvider>
+      <Layout>
+        <Routes>
+          <Route path="/" element={ 
+            authUser ? (
+              authUser.role === 'admin' ? <Navigate to="/admin/dashboard" /> : <HomePage />
+            ) : <Navigate to={"/login"} /> 
+          } />
         <Route path="/signup" element={ !authUser ? <SignUpPage /> : <Navigate to={"/"} /> } />
         <Route path="/login" element={ !authUser ? <LoginPage /> : <Navigate to={"/"} /> } />
         <Route path="/admin/dashboard" element={ 
@@ -64,11 +67,13 @@ function App() {
         <Route path="/notifications" element={ authUser ? <NotificationsPage /> : <Navigate to={"/login"} /> } />
         <Route path="/network" element={ authUser ? <NetworkPage /> : <Navigate to={"/login"} /> } />
         <Route path="/mentorship" element={ authUser ? <MentorshipPortalPage /> : <Navigate to={"/login"} /> } />
+        <Route path="/messages" element={ authUser ? <MessagesPage /> : <Navigate to={"/login"} /> } />
         <Route path="/post/:postId" element={ authUser ? <PostPage /> : <Navigate to={"/login"} /> } />
         <Route path="/profile/:username" element={ authUser ? <ProfilePage /> : <Navigate to={"/login"} /> } />
       </Routes>
       <Toaster />
     </Layout>
+    </SocketProvider>
   )
 }
 

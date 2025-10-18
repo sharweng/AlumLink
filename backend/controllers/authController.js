@@ -55,7 +55,7 @@ export const signup = async (req, res) => {
         res.cookie("jwt-alumnilink", token, {
             httpOnly: true, // prevents XSS attacks
             secure: process.env.NODE_ENV === "production", // prevents man-in-the-middle attacks
-            sameSite: "strict", // prevents CSRF attacks
+            sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax", // lax for development
             maxAge: 3 * 24 * 60 * 60 * 1000, // 3 days
         });
 
@@ -107,7 +107,7 @@ export const login = async (req, res) => {
         await res.cookie("jwt-alumnilink", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
+            sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax", // lax for development
             maxAge: 3 * 24 * 60 * 60 * 1000,
         });
 
@@ -137,6 +137,17 @@ export const getCurrentUser = async (req, res) => {
         res.json(req.user);
     } catch (error) {
         console.log("Error in getCurrentUser authController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export const getSocketToken = async (req, res) => {
+    try {
+        // Generate a token for Socket.IO authentication
+        const token = jwt.sign({ userId: req.user._id }, process.env.JWT_SECRET, { expiresIn: "3d" });
+        res.json({ token });
+    } catch (error) {
+        console.log("Error in getSocketToken:", error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 }

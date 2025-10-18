@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { axiosInstance } from "../../lib/axios"
-import { Home, User, Users, Bell, LogOut, Search, Briefcase, MessageSquare, Calendar, Shield, Award } from "lucide-react"
+import { Home, User, Users, Bell, LogOut, Search, Briefcase, MessageSquare, Calendar, Shield, Award, MessageCircle } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { useState, useRef, useEffect } from "react"
 import SearchResults from "../SearchResults"
@@ -56,6 +56,13 @@ const Navbar = () => {
     enabled: !!authUser,
     refetchInterval: 5000, // Check every 5 seconds
     refetchOnWindowFocus: true,
+  })
+
+  const { data: unreadMessagesData } = useQuery({
+    queryKey: ["unreadMessages"],
+    queryFn: async () => axiosInstance.get("/messages/unread-count"),
+    enabled: !!authUser,
+    refetchInterval: 10000, // Refetch every 10 seconds
   })
 
   const { mutate: logout } = useMutation({
@@ -130,6 +137,7 @@ const Navbar = () => {
 
   const unreadNotificationCount = notifications?.data.filter(notif => !notif.read).length
   const unreadLinkRequestsCount = linkRequests?.data?.length
+  const unreadMessagesCount = unreadMessagesData?.data?.unreadCount || 0
 
   return (
     <nav className='bg-secondary shadow-md sticky top-0 z-10'>
@@ -195,6 +203,18 @@ const Navbar = () => {
 							<Link to='/mentorship' className='text-neutral flex flex-col items-center'>
 								<Award size={20} />
 								<span className='text-xs hidden md:block'>Mentorship</span>
+							</Link>
+							<Link to='/messages' className='text-neutral flex flex-col items-center relative'>
+								<MessageCircle size={20} />
+								<span className='text-xs hidden md:block'>Messages</span>
+								{unreadMessagesCount > 0 && (
+									<span
+										className='absolute -top-1 -right-1 md:right-4 bg-red-500 text-white text-xs 
+									rounded-full size-3 md:size-4 flex items-center justify-center'
+									>
+										{unreadMessagesCount}
+									</span>
+								)}
 							</Link>
 							<Link to='/network' className='text-neutral flex flex-col items-center relative'>
 									<Users size={20} />

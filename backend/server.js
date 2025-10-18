@@ -2,6 +2,7 @@ import express from "express"
 import dotenv from "dotenv"
 import cookieParser from "cookie-parser";
 import cors from "cors"
+import { createServer } from "http"
 
 import authRoutes from "./routes/authRoute.js"
 import userRoutes from "./routes/userRoute.js"
@@ -15,13 +16,19 @@ import eventRoutes from "./routes/eventRoute.js"
 import adminRoutes from "./routes/adminRoute.js"
 import mentorshipRoutes from "./routes/mentorshipRoute.js"
 import streamRoutes from "./routes/streamRoute.js"
+import messageRoutes from "./routes/messageRoute.js"
 
 import { connectDB } from "./lib/db.js";
+import { initializeSocket } from "./lib/socket.js";
 
 dotenv.config()
 
 const app = express();
+const server = createServer(app);
 const PORT = process.env.PORT || 5000
+
+// Initialize Socket.IO
+initializeSocket(server);
 
 app.use(cors({
     origin: "http://localhost:5173",
@@ -44,8 +51,9 @@ app.use("/api/v1/events", eventRoutes)
 app.use("/api/v1/admin", adminRoutes)
 app.use("/api/v1/mentorships", mentorshipRoutes)
 app.use("/api/v1/stream", streamRoutes)
+app.use("/api/v1/messages", messageRoutes)
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
     connectDB();
 })

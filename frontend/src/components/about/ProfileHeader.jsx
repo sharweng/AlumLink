@@ -2,18 +2,39 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { axiosInstance } from "../../lib/axios";
 import toast from "react-hot-toast";
-import { Camera, Clock, MapPin, UserCheck, UserPlus, X, Loader } from "lucide-react";
+import { Camera, Clock, MapPin, UserCheck, UserPlus, X, Loader, MessageCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving }) => {
   const [ isEditing, setIsEditing ] = useState(false);
   const [ editedData, setEditedData ] = useState({})
   const queryClient = useQueryClient();
   const authUser = queryClient.getQueryData(["authUser"])
+  const navigate = useNavigate();
 
   const { data: linkStatus, refetch:refetchLinkStatus } = useQuery({
     queryKey: ["linkStatus", userData._id],
     queryFn: () => axiosInstance.get(`/links/status/${ userData._id }`),
     enabled: !isOwnProfile
+  });
+
+  // Check if user can message this person
+  const { data: canMessageData } = useQuery({
+    queryKey: ["canMessage", userData._id],
+    queryFn: async () => {
+      try {
+        const response = await axiosInstance.get(`/messages/conversations/${userData._id}`);
+        return { canMessage: true, conversationId: response.data._id };
+      } catch (error) {
+        // If 403, user cannot message (not connected/no mentorship)
+        if (error.response?.status === 403) {
+          return { canMessage: false };
+        }
+        throw error;
+      }
+    },
+    enabled: !isOwnProfile,
+    retry: false
   });
 
   const isLinked = userData.links.some((link) => link._id === authUser._id)
@@ -142,6 +163,10 @@ const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving }) => {
     });
   };
 
+  const handleMessage = () => {
+    navigate(`/messages?user=${userData._id}`);
+  };
+
   return (
     <div className='bg-white shadow rounded-lg mb-6'>
 			<div
@@ -244,7 +269,18 @@ const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving }) => {
 						</button>
 					)
 				) : (
-					<div className='flex justify-center'>{renderLinkButton()}</div>
+					<div className='flex flex-col gap-2'>
+						<div className='flex justify-center'>{renderLinkButton()}</div>
+						{canMessageData?.canMessage && (
+							<button
+								onClick={handleMessage}
+								className='bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-full transition duration-300 flex items-center justify-center'
+							>
+								<MessageCircle size={20} className='mr-2' />
+								Message
+							</button>
+						)}
+					</div>
 				)}
 			</div>
 		</div>
