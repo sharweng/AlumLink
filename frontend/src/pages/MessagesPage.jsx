@@ -179,7 +179,7 @@ const MessagesPage = () => {
     };
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 max-w-7xl mx-auto py-4">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Sidebar */}
             <div className="hidden lg:block">
                 <Sidebar user={authUser} />
