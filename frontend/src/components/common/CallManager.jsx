@@ -40,8 +40,11 @@ const CallManager = () => {
     useEffect(() => {
         if (!socket || !authUser) return;
 
+        console.log('CallManager effect mounted, socket and authUser present');
+
         let incomingCallTimeout;
         const handleIncomingCall = ({ callId, callerId, callerName, callerProfilePicture, otherUser }) => {
+            console.log('CallManager: incoming-call received', { callId, callerId, callerName, otherUser });
             // Always close any open invitation or no-response modal before opening a new one
             setShowCallEndedModal(false);
             setShowInvitationModal(false);
@@ -62,6 +65,7 @@ const CallManager = () => {
         };
 
         const handleStartVideoCall = ({ callId, otherUser }) => {
+            console.log('CallManager: start-video-call received', { callId, otherUser });
             setShowInvitationModal(false);
             setCallId(callId);
             // Find the other user from conversations or use provided otherUser
@@ -79,6 +83,26 @@ const CallManager = () => {
                 setOtherUserForVideo(otherUser);
             }
             setShowCallModal(true);
+        };
+
+        const handleCallAccepted = ({ callId: acceptedCallId }) => {
+            console.log('CallManager: call-accepted received', { acceptedCallId, invitationCallId, otherUserForCall });
+            // If the caller's invitation was accepted, open the video modal for the caller
+            if (!invitationCallId) {
+                console.warn('CallManager: no local invitationCallId set when call-accepted arrived');
+                return;
+            }
+            if (acceptedCallId === invitationCallId) {
+                console.log('CallManager: matching call-accepted for our invitation, opening video modal', acceptedCallId);
+                setShowInvitationModal(false);
+                setCallId(acceptedCallId);
+                setOtherUserForVideo(otherUserForCall);
+                setShowCallModal(true);
+                // clear invitation state
+                setInvitationCallId(null);
+                setIsCaller(false);
+                setOtherUserForCall(null);
+            }
         };
 
         const handleCallEnded = ({ callId }) => {
@@ -99,23 +123,33 @@ const CallManager = () => {
             }
         };
 
-        socket.on('incoming-call', handleIncomingCall);
-        socket.on('start-video-call', handleStartVideoCall);
-        socket.on('call-ended', handleCallEnded);
+    socket.on('incoming-call', handleIncomingCall);
+    socket.on('start-video-call', handleStartVideoCall);
+    socket.on('call-accepted', handleCallAccepted);
+    socket.on('call-ended', handleCallEnded);
 
         return () => {
             socket.off('incoming-call', handleIncomingCall);
             socket.off('start-video-call', handleStartVideoCall);
+            socket.off('call-accepted', handleCallAccepted);
             socket.off('call-ended', handleCallEnded);
         };
-    }, [socket, authUser]);
+    }, [socket, authUser, conversations, invitationCallId, otherUserForCall]);
 
     const handleCallAgain = () => {
         if (endedOtherUser && socket) {
             const callId = `${endedCallId.split('-')[0]}-${Date.now()}`; // Generate new callId with same base
+            // Prepare local caller state first to avoid race with incoming 'call-accepted'
             setShowCallEndedModal(false);
             setEndedCallId(null);
             setEndedOtherUser(null);
+            // Show outgoing call modal for the caller BEFORE emitting
+            setInvitationCallId(callId);
+            setIsCaller(true);
+            setOtherUserForCall(endedOtherUser);
+            setShowInvitationModal(true);
+
+            // Now emit the invite to the recipient
             socket.emit('call-invite', {
                 callId,
                 recipientId: endedOtherUser._id,
@@ -124,11 +158,6 @@ const CallManager = () => {
                 callerProfilePicture: authUser.profilePicture,
                 otherUser: endedOtherUser
             });
-            // Show outgoing call modal for the caller
-            setInvitationCallId(callId);
-            setIsCaller(true);
-            setOtherUserForCall(endedOtherUser);
-            setShowInvitationModal(true);
         }
     };
 
@@ -172,6 +201,7 @@ const CallManager = () => {
                 isCaller={isCaller}
                 otherUser={otherUserForCall}
                 onAccept={handleAcceptCall}
+                onCallAgain={handleCallAgain}
                 socket={socket}
             />
 
@@ -188,21 +218,24 @@ const CallManager = () => {
             {showCallEndedModal && (
                 <div className="fixed inset-0 bg-[#071026] flex items-center justify-center z-50">
                     <div className="text-white text-center rounded-2xl p-8 max-w-md mx-4">
-                        <h2 className="text-xl font-semibold mb-2">The call ended</h2>
-                        <p className="text-gray-400 mb-6">Would you like to call again?</p>
-                        <div className="flex gap-4 justify-center">
-                            <button
-                                onClick={handleCallAgain}
-                                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
-                            >
-                                Call Again
-                            </button>
-                            <button
-                                onClick={handleCloseEndedModal}
-                                className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition font-medium"
-                            >
-                                Close
-                            </button>
+                        <div className="flex flex-col items-center">
+                            <div className="w-24 h-24 rounded-full overflow-hidden mb-4">
+                                <img
+                                    src={endedOtherUser?.profilePicture || '/avatar.png'}
+                                    alt={endedOtherUser?.name || 'User'}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                            <h2 className="text-xl font-semibold mb-2">{`Call with ${endedOtherUser?.name || 'the user'} ended`}</h2>
+                            <p className="text-gray-400 mb-6">You can start a new call from the conversation view.</p>
+                            <div className="flex gap-4 justify-center">
+                                <button
+                                    onClick={handleCloseEndedModal}
+                                    className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition font-medium"
+                                >
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -44,6 +44,8 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser, otherUser }) => {
     useEffect(() => {
         if (!isOpen) return;
 
+        console.log('VideoCallModal effect starting for callId:', callId, 'isOpen:', isOpen, 'authUser present:', !!authUser);
+
         // Set a timer to allow showing errors after 15 seconds
         const errorTimer = setTimeout(() => {
             setShowError(true);
@@ -232,6 +234,7 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser, otherUser }) => {
         };
 
         if (socket) {
+            console.log('VideoCallModal: registering socket listener for call-ended');
             socket.on('call-ended', handleRemoteCallEnded);
         }
 
@@ -239,6 +242,7 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser, otherUser }) => {
         return () => {
             clearTimeout(errorTimer);
             if (socket) {
+                console.log('VideoCallModal: removing socket listener for call-ended');
                 socket.off('call-ended', handleRemoteCallEnded);
             }
             const activeCall = callRef.current;
@@ -251,6 +255,7 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser, otherUser }) => {
     }, [tokenData, authUser, callId, isOpen]);
 
     const handleClose = async () => {
+        console.log('VideoCallModal: handleClose invoked for callId:', callId);
         if (otherUser && socket) {
             socket.emit('end-call', { recipientId: otherUser._id, callId });
         }

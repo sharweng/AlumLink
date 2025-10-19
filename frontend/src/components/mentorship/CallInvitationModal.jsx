@@ -30,8 +30,11 @@ const CallInvitationModal = ({ isOpen, onClose, callId, authUser, isCaller, othe
     useEffect(() => {
         if (!socket || !isOpen) return;
 
+        console.log('CallInvitationModal mounted for callId:', callId, 'isCaller:', isCaller, 'otherUser:', otherUser);
+
         // For the caller: open video call modal when recipient accepts
         const handleCallAccepted = ({ callId: acceptedCallId }) => {
+            console.log('CallInvitationModal: call-accepted received', { acceptedCallId });
             if (acceptedCallId === callId) {
                 onAccept();
                 onClose();
@@ -50,6 +53,7 @@ const CallInvitationModal = ({ isOpen, onClose, callId, authUser, isCaller, othe
         };
 
         const handleCallCancelled = ({ callId: cancelledCallId }) => {
+            console.log('CallInvitationModal: call-cancelled received', { cancelledCallId });
             if (cancelledCallId === callId && !isCaller) {
                 toast.info("Call cancelled by caller");
                 onClose();
@@ -60,6 +64,7 @@ const CallInvitationModal = ({ isOpen, onClose, callId, authUser, isCaller, othe
         socket.on('call-denied', handleCallDenied);
         socket.on('call-cancelled', handleCallCancelled);
         socket.on('call-timeout', ({ callId: timedOutCallId }) => {
+            console.log('CallInvitationModal: call-timeout received', { timedOutCallId });
             if (timedOutCallId === callId) {
                 setCallStatus('no-response');
             }
@@ -85,17 +90,28 @@ const CallInvitationModal = ({ isOpen, onClose, callId, authUser, isCaller, othe
         onClose();
     };
 
+    // If an onCallAgain prop is provided by the parent, use it so the parent can set caller state
     const handleCallAgain = () => {
         if (isCaller) {
             setCallStatus('calling');
             setTimeLeft(15);
-            socket.emit('call-invite', {
-                callId,
-                recipientId: otherUser?._id,
-                callerId: authUser._id,
-                callerName: authUser.name,
-                callerProfilePicture: authUser.profilePicture
-            });
+            if (typeof onCallAgain === 'function') {
+                console.log('CallInvitationModal: delegating Call Again to parent');
+                onCallAgain();
+            } else {
+                console.log('CallInvitationModal: no onCallAgain handler, falling back to local emit');
+                console.log('CallInvitationModal: emitting call-invite', { callId, recipientId: otherUser?._id });
+                socket.emit('call-invite', {
+                    callId,
+                    recipientId: otherUser?._id,
+                    callerId: authUser._id,
+                    callerName: authUser.name,
+                    callerProfilePicture: authUser.profilePicture,
+                    otherUser
+                }, (ack) => {
+                    console.log('call-invite ack received from server:', ack);
+                });
+            }
         }
     };
 
@@ -104,9 +120,11 @@ const CallInvitationModal = ({ isOpen, onClose, callId, authUser, isCaller, othe
     };
 
     const handleAccept = () => {
-        socket.emit('call-accept', { callId, callerId: otherUser?._id });
-        // Recipient emits start-video-call so both sides open video modal
-        socket.emit('start-video-call', { callId });
+        console.log('CallInvitationModal: accepting call, emitting call-accept', { callId, callerId: otherUser?._id });
+        socket.emit('call-accept', { callId, callerId: otherUser?._id }, (ack) => {
+            console.log('call-accept ack:', ack);
+        });
+        // Do not emit 'start-video-call' from recipient — server will instruct both parties
         onAccept();
         onClose();
     };
