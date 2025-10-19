@@ -81,38 +81,92 @@ export const initializeSocket = (server) => {
             }
         });
 
-        // Handle incoming call
-        socket.on("call-user", ({ recipientId, callId, callType, callerName }) => {
+        // Handle call invitation
+        socket.on("call-invite", ({ callId, recipientId, callerId, callerName, callerProfilePicture, otherUser }) => {
             const recipientSocketId = userSocketMap.get(recipientId);
             if (recipientSocketId) {
                 io.to(recipientSocketId).emit("incoming-call", {
                     callId,
-                    callType,
-                    callerId: socket.userId,
-                    callerName
+                    callerId,
+                    callerName,
+                    callerProfilePicture,
+                    otherUser
                 });
             }
         });
 
-        // Handle call response
-        socket.on("call-response", ({ callerId, accepted, callId }) => {
+        // Handle call accept
+        socket.on("call-accept", async ({ callId, callerId }) => {
+            const callerSocketId = userSocketMap.get(callerId);
+            const recipientSocketId = userSocketMap.get(socket.userId);
+            
+            // Get user data
+            const recipientUser = socket.user;
+            const callerUser = await User.findById(callerId).select("-password");
+            
+            // Notify caller that call was accepted
+            if (callerSocketId) {
+                io.to(callerSocketId).emit("call-accepted", { callId });
+                // Also instruct caller to start the video call
+                io.to(callerSocketId).emit("start-video-call", { callId, otherUser: recipientUser });
+            }
+            // Ensure recipient also starts the video call
+            if (recipientSocketId) {
+                io.to(recipientSocketId).emit("start-video-call", { callId, otherUser: callerUser });
+            }
+        });
+
+        // Handle call deny
+        socket.on("call-deny", ({ callId, callerId }) => {
             const callerSocketId = userSocketMap.get(callerId);
             if (callerSocketId) {
-                io.to(callerSocketId).emit("call-responded", {
-                    accepted,
-                    callId,
-                    recipientId: socket.userId
+                io.to(callerSocketId).emit("call-denied", {
+                    callId
                 });
             }
         });
 
-        // Handle call end
-        socket.on("end-call", ({ recipientId, callId }) => {
+        // Handle call cancel
+        socket.on("call-cancel", ({ callId, recipientId }) => {
             const recipientSocketId = userSocketMap.get(recipientId);
             if (recipientSocketId) {
+                io.to(recipientSocketId).emit("call-cancelled", {
+                    callId
+                });
+            }
+        });
+
+        // Handle call timeout
+        socket.on("call-timeout", ({ callId, recipientId }) => {
+            const recipientSocketId = userSocketMap.get(recipientId);
+            if (recipientSocketId) {
+                io.to(recipientSocketId).emit("call-timeout", {
+                    callId
+                });
+            }
+        });
+
+        // Handle start video call
+        socket.on("start-video-call", ({ callId }) => {
+            socket.emit("start-video-call", { callId });
+        });
+
+        // Handle end call
+        socket.on("end-call", ({ recipientId, callId }) => {
+            const recipientSocketId = userSocketMap.get(recipientId);
+            const senderSocketId = userSocketMap.get(socket.userId);
+            
+            // Notify the recipient that the call has ended
+            if (recipientSocketId) {
                 io.to(recipientSocketId).emit("call-ended", {
-                    callId,
-                    endedBy: socket.userId
+                    callId
+                });
+            }
+            
+            // Also notify the sender (the person who hung up) to show the ended modal
+            if (senderSocketId) {
+                io.to(senderSocketId).emit("call-ended", {
+                    callId
                 });
             }
         });

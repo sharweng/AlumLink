@@ -6,6 +6,7 @@ import { Calendar, Clock, Video, MapPin, CheckCircle, FileText, Star, X, Edit2, 
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
 import VideoCallModal from "./VideoCallModal";
+import { useSocket } from "../../contexts/SocketContext";
 
 const SessionCard = ({ session, mentorship, authUser }) => {
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -14,6 +15,7 @@ const SessionCard = ({ session, mentorship, authUser }) => {
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [cancelReason, setCancelReason] = useState("");
     const [showVideoCall, setShowVideoCall] = useState(false);
+    const [currentCallId, setCurrentCallId] = useState(null);
     const [isEditingFeedback, setIsEditingFeedback] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -21,6 +23,8 @@ const SessionCard = ({ session, mentorship, authUser }) => {
     const isMentor = mentorship.mentor._id === authUser._id;
     const needsMyConfirmation = isMentor ? !session.confirmedByMentor : !session.confirmedByMentee;
     const otherPartyConfirmed = isMentor ? session.confirmedByMentee : session.confirmedByMentor;
+    const otherUser = isMentor ? mentorship.mentee : mentorship.mentor;
+    const { socket } = useSocket();
 
     // Load existing feedback when editing
     useEffect(() => {
@@ -185,7 +189,21 @@ const SessionCard = ({ session, mentorship, authUser }) => {
                         <div className="flex items-center gap-2">
                             <Video size={18} className="text-primary" />
                             <button
-                                onClick={() => setShowVideoCall(true)}
+                                onClick={() => {
+                                    const callId = `${session._id}-${Date.now()}`;
+                                    setCurrentCallId(callId);
+                                    if (socket) {
+                                        socket.emit('call-invite', {
+                                            callId,
+                                            recipientId: otherUser._id,
+                                            callerId: authUser._id,
+                                            callerName: authUser.name,
+                                            callerProfilePicture: authUser.profilePicture,
+                                            otherUser: otherUser
+                                        });
+                                    }
+                                    setShowVideoCall(true);
+                                }}
                                 className="text-sm text-blue-600 hover:underline font-medium"
                             >
                                 Join Video Call
@@ -700,9 +718,13 @@ const SessionCard = ({ session, mentorship, authUser }) => {
             {/* Video Call Modal */}
             <VideoCallModal
                 isOpen={showVideoCall}
-                onClose={() => setShowVideoCall(false)}
-                callId={session._id}
+                onClose={() => {
+                    setShowVideoCall(false);
+                    setCurrentCallId(null);
+                }}
+                callId={currentCallId}
                 authUser={authUser}
+                otherUser={otherUser}
             />
         </>
     );

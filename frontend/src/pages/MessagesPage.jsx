@@ -5,10 +5,11 @@ import { useSocket } from '../contexts/SocketContext';
 import Sidebar from '../components/Sidebar';
 import { useSearchParams } from 'react-router-dom';
 import { 
-    MessageCircle, Send, Phone, Video, MoreVertical, 
+    MessageCircle, Send, Video, MoreVertical, 
     ArrowLeft, Smile, Paperclip, Search, Check, CheckCheck 
 } from 'lucide-react';
 import VideoCallModal from '../components/mentorship/VideoCallModal';
+import CallInvitationModal from '../components/mentorship/CallInvitationModal';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -18,8 +19,10 @@ const MessagesPage = () => {
     const [messageInput, setMessageInput] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [isTyping, setIsTyping] = useState(false);
-    const [showCallModal, setShowCallModal] = useState(false);
-    const [callId, setCallId] = useState(null);
+    const [showInvitationModal, setShowInvitationModal] = useState(false);
+    const [invitationCallId, setInvitationCallId] = useState(null);
+    const [isCaller, setIsCaller] = useState(false);
+    const [otherUserForCall, setOtherUserForCall] = useState(null);
     const messagesEndRef = useRef(null);
     const typingTimeoutRef = useRef(null);
     const queryClient = useQueryClient();
@@ -103,15 +106,24 @@ const MessagesPage = () => {
     useEffect(() => {
         if (!socket) return;
 
-        socket.on('user-typing', ({ conversationId, userId }) => {
-            if (conversationId === selectedConversation?._id && userId !== authUser._id) {
-                setIsTyping(true);
+        // Handle typing indicator
+        socket.on("typing", ({ conversationId, recipientId }) => {
+            const recipientSocketId = userSocketMap.get(recipientId);
+            if (recipientSocketId) {
+                io.to(recipientSocketId).emit("user-typing", {
+                    conversationId,
+                    userId: socket.userId
+                });
             }
         });
 
-        socket.on('user-stop-typing', ({ conversationId }) => {
-            if (conversationId === selectedConversation?._id) {
-                setIsTyping(false);
+        socket.on("stop-typing", ({ conversationId, recipientId }) => {
+            const recipientSocketId = userSocketMap.get(recipientId);
+            if (recipientSocketId) {
+                io.to(recipientSocketId).emit("user-stop-typing", {
+                    conversationId,
+                    userId: socket.userId
+                });
             }
         });
 
@@ -119,7 +131,7 @@ const MessagesPage = () => {
             socket.off('user-typing');
             socket.off('user-stop-typing');
         };
-    }, [socket, selectedConversation, authUser]);
+    }, [socket, selectedConversation, authUser, conversations]);
 
     // Handle user parameter from URL (when coming from profile)
     useEffect(() => {
@@ -313,20 +325,24 @@ const MessagesPage = () => {
                                         <div className="flex items-center gap-2">
                                             <button
                                                 className="p-2 hover:bg-gray-100 rounded-full transition"
+                                                disabled={showInvitationModal}
                                                 onClick={() => {
+                                                    console.log('Video call button clicked');
                                                     const cid = `conversation-${selectedConversation._id}`;
-                                                    setCallId(cid);
-                                                    setShowCallModal(true);
-                                                }}
-                                            >
-                                                <Phone size={20} className="text-gray-600" />
-                                            </button>
-                                            <button
-                                                className="p-2 hover:bg-gray-100 rounded-full transition"
-                                                onClick={() => {
-                                                    const cid = `conversation-${selectedConversation._id}`;
-                                                    setCallId(cid);
-                                                    setShowCallModal(true);
+                                                    const otherUser = getOtherUser(selectedConversation);
+                                                    console.log('Call ID:', cid, 'Other user:', otherUser);
+                                                    setInvitationCallId(cid);
+                                                    setIsCaller(true);
+                                                    setOtherUserForCall(otherUser);
+                                                    setShowInvitationModal(true);
+                                                    socket.emit('call-invite', {
+                                                        callId: cid,
+                                                        recipientId: otherUser._id,
+                                                        callerId: authUser._id,
+                                                        callerName: authUser.name,
+                                                        callerProfilePicture: authUser.profilePicture
+                                                    });
+                                                    console.log('Call invite emitted');
                                                 }}
                                             >
                                                 <Video size={20} className="text-gray-600" />
@@ -445,12 +461,23 @@ const MessagesPage = () => {
                 </div>
             </div>
         
-            {/* Video call modal (Stream) */}
-            <VideoCallModal
-                isOpen={showCallModal}
-                onClose={() => { setShowCallModal(false); setCallId(null); }}
-                callId={callId}
+            {/* Call invitation modal */}
+            <CallInvitationModal
+                isOpen={showInvitationModal}
+                onClose={() => { 
+                    setShowInvitationModal(false); 
+                    setInvitationCallId(null); 
+                    setIsCaller(false); 
+                    setOtherUserForCall(null); 
+                }}
+                callId={invitationCallId}
                 authUser={authUser}
+                isCaller={isCaller}
+                otherUser={otherUserForCall}
+                onAccept={() => {
+                    socket.emit('start-video-call', { callId: invitationCallId });
+                }}
+                socket={socket}
             />
         </div>
     );

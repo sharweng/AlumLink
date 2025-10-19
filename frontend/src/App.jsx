@@ -23,6 +23,7 @@ import AdminDashboard from "./pages/AdminDashboard"
 import MentorshipPortalPage from "./pages/MentorshipPortalPage"
 import MessagesPage from "./pages/MessagesPage"
 import { SocketProvider } from "./contexts/SocketContext"
+import CallManager from "./components/common/CallManager"
 
 function App() {
   const { data: authUser, isLoading } = useQuery({
@@ -44,6 +45,7 @@ function App() {
 
   return (
     <SocketProvider>
+      <CallManager />
       <Layout>
         <Routes>
           <Route path="/" element={ 

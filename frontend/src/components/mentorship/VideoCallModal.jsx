@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { axiosInstance } from "../../lib/axios";
+import { useSocket } from "../../contexts/SocketContext";
 import toast from "react-hot-toast";
 import {
     StreamVideo,
@@ -19,12 +20,15 @@ const STREAM_API_KEY = import.meta.env.VITE_STREAM_API_KEY;
 
 console.log("VideoCallModal loaded with API Key:", STREAM_API_KEY ? "Configured" : "MISSING!");
 
-const VideoCallModal = ({ isOpen, onClose, callId, authUser }) => {
+const VideoCallModal = ({ isOpen, onClose, callId, authUser, otherUser }) => {
     const [client, setClient] = useState(null);
+    const clientRef = useRef(null);
     const [call, setCall] = useState(null);
+    const callRef = useRef(null);
     const [isConnecting, setIsConnecting] = useState(true);
     const [showError, setShowError] = useState(false);
     const [hasError, setHasError] = useState(false);
+    const { socket } = useSocket();
 
     // Fetch Stream token
     const { data: tokenData, isLoading: tokenLoading } = useQuery({
@@ -75,7 +79,7 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser }) => {
 
                 console.log("Creating video client with user:", user);
 
-                const videoClient = new StreamVideoClient({
+                const videoClient = StreamVideoClient.getOrCreateInstance({
                     apiKey: STREAM_API_KEY,
                     user,
                     token: tokenData.token,
@@ -85,14 +89,64 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser }) => {
 
                 const callInstance = videoClient.call("default", callId);
 
-                await callInstance.join({ create: true });
+                let callState;
+                try {
+                    callState = await callInstance.get();
+                } catch (error) {
+                    // Call doesn't exist yet, will create it
+                    console.log("Call does not exist, will create");
+                }
+
+                if (callState) {
+                    const participants = callState.participants || [];
+                    console.log("Existing call participants:", participants.length);
+
+                    // Check if user is already in the call
+                    const isUserAlreadyIn = participants.some(p => p.user_id === authUser._id);
+                        if (isUserAlreadyIn) {
+                            console.log("User already in call, skipping join");
+                            setClient(videoClient);
+                            clientRef.current = videoClient;
+                            setCall(callInstance);
+                            callRef.current = callInstance;
+                        setHasError(false);
+                        clearTimeout(errorTimer);
+                        return;
+                    }
+
+                    // Check if call is full (should only be 2 for mentorship)
+                    if (participants.length >= 2) {
+                        throw new Error("This mentorship call is already full (2 participants maximum)");
+                    }
+
+                    // Join existing call
+                    await callInstance.join();
+                } else {
+                    // Create new call
+                    await callInstance.join({ create: true });
+                    
+                    // Set max participants to 2 for mentorship calls
+                    try {
+                        await callInstance.update({ 
+                            settings: { 
+                                limits: { max_participants: 2 } 
+                            } 
+                        });
+                        console.log("Set max participants to 2 for new call");
+                    } catch (updateError) {
+                        console.warn("Could not set max participants limit:", updateError);
+                        // Continue anyway, as the call was created successfully
+                    }
+                }
 
                 console.log("Joined call successfully");
 
                 setClient(videoClient);
+                clientRef.current = videoClient;
                 setCall(callInstance);
+                callRef.current = callInstance;
                 setHasError(false);
-                clearTimeout(errorTimer); // Clear error timer on success
+                clearTimeout(errorTimer);
             } catch (error) {
                 console.error("Error joining call:", error);
                 console.error("Error message:", error.message);
@@ -111,31 +165,135 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser }) => {
 
         initCall();
 
+        // Listen for remote end-call events so we can force the local client to leave too
+        const handleRemoteCallEnded = async ({ callId: endedCallId }) => {
+            if (!endedCallId) return;
+            // Only react if the ended call matches the current callId
+            if (endedCallId !== callId) return;
+            console.log("Remote call-ended received for this call, forcing leave and cleanup");
+
+            try {
+                // Primary attempt: use the local call instance
+                const activeCall = callRef.current;
+                if (activeCall) {
+                    try {
+                        await activeCall.leave();
+                    } catch (err) {
+                        console.warn("Error leaving call on remote end (call.leave):", err);
+                    }
+                }
+
+                // Fallback: if call wasn't available, try to create a call handle and leave that
+                if (!activeCall && clientRef.current) {
+                    try {
+                        const fallbackCall = clientRef.current.call("default", endedCallId);
+                        await fallbackCall.leave();
+                    } catch (err) {
+                        console.warn("Error leaving call via fallback client.call:", err);
+                    }
+                }
+
+                // Finally, ensure the client is disconnected (this should stop local media)
+                if (clientRef.current) {
+                    try {
+                        await clientRef.current.disconnectUser();
+                    } catch (err) {
+                        console.warn("Error disconnecting client on remote end:", err);
+                    }
+                }
+
+                // Final fallback: stop any local media tracks if they are still active
+                try {
+                    const fallbackStream = callRef.current?.state?.mediaStream || clientRef.current?.state?.mediaStream || null;
+                    if (fallbackStream && typeof fallbackStream.getTracks === 'function') {
+                        fallbackStream.getTracks().forEach((t) => {
+                            try { t.stop(); } catch (e) { /* ignore */ }
+                        });
+                        console.log('Stopped local media tracks via fallback after remote end');
+                    }
+                } catch (err) {
+                    console.warn('Error stopping local media tracks on remote end fallback:', err);
+                }
+
+                // Close modal and clear local state
+                try {
+                    onClose();
+                    // clear local references so subsequent joins create fresh state
+                    setCall(null);
+                    callRef.current = null;
+                    setClient(null);
+                    clientRef.current = null;
+                } catch (err) {
+                    console.warn("Error closing modal after remote end:", err);
+                }
+            } catch (err) {
+                console.error("Error handling remote call-ended:", err);
+            }
+        };
+
+        if (socket) {
+            socket.on('call-ended', handleRemoteCallEnded);
+        }
+
         // Cleanup function
         return () => {
             clearTimeout(errorTimer);
-            if (call) {
-                call.leave().catch(console.error);
+            if (socket) {
+                socket.off('call-ended', handleRemoteCallEnded);
             }
-            if (client) {
-                client.disconnectUser().catch(console.error);
+            const activeCall = callRef.current;
+            if (activeCall) {
+                activeCall.leave().catch((err) => console.warn('Error leaving call during cleanup:', err));
+                callRef.current = null;
             }
+            // Note: Don't disconnect client here as it's shared via getOrCreateInstance
         };
     }, [tokenData, authUser, callId, isOpen]);
 
     const handleClose = async () => {
+        if (otherUser && socket) {
+            socket.emit('end-call', { recipientId: otherUser._id, callId });
+        }
         try {
-            if (call) {
-                await call.leave();
+            // Try to leave the call if possible. call.end() is not part of the client SDK
+            const activeCall = callRef.current;
+            if (activeCall) {
+                try {
+                    await activeCall.leave();
+                } catch (leaveErr) {
+                    // If the call was already left or cannot be left, just log and continue
+                    console.warn("Error leaving call during handleClose:", leaveErr);
+                }
             }
-            if (client) {
-                await client.disconnectUser();
+
+            // Ensure we disconnect the client to stop any local media
+            if (clientRef.current) {
+                try {
+                    await clientRef.current.disconnectUser();
+                } catch (discErr) {
+                    console.warn("Error disconnecting client during handleClose:", discErr);
+                }
+            }
+
+            // Final fallback: stop any local media tracks if they are still active
+            try {
+                const fallbackStream = callRef.current?.state?.mediaStream || clientRef.current?.state?.mediaStream || null;
+                if (fallbackStream && typeof fallbackStream.getTracks === 'function') {
+                    fallbackStream.getTracks().forEach((t) => {
+                        try { t.stop(); } catch (e) { /* ignore */ }
+                    });
+                    console.log('Stopped local media tracks via fallback during handleClose');
+                }
+            } catch (err) {
+                console.warn('Error stopping local media tracks on handleClose fallback:', err);
             }
         } catch (error) {
             console.error("Error leaving call:", error);
         } finally {
             setClient(null);
+            clientRef.current = null;
             setCall(null);
+            callRef.current = null;
             onClose();
         }
     };
