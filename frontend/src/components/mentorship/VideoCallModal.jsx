@@ -143,8 +143,13 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center z-50">
+        // Use a solid dark background for the modal body and add dedicated top/bottom gradient overlays
+        <div className="fixed inset-0 bg-[#071026] flex items-center justify-center z-50">
             <div className="relative w-full h-full flex flex-col">
+                {/* Top gradient overlay (keeps header readable) */}
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/70 to-transparent z-40"></div>
+                {/* Bottom gradient overlay (soft fade near controls) */}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/70 to-transparent z-40"></div>
                 {/* Header Bar */}
                 <div className="absolute top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/70 to-transparent">
                     <div className="flex items-center justify-between p-4">
@@ -175,11 +180,15 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser }) => {
                             <p className="text-gray-400">Please wait while we set up your connection</p>
                         </div>
                     ) : client && call ? (
-                        <StreamVideo client={client}>
-                            <StreamCall call={call}>
-                                <CallContent onLeave={handleClose} authUser={authUser} />
-                            </StreamCall>
-                        </StreamVideo>
+                        <div className="w-full flex justify-center px-4">
+                            <div className="w-full" style={{ maxWidth: '937px' }}>
+                                <StreamVideo client={client}>
+                                    <StreamCall call={call}>
+                                            <CallContent onLeave={handleClose} />
+                                        </StreamCall>
+                                </StreamVideo>
+                            </div>
+                        </div>
                     ) : hasError && showError ? (
                         <div className="text-white text-center bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 max-w-md mx-4">
                             <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -210,7 +219,7 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser }) => {
     );
 };
 
-const CallContent = ({ onLeave, authUser }) => {
+const CallContent = ({ onLeave }) => {
     const { useCallCallingState, useParticipants } = useCallStateHooks();
     const callingState = useCallCallingState();
     const participants = useParticipants();
@@ -222,8 +231,9 @@ const CallContent = ({ onLeave, authUser }) => {
     }, [callingState, onLeave]);
 
     return (
-        <StreamTheme className="w-full h-full">
-            <div className="flex flex-col h-full bg-gray-900">
+        // Ensure text inside the call (user names, labels) is white by default
+        <StreamTheme className="w-full h-full text-white">
+            <div className="flex flex-col h-full bg-transparent">
                 {/* Participant Info Bar */}
                 <div className="absolute top-20 left-0 right-0 z-40 px-4">
                     <div className="flex justify-center">
@@ -244,7 +254,7 @@ const CallContent = ({ onLeave, authUser }) => {
                 </div>
 
                 {/* Control Bar */}
-                <div className="bg-gradient-to-t from-black/80 to-transparent pb-6 pt-8">
+                <div className="pb-6 pt-8 bg-transparent">
                     <div className="flex justify-center">
                         <div className="bg-gray-800/90 backdrop-blur-md rounded-full px-4 py-3 shadow-2xl border border-gray-700">
                             <CallControls />

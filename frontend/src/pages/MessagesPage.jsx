@@ -8,6 +8,7 @@ import {
     MessageCircle, Send, Phone, Video, MoreVertical, 
     ArrowLeft, Smile, Paperclip, Search, Check, CheckCheck 
 } from 'lucide-react';
+import VideoCallModal from '../components/mentorship/VideoCallModal';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -17,6 +18,8 @@ const MessagesPage = () => {
     const [messageInput, setMessageInput] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [showCallModal, setShowCallModal] = useState(false);
+    const [callId, setCallId] = useState(null);
     const messagesEndRef = useRef(null);
     const typingTimeoutRef = useRef(null);
     const queryClient = useQueryClient();
@@ -308,10 +311,24 @@ const MessagesPage = () => {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <button className="p-2 hover:bg-gray-100 rounded-full transition">
+                                            <button
+                                                className="p-2 hover:bg-gray-100 rounded-full transition"
+                                                onClick={() => {
+                                                    const cid = `conversation-${selectedConversation._id}`;
+                                                    setCallId(cid);
+                                                    setShowCallModal(true);
+                                                }}
+                                            >
                                                 <Phone size={20} className="text-gray-600" />
                                             </button>
-                                            <button className="p-2 hover:bg-gray-100 rounded-full transition">
+                                            <button
+                                                className="p-2 hover:bg-gray-100 rounded-full transition"
+                                                onClick={() => {
+                                                    const cid = `conversation-${selectedConversation._id}`;
+                                                    setCallId(cid);
+                                                    setShowCallModal(true);
+                                                }}
+                                            >
                                                 <Video size={20} className="text-gray-600" />
                                             </button>
                                             <button className="p-2 hover:bg-gray-100 rounded-full transition">
@@ -427,6 +444,14 @@ const MessagesPage = () => {
                     </div>
                 </div>
             </div>
+        
+            {/* Video call modal (Stream) */}
+            <VideoCallModal
+                isOpen={showCallModal}
+                onClose={() => { setShowCallModal(false); setCallId(null); }}
+                callId={callId}
+                authUser={authUser}
+            />
         </div>
     );
 };
