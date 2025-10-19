@@ -1,7 +1,9 @@
-import { Bell, Home, UserPlus, Briefcase, Calendar } from "lucide-react"
+import { Bell, Home, UserPlus, Briefcase, Calendar, Trophy } from "lucide-react"
 import { Link } from "react-router-dom"
 
 const Sidebar = ({ user }) => {
+  if (!user) return null; // Handle loading state
+  
   return (
     <div className='bg-secondary rounded-lg shadow'>
         <div className='p-4 text-center'>
@@ -63,6 +65,14 @@ const Sidebar = ({ user }) => {
                             className='flex items-center py-2 px-4 rounded-md hover:bg-primary hover:text-white transition-colors'
                         >
                             <Bell className='mr-2' size={20} /> Notifications
+                        </Link>
+                    </li>
+                    <li>
+                        <Link
+                            to='/achievements'
+                            className='flex items-center py-2 px-4 rounded-md hover:bg-primary hover:text-white transition-colors'
+                        >
+                            <Trophy className='mr-2' size={20} /> Achievements
                         </Link>
                     </li>
                 </ul>

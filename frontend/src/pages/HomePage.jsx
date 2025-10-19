@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar'
 import PostCreation from '../components/post/PostCreation'
 import Post from '../components/post/Post'
 import RecommendedUser from '../components/network/RecommendedUser'
+// RecognitionWall removed from sidebar (moved to centralized Achievements page)
 import { Users } from "lucide-react"
 
 const HomePage = () => {

@@ -6,6 +6,7 @@ import { MessageSquare, Plus, Search, Filter, Loader } from 'lucide-react';
 import DiscussionPost from '../components/discussion/DiscussionPost';
 import DiscussionCreation from '../components/discussion/DiscussionCreation';
 import Sidebar from '../components/Sidebar';
+// RecognitionWall moved to central Achievements page
 
 const DiscussionForumsPage = () => {
   const queryClient = useQueryClient();

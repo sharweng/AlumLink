@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { X } from "lucide-react";
+import { X, Loader } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { axiosInstance } from "../../lib/axios";
 import { useSocket } from "../../contexts/SocketContext";
@@ -336,7 +336,7 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser, otherUser }) => {
                     {tokenLoading || isConnecting ? (
                         <div className="text-white text-center">
                             <div className="relative mb-6">
-                                <div className="animate-spin rounded-full h-20 w-20 border-4 border-t-primary border-r-primary border-b-transparent border-l-transparent mx-auto"></div>
+                                <Loader className="animate-spin text-primary mx-auto" size={80} />
                                 <div className="absolute inset-0 rounded-full h-20 w-20 border-4 border-primary/20 mx-auto"></div>
                             </div>
                             <p className="text-xl font-semibold mb-2">Connecting to video call...</p>
@@ -369,7 +369,7 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser, otherUser }) => {
                     ) : (
                         <div className="text-white text-center">
                             <div className="relative mb-6">
-                                <div className="animate-spin rounded-full h-20 w-20 border-4 border-t-primary border-r-primary border-b-transparent border-l-transparent mx-auto"></div>
+                                <Loader className="animate-spin text-primary mx-auto" size={80} />
                                 <div className="absolute inset-0 rounded-full h-20 w-20 border-4 border-primary/20 mx-auto"></div>
                             </div>
                             <p className="text-xl font-semibold mb-2">Setting up video call...</p>

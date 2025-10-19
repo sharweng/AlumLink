@@ -22,6 +22,7 @@ import EventEditPage from "./pages/EventEditPage"
 import AdminDashboard from "./pages/AdminDashboard"
 import MentorshipPortalPage from "./pages/MentorshipPortalPage"
 import MessagesPage from "./pages/MessagesPage"
+import AchievementsPage from "./pages/AchievementsPage"
 import { SocketProvider } from "./contexts/SocketContext"
 import CallManager from "./components/common/CallManager"
 
@@ -70,6 +71,7 @@ function App() {
         <Route path="/network" element={ authUser ? <NetworkPage /> : <Navigate to={"/login"} /> } />
         <Route path="/mentorship" element={ authUser ? <MentorshipPortalPage /> : <Navigate to={"/login"} /> } />
         <Route path="/messages" element={ authUser ? <MessagesPage /> : <Navigate to={"/login"} /> } />
+        <Route path="/achievements" element={ authUser ? <AchievementsPage /> : <Navigate to={"/login"} /> } />
         <Route path="/post/:postId" element={ authUser ? <PostPage /> : <Navigate to={"/login"} /> } />
         <Route path="/profile/:username" element={ authUser ? <ProfilePage /> : <Navigate to={"/login"} /> } />
       </Routes>

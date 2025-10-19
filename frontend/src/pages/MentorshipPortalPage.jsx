@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
-import { Users, Calendar, Award, Search, BookOpen, Clock } from "lucide-react";
+import { Users, Calendar, Award, Search, BookOpen, Clock, Loader } from "lucide-react";
 import MentorCard from "../components/mentorship/MentorCard";
 import MentorshipCard from "../components/mentorship/MentorshipCard";
 import SessionCard from "../components/mentorship/SessionCard";
@@ -187,7 +187,7 @@ ary"
 					{/* Mentors Grid */}
 					{loadingMentors ? (
 						<div className="flex justify-center items-center py-12">
-							<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+							<Loader className="animate-spin text-primary" size={48} />
 						</div>
 					) : filteredMentors?.length === 0 ? (
 						<div className="bg-white rounded-lg shadow-md p-12 text-center">
@@ -214,7 +214,7 @@ ary"
 				<div>
 					{loadingMentorships ? (
 						<div className="flex justify-center items-center py-12">
-							<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+							<Loader className="animate-spin text-primary" size={48} />
 						</div>
 					) : myMentorships?.length === 0 ? (
 						<div className="bg-white rounded-lg shadow-md p-12 text-center">
@@ -266,7 +266,7 @@ ary"
 				<div>
 					{loadingSessions ? (
 						<div className="flex justify-center items-center py-12">
-							<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+							<Loader className="animate-spin text-primary" size={48} />
 						</div>
 					) : sessions?.length === 0 ? (
 						<div className="bg-white rounded-lg shadow-md p-12 text-center">

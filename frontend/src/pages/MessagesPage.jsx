@@ -6,7 +6,7 @@ import Sidebar from '../components/Sidebar';
 import { useSearchParams } from 'react-router-dom';
 import { 
     MessageCircle, Send, Video, MoreVertical, 
-    ArrowLeft, Smile, Paperclip, Search, Check, CheckCheck 
+    ArrowLeft, Smile, Paperclip, Search, Check, CheckCheck, Loader
 } from 'lucide-react';
 import VideoCallModal from '../components/mentorship/VideoCallModal';
 import CallInvitationModal from '../components/mentorship/CallInvitationModal';
@@ -229,7 +229,7 @@ const MessagesPage = () => {
                             <div className="flex-1 overflow-y-auto">
                                 {loadingConversations ? (
                                     <div className="flex justify-center items-center h-full">
-                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                                        <Loader className="animate-spin text-primary" size={32} />
                                     </div>
                                 ) : filteredConversations?.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center h-full text-gray-500 p-4">
@@ -357,7 +357,7 @@ const MessagesPage = () => {
                                     <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 bg-gray-50">
                                         {loadingMessages ? (
                                             <div className="flex justify-center items-center h-full">
-                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                                                <Loader className="animate-spin text-primary" size={32} />
                                             </div>
                                         ) : (
                                             <>
