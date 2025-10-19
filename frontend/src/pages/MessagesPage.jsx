@@ -193,6 +193,18 @@ const MessagesPage = () => {
         return conversation.participants.find(p => p._id !== authUser._id);
     };
 
+    const formatShortDistance = (date) => {
+        if (!date) return '';
+        const diffMs = Date.now() - new Date(date).getTime();
+        const minutes = Math.floor(diffMs / 60000);
+        if (minutes < 1) return 'now';
+        if (minutes < 60) return `${minutes}m`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h`;
+        const days = Math.floor(hours / 24);
+        return `${days}d`;
+    };
+
     return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Sidebar */}
@@ -263,21 +275,20 @@ const MessagesPage = () => {
                                                         )}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center justify-between">
-                                                            <p className="font-semibold text-gray-900 truncate">{otherUser.name}</p>
-                                                            {conversation.lastMessageAt && (
-                                                                <span className="text-xs text-gray-500">
-                                                                    {formatDistanceToNow(new Date(conversation.lastMessageAt), { addSuffix: true })}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <p className="text-sm text-gray-600 truncate">{otherUser.headline || otherUser.username}</p>
-                                                        {conversation.lastMessage && (
-                                                            <p className="text-sm text-gray-500 truncate mt-1">
-                                                                {conversation.lastMessage.sender._id === authUser._id && 'You: '}
-                                                                {conversation.lastMessage.content}
-                                                            </p>
-                                                        )}
+                                                                                <div className="flex items-center justify-between">
+                                                                                    <p className="font-semibold text-gray-900 truncate" title={otherUser.name}>{otherUser.name}</p>
+                                                                                    {/* time moved to the message preview on the right */}
+                                                                                </div>
+                                                                                <p className="text-sm text-gray-600 truncate">{otherUser.headline || otherUser.username}</p>
+                                                                                {conversation.lastMessage && (
+                                                                                    <div className="flex items-center justify-between mt-1">
+                                                                                        <p className="text-sm text-gray-500 truncate mr-3">
+                                                                                            {conversation.lastMessage.sender._id === authUser._id && 'You: '}
+                                                                                            {conversation.lastMessage.content}
+                                                                                        </p>
+                                                                                        <span className="text-xs text-gray-400 flex-shrink-0">{formatShortDistance(conversation.lastMessageAt || conversation.lastMessage?.createdAt)}</span>
+                                                                                    </div>
+                                                                                )}
                                                     </div>
                                                     {unread > 0 && (
                                                         <div className="bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -399,20 +410,7 @@ const MessagesPage = () => {
                                         )}
                                     </div>
 
-                                    {/* Typing Indicator - Fixed between messages and input */}
-                                    <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 flex-shrink-0" style={{ minHeight: '40px' }}>
-                                        {isTyping && (
-                                            <div className="flex justify-start">
-                                                <div className="bg-gray-100 rounded-lg px-4 py-2">
-                                                    <div className="flex gap-1">
-                                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
+                                    {/* Typing indicator removed — not functional and was wasting space */}
 
                                     {/* Message Input - Fixed at bottom */}
                                     <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
