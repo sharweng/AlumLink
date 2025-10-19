@@ -3,12 +3,12 @@ import { useState, useEffect } from "react";
 import { axiosInstance } from "../../lib/axios";
 import toast from "react-hot-toast";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { 
-  Heart, 
-  MessageCircle, 
-  Share2, 
-  Trash2, 
-  Edit, 
+import {
+  Heart,
+  MessageCircle,
+  Share2,
+  Trash2,
+  Edit,
   FileText,
   Download,
   Tag,
@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import ConfirmModal from "../common/ConfirmModal";
+import ReportMenuItem from '../feedback/ReportMenuItem'
 
 const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = null }) => {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   const [commentToDelete, setCommentToDelete] = useState(null);
   const [showDeleteReplyConfirm, setShowDeleteReplyConfirm] = useState(false);
   const [replyToDelete, setReplyToDelete] = useState(null);
-  
+
   const isOwner = authUser?._id === discussion.author._id;
   const isLiked = discussion.likes?.includes(authUser?._id);
 
@@ -85,28 +86,28 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   useEffect(() => {
     const commentId = searchParams.get('comment');
     const replyId = searchParams.get('reply');
-    
+
     if (discussion && (commentId || replyId)) {
       // Ensure comments are shown
       setShowComments(true);
-      
+
       // If it's a reply, expand the parent comment
       if (replyId && commentId) {
         setExpandedComments(prev => new Set(prev).add(commentId));
       }
-      
+
       // Wait for DOM to render
       setTimeout(() => {
         const targetId = replyId || commentId;
         const element = document.getElementById(targetId);
-        
+
         if (element) {
           // Scroll to the element
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          
+
           // Find and highlight the appropriate box
           let contentBox;
-          
+
           if (replyId) {
             // For replies, get the bg-gray-100 element
             contentBox = element.querySelector('.bg-gray-100');
@@ -120,11 +121,11 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
               }
             }
           }
-          
+
           if (contentBox) {
             const originalBgClass = contentBox.className;
             contentBox.className = contentBox.className.replace(/bg-gray-\d+/, 'bg-yellow-100');
-            
+
             setTimeout(() => {
               contentBox.className = originalBgClass;
             }, 2000);
@@ -137,7 +138,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   // Helper function to render text with @mentions highlighted
   const renderTextWithMentions = (text) => {
     if (!text) return null;
-    
+
     const parts = text.split(/(@\w+)/g);
     return parts.map((part, index) => {
       if (part.startsWith('@')) {
@@ -154,7 +155,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   // Calculate total comment count including replies
   const getTotalCommentCount = () => {
     if (!discussion.comments) return 0;
-    
+
     let total = discussion.comments.length;
     discussion.comments.forEach(comment => {
       if (comment.replies && comment.replies.length > 0) {
@@ -167,9 +168,9 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   // Sort comments based on selected order
   const getSortedComments = () => {
     if (!discussion.comments) return [];
-    
+
     const comments = [...discussion.comments];
-    
+
     switch (commentSortOrder) {
       case "newest":
         return comments.reverse(); // Newest first (reverse chronological)
@@ -179,12 +180,12 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         return comments.sort((a, b) => {
           const aLikes = (a.likes?.length || 0) - (a.dislikes?.length || 0);
           const bLikes = (b.likes?.length || 0) - (b.dislikes?.length || 0);
-          
+
           // If net likes are equal, sort by newest first
           if (bLikes === aLikes) {
             return new Date(b.createdAt) - new Date(a.createdAt);
           }
-          
+
           return bLikes - aLikes; // Sort by net likes (likes - dislikes)
         });
       default:
@@ -271,11 +272,11 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
     },
     onError: (error) => {
       const errorMessage = error.message || error.response?.data?.message || "Failed to update discussion";
-      
+
       // Don't show toast for validation errors (they have visual indicators)
       if (!errorMessage.includes("required fields")) {
         setEditFileError(errorMessage);
-        
+
         // Only show toast for non-file-size errors (file size errors already have visual indicators)
         if (!errorMessage.includes("larger than 25MB")) {
           toast.error(errorMessage);
@@ -322,30 +323,30 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
     onSuccess: (data) => {
       setNewComment("");
       toast.success("Comment added successfully");
-      
+
       // Clear URL parameters to prevent double highlighting
       if (searchParams.get('comment') || searchParams.get('reply')) {
         navigate(`/discussion/${discussion._id}`, { replace: true });
       }
-      
+
       // Ensure comments section is open
       setShowComments(true);
-      
+
       // Highlight the new comment after data refreshes
       if (data.comments && data.comments.length > 0) {
         const newComment = data.comments[data.comments.length - 1];
-        
+
         // Invalidate queries to refresh the data
         queryClient.invalidateQueries({ queryKey: ["discussions"] });
         queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
-        
+
         // Wait for the queries to refetch and DOM to update
         setTimeout(() => {
           const element = document.getElementById(newComment._id);
           if (element) {
             // Scroll to the element
             element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
+
             // Find and highlight the comment box
             const children = element.children;
             for (let child of children) {
@@ -354,7 +355,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                 if (contentBox) {
                   const originalBgClass = contentBox.className;
                   contentBox.className = contentBox.className.replace(/bg-gray-\d+/, 'bg-yellow-100');
-                  
+
                   setTimeout(() => {
                     contentBox.className = originalBgClass;
                   }, 2000);
@@ -412,41 +413,41 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
       setReplyingToCommentId(null);
       setNewReply("");
       toast.success("Reply added successfully");
-      
+
       // Clear URL parameters to prevent double highlighting
       if (searchParams.get('comment') || searchParams.get('reply')) {
         navigate(`/discussion/${discussion._id}`, { replace: true });
       }
-      
+
       // Ensure comments section is open
       setShowComments(true);
-      
+
       // Highlight the new reply after data refreshes
       if (data.comments) {
         const comment = data.comments.find(c => c._id === commentId);
         if (comment && comment.replies && comment.replies.length > 0) {
           const newReply = comment.replies[comment.replies.length - 1];
-          
+
           // Expand the replies section first
           setExpandedComments(prev => new Set(prev).add(commentId));
-          
+
           // Invalidate queries to refresh the data
           queryClient.invalidateQueries({ queryKey: ["discussions"] });
           queryClient.invalidateQueries({ queryKey: ["discussion", discussion._id] });
-          
+
           // Wait for the queries to refetch and DOM to update
           setTimeout(() => {
             const element = document.getElementById(newReply._id);
             if (element) {
               // Scroll to the element
               element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              
+
               // Find and highlight the reply box (bg-gray-100 for replies)
               const contentBox = element.querySelector('.bg-gray-100');
               if (contentBox) {
                 const originalBgClass = contentBox.className;
                 contentBox.className = contentBox.className.replace(/bg-gray-\d+/, 'bg-yellow-100');
-                
+
                 setTimeout(() => {
                   contentBox.className = originalBgClass;
                 }, 2000);
@@ -533,7 +534,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   const handleEditImageChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
     setEditImages([...editImages, ...selectedFiles]);
-    
+
     selectedFiles.forEach(file => {
       readFileAsDataURL(file).then(preview => {
         setEditImagePreviews(prev => [...prev, preview]);
@@ -561,7 +562,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   const removeEditFile = (index) => {
     const updatedFiles = editFiles.filter((_, i) => i !== index);
     setEditFiles(updatedFiles);
-    
+
     // Clear error if all oversized files are removed
     const maxFileSize = 25 * 1024 * 1024;
     const hasOversizedFiles = updatedFiles.some(file => file.size > maxFileSize);
@@ -728,6 +729,11 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
               </button>
             </div>
           )}
+          {!isOwner && (
+            <div className="flex gap-2">
+              <ReportMenuItem page={`discussion:${discussion._id}`} />
+            </div>
+          )}
         </div>
       </div>
 
@@ -751,7 +757,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
               {discussion.category}
             </span>
           </div>
-          
+
           {/* Tags */}
           {discussion.tags && discussion.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
@@ -779,11 +785,10 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                     setShowEditErrors({ ...showEditErrors, title: false });
                   }
                 }}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  showEditErrors.title 
-                    ? 'border-red-500 focus:ring-red-500' 
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${showEditErrors.title
+                    ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-primary'
-                }`}
+                  }`}
                 placeholder="Discussion title"
               />
               {showEditErrors.title && (
@@ -802,11 +807,10 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                   }
                 }}
                 rows={6}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  showEditErrors.content 
-                    ? 'border-red-500 focus:ring-red-500' 
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${showEditErrors.content
+                    ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-primary'
-                }`}
+                  }`}
                 placeholder="What's on your mind?"
               />
               {showEditErrors.content && (
@@ -976,11 +980,10 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                     const fileSizeMB = file.size / (1024 * 1024);
                     const isOversized = fileSizeMB > 25;
                     return (
-                      <div 
-                        key={index} 
-                        className={`flex items-center justify-between p-2 rounded-lg group ${
-                          isOversized ? 'bg-red-50 border border-red-300' : 'bg-gray-50'
-                        }`}
+                      <div
+                        key={index}
+                        className={`flex items-center justify-between p-2 rounded-lg group ${isOversized ? 'bg-red-50 border border-red-300' : 'bg-gray-50'
+                          }`}
                       >
                         <div className="flex items-center gap-2 flex-1">
                           <FileText size={16} className={isOversized ? "text-red-500" : "text-gray-500"} />
@@ -988,8 +991,8 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                             {file.name}
                           </span>
                           <span className={`text-xs ${isOversized ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
-                            ({fileSizeMB >= 1 
-                              ? `${fileSizeMB.toFixed(2)} MB` 
+                            ({fileSizeMB >= 1
+                              ? `${fileSizeMB.toFixed(2)} MB`
                               : `${(file.size / 1024).toFixed(1)} KB`}
                             {isOversized && ' - Too large!'})
                           </span>
@@ -1053,62 +1056,62 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
 
         {!isEditing && (
           <>
-        {/* Images - Full view in detail, count in list */}
-        {discussion.images && discussion.images.length > 0 && (
-          isDetailView ? (
-            <div className={`grid gap-2 mb-4 ${discussion.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-              {discussion.images.map((image, index) => (
-                <div key={index} className="w-full aspect-square bg-gray-100">
-                  <img
-                    src={image}
-                    alt={`Discussion image ${index + 1}`}
-                    className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => setSelectedImageIndex(index)}
-                  />
+            {/* Images - Full view in detail, count in list */}
+            {discussion.images && discussion.images.length > 0 && (
+              isDetailView ? (
+                <div className={`grid gap-2 mb-4 ${discussion.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                  {discussion.images.map((image, index) => (
+                    <div key={index} className="w-full aspect-square bg-gray-100">
+                      <img
+                        src={image}
+                        alt={`Discussion image ${index + 1}`}
+                        className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => setSelectedImageIndex(index)}
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="mb-3 flex items-center gap-2 text-sm text-gray-600 px-4">
-              <ImageIcon size={16} />
-              <span>{discussion.images.length} {discussion.images.length === 1 ? 'image' : 'images'} attached</span>
-            </div>
-          )
-        )}
+              ) : (
+                <div className="mb-3 flex items-center gap-2 text-sm text-gray-600 px-4">
+                  <ImageIcon size={16} />
+                  <span>{discussion.images.length} {discussion.images.length === 1 ? 'image' : 'images'} attached</span>
+                </div>
+              )
+            )}
 
-        {/* Files - Full view in detail, count in list */}
-        {discussion.files && discussion.files.length > 0 && (
-          isDetailView ? (
-            <div className="mb-4 space-y-2 px-4">
-              <h4 className="text-sm font-semibold text-gray-700">Attachments:</h4>
-              {discussion.files.map((file, index) => (
-                <a
-                  key={index}
-                  href={file.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <FileText className="text-primary" size={20} />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{file.name}</p>
-                    {file.size && (
-                      <p className="text-xs text-gray-500">
-                        {(file.size / 1024).toFixed(2)} KB
-                      </p>
-                    )}
-                  </div>
-                  <Download size={18} className="text-gray-400" />
-                </a>
-              ))}
-            </div>
-          ) : (
-            <div className="mb-3 flex items-center gap-2 text-sm text-gray-600 px-4">
-              <FileText size={16} />
-              <span>{discussion.files.length} {discussion.files.length === 1 ? 'file' : 'files'} attached</span>
-            </div>
-          )
-        )}
+            {/* Files - Full view in detail, count in list */}
+            {discussion.files && discussion.files.length > 0 && (
+              isDetailView ? (
+                <div className="mb-4 space-y-2 px-4">
+                  <h4 className="text-sm font-semibold text-gray-700">Attachments:</h4>
+                  {discussion.files.map((file, index) => (
+                    <a
+                      key={index}
+                      href={file.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <FileText className="text-primary" size={20} />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{file.name}</p>
+                        {file.size && (
+                          <p className="text-xs text-gray-500">
+                            {(file.size / 1024).toFixed(2)} KB
+                          </p>
+                        )}
+                      </div>
+                      <Download size={18} className="text-gray-400" />
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div className="mb-3 flex items-center gap-2 text-sm text-gray-600 px-4">
+                  <FileText size={16} />
+                  <span>{discussion.files.length} {discussion.files.length === 1 ? 'file' : 'files'} attached</span>
+                </div>
+              )
+            )}
           </>
         )}
       </div>
@@ -1122,7 +1125,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
           <Heart size={20} fill={isLiked ? 'currentColor' : 'none'} />
           <span className="text-sm min-w-[20px] text-left">{formatCount(discussion.likes?.length || 0)}</span>
         </button>
-        
+
         <button
           onClick={() => setShowComments(!showComments)}
           className="flex items-center gap-2 text-gray-600 hover:text-primary transition-colors"
@@ -1130,7 +1133,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
           <MessageCircle size={20} />
           <span className="text-sm min-w-[20px] text-left">{formatCount(getTotalCommentCount())}</span>
         </button>
-        
+
         <button
           onClick={() => {
             // Share functionality will be implemented later
@@ -1201,7 +1204,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
             {getSortedComments().map((comment) => {
               const isCommentOwner = comment.user?._id === authUser?._id;
               const isEditingThisComment = editingCommentId === comment._id;
-              
+
               return (
                 <div key={comment._id} id={comment._id} className="flex gap-3">
                   <Link to={`/profile/${comment.user?.username}`}>
@@ -1333,7 +1336,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                         {comment.replies.map((reply) => {
                           const isReplyOwner = reply.user?._id === authUser?._id;
                           const isEditingThisReply = editingReplyId === reply._id;
-                          
+
                           return (
                             <div key={reply._id} id={reply._id} className="flex gap-2">
                               <Link to={`/profile/${reply.user?.username}`}>
@@ -1487,7 +1490,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
 
       {/* Image Lightbox Modal */}
       {selectedImageIndex !== null && discussion?.images && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4"
           onClick={() => setSelectedImageIndex(null)}
         >
@@ -1498,7 +1501,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
           >
             <X size={32} />
           </button>
-          
+
           {/* Previous Button */}
           {discussion.images.length > 1 && (
             <button

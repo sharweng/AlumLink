@@ -24,6 +24,7 @@ import {
 import PostAction from "./PostAction"
 import { formatDistanceToNow } from "date-fns"
 import ConfirmModal from "../common/ConfirmModal"
+import ReportMenuItem from '../feedback/ReportMenuItem'
 
 const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   const { postId } = useParams()
@@ -607,28 +608,35 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
           </div>
         
           <div className='flex items-center gap-2'>
-            {isOwner && (
-              <>
-                <button 
-                  onClick={handleEditPost} 
-                  disabled={isEditingPost}
-                  className="text-green-600 hover:bg-green-50 p-2 rounded transition-colors disabled:opacity-50"
-                >
-                  <Edit size={18} />
-                </button>
-                <button 
-                  onClick={handleDeletePost} 
-                  disabled={isDeletingPost}
-                  className="text-red-600 hover:bg-red-50 p-2 rounded transition-colors disabled:opacity-50"
-                >
-                  {isDeletingPost ? (
-                    <Loader className="animate-spin" size={16} />
-                  ) : (
-                    <Trash2 size={18} />
-                  )}
-                </button>
-              </>
-            )}
+                    {isOwner && (
+                      <>
+                        <li>
+                          <button
+                            onClick={() => setEditMode(true)}
+                            className="flex items-center gap-2 w-full px-2 py-1 hover:bg-gray-100"
+                          >
+                            <Edit size={16} /> Edit
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="flex items-center gap-2 w-full px-2 py-1 hover:bg-gray-100 text-red-600"
+                          >
+                            <Trash2 size={16} /> Delete
+                          </button>
+                        </li>
+                      </>
+                    )}
+                    {!isOwner && (
+                      <>
+                        <li>
+                          <ReportMenuItem
+                            page={`post:${post._id}`}
+                          />
+                        </li>
+                      </>
+                    )}
           </div>
         </div>
       </div>

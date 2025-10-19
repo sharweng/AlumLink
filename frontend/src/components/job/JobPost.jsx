@@ -17,6 +17,7 @@ import { formatDistanceToNow } from 'date-fns';
 import JobPostEdit from './JobPostEdit';
 import { Link, useNavigate } from 'react-router-dom';
 import ConfirmModal from '../common/ConfirmModal';
+import ReportMenuItem from '../feedback/ReportMenuItem';
 
 const JobPost = ({ jobPost, isDetailPage = false }) => {
   const queryClient = useQueryClient();
@@ -193,6 +194,12 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
                   <Share2 size={16} />
                   Share
                 </button>
+                {!isOwner && (
+                  <>
+                    {/* Report option for non-owners */}
+                    <ReportMenuItem page={`job:${jobPost._id}`} onClickExtra={() => setShowDropdown(false)} />
+                  </>
+                )}
                 {isOwner && (
                   <>
                     <button

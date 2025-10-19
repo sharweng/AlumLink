@@ -9,6 +9,7 @@ import {
     ArrowLeft, Smile, Paperclip, Search, Check, CheckCheck, Loader
 } from 'lucide-react';
 import VideoCallModal from '../components/mentorship/VideoCallModal';
+import ReportMenuItem from '../components/feedback/ReportMenuItem';
 import CallInvitationModal from '../components/mentorship/CallInvitationModal';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -28,6 +29,7 @@ const MessagesPage = () => {
     const queryClient = useQueryClient();
     const authUser = queryClient.getQueryData(['authUser']);
     const { socket, isUserOnline } = useSocket();
+    const [showHeaderMenu, setShowHeaderMenu] = useState(false);
     
     const userIdFromParams = searchParams.get('user');
 
@@ -358,9 +360,19 @@ const MessagesPage = () => {
                                             >
                                                 <Video size={20} className="text-gray-600" />
                                             </button>
-                                            <button className="p-2 hover:bg-gray-100 rounded-full transition">
-                                                <MoreVertical size={20} className="text-gray-600" />
-                                            </button>
+                                                                                        <div className="relative">
+                                                                                            <button
+                                                                                                    onClick={() => setShowHeaderMenu(prev => !prev)}
+                                                                                                    className="p-2 hover:bg-gray-100 rounded-full transition"
+                                                                                            >
+                                                                                                    <MoreVertical size={20} className="text-gray-600" />
+                                                                                            </button>
+                                                                                            {showHeaderMenu && (
+                                                                                                <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow z-50">
+                                                                                                    <ReportMenuItem page={`message:${getOtherUser(selectedConversation)._id}`} onClickExtra={() => setShowHeaderMenu(false)} />
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
                                         </div>
                                     </div>
 

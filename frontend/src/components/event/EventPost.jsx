@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import ConfirmModal from "../common/ConfirmModal";
+import ReportMenuItem from '../feedback/ReportMenuItem'
 
 const EventPost = ({ event }) => {
   const queryClient = useQueryClient();
@@ -138,6 +139,11 @@ const EventPost = ({ event }) => {
               </h2>
             </div>
           </div>
+          {!isOrganizer && (
+            <div className="flex items-center">
+              <ReportMenuItem page={`event:${event._id}`} />
+            </div>
+          )}
 
           {/* Organizer */}
           <div 

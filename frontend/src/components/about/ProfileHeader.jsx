@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { axiosInstance } from "../../lib/axios";
 import toast from "react-hot-toast";
 import { Camera, Clock, MapPin, UserCheck, UserPlus, X, Loader, MessageCircle } from "lucide-react";
+import ReportMenuItem from '../feedback/ReportMenuItem'
 import { useNavigate } from "react-router-dom";
 
 const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving }) => {
@@ -271,15 +272,20 @@ const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving }) => {
 				) : (
 					<div className='flex flex-col gap-2'>
 						<div className='flex justify-center'>{renderLinkButton()}</div>
-						{canMessageData?.canMessage && (
-							<button
-								onClick={handleMessage}
-								className='bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-full transition duration-300 flex items-center justify-center'
-							>
-								<MessageCircle size={20} className='mr-2' />
-								Message
-							</button>
-						)}
+                        <div className="flex items-center gap-2 justify-center">
+                          {canMessageData?.canMessage && (
+                            <button
+                                onClick={handleMessage}
+                                className='bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-full transition duration-300 flex items-center justify-center'
+                            >
+                                <MessageCircle size={20} className='mr-2' />
+                                Message
+                            </button>
+                          )}
+                          {!isOwnProfile && (
+                            <ReportMenuItem page={`profile:${userData._id}`} />
+                          )}
+                        </div>
 					</div>
 				)}
 			</div>
