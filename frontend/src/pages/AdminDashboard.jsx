@@ -1,53 +1,50 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
-import { 
-  Users, 
-  UserCheck, 
-  UserX, 
-  Shield, 
-  Activity, 
-  TrendingUp,
-  ChevronDown,
-  ChevronUp,
-  Loader
+import {
+  Users,
+  UserCheck,
+  UserX,
+  Loader,
+  Flag,
+  MessageSquare,
+  Eye,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Flag, MessageSquare, Eye } from 'lucide-react'
 
 const AdminDashboard = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const authUser = queryClient.getQueryData(["authUser"]);
 
-  // Check if current user is deactivated on mount and periodically
+  const [reportsView, setReportsView] = useState("recent");
+  const [feedbackView, setFeedbackView] = useState("recent");
+  const [reportSearch, setReportSearch] = useState("");
+  const [feedbackSearch, setFeedbackSearch] = useState("");
+  const [reportFilter, setReportFilter] = useState("all");
+  const [reportTypeFilter, setReportTypeFilter] = useState("all");
+  const [feedbackFilter, setFeedbackFilter] = useState("all");
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
+
+  const activeTab = searchParams.get("tab") || "users";
+
   useEffect(() => {
-    const checkUserStatus = async () => {
+    // basic auth check (non-blocking)
+    const check = async () => {
       try {
         const res = await axiosInstance.get("/auth/me");
-        if (!res.data.isActive) {
-          queryClient.setQueryData(["authUser"], null);
-          toast.error("Your account has been deactivated");
-          navigate("/login");
-        }
-      } catch (error) {
-        // If user check fails, they're likely logged out
-        console.error("Error checking user status:", error);
+        if (!res.data) navigate("/login");
+      } catch (e) {
+        console.warn("auth check failed", e);
       }
     };
+    check();
+  }, [navigate]);
 
-    // Check immediately
-    checkUserStatus();
-
-    // Check every 5 seconds
-    const interval = setInterval(checkUserStatus, 5000);
-
-    return () => clearInterval(interval);
-  }, [navigate, queryClient]);
-
-  // Get dashboard stats
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["adminStats"],
     queryFn: async () => {
@@ -56,7 +53,6 @@ const AdminDashboard = () => {
     },
   });
 
-  // Get all users
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ["adminUsers"],
     queryFn: async () => {
@@ -65,160 +61,88 @@ const AdminDashboard = () => {
     },
   });
 
-  // Feedbacks & reports
-  const { data: reports, isLoading: reportsLoading } = useQuery({
+  const { data: reports } = useQuery({
     queryKey: ["adminReports"],
     queryFn: async () => {
-      const res = await axiosInstance.get('/reports');
+      const res = await axiosInstance.get("/reports");
       return res.data;
-    }
-  })
+    },
+  });
 
-  const { data: feedbacks, isLoading: feedbacksLoading } = useQuery({
+  const { data: feedbacks } = useQuery({
     queryKey: ["adminFeedbacks"],
     queryFn: async () => {
-      const res = await axiosInstance.get('/feedbacks');
+      const res = await axiosInstance.get("/feedbacks");
       return res.data;
-    }
-  })
+    },
+  });
 
-  const activeTab = searchParams.get('tab') || 'users'
-  const [reportsView, setReportsView] = useState('recent')
-  const [feedbackView, setFeedbackView] = useState('recent')
-  const [reportSearch, setReportSearch] = useState('')
-  const [feedbackSearch, setFeedbackSearch] = useState('')
-  const [reportFilter, setReportFilter] = useState('all') // all, seen, unseen
-  const [feedbackFilter, setFeedbackFilter] = useState('all')
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
-  const [selectedFeedback, setSelectedFeedback] = useState(null)
-  const [showReportModal, setShowReportModal] = useState(false)
-  const [selectedReport, setSelectedReport] = useState(null)
-
-  // Update user role mutation
   const updateRoleMutation = useMutation({
     mutationFn: async ({ userId, role }) => {
       const res = await axiosInstance.put(`/admin/users/${userId}/role`, { role });
       return res.data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
-      queryClient.invalidateQueries({ queryKey: ["adminStats"] });
-      toast.success(data.message);
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || "Failed to update role");
-    },
+    onSuccess: () => queryClient.invalidateQueries(["adminUsers", "adminStats"]),
   });
 
-  // Toggle user status mutation
   const toggleStatusMutation = useMutation({
     mutationFn: async (userId) => {
       const res = await axiosInstance.put(`/admin/users/${userId}/toggle-status`);
       return res.data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
-      queryClient.invalidateQueries({ queryKey: ["adminStats"] });
-      toast.success(data.message);
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || "Failed to update status");
-    },
+    onSuccess: () => queryClient.invalidateQueries(["adminUsers", "adminStats"]),
   });
 
-  // Mark report seen mutation
   const markReportSeenMutation = useMutation({
     mutationFn: async (reportId) => {
       const res = await axiosInstance.put(`/reports/${reportId}/seen`);
       return res.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["adminReports"] });
-    },
-    onError: (error) => {
-      toast.error("Failed to mark report as seen");
-    },
+    onSuccess: () => queryClient.invalidateQueries(["adminReports"]),
   });
 
-  // Mark feedback seen mutation
   const markFeedbackSeenMutation = useMutation({
     mutationFn: async (feedbackId) => {
       const res = await axiosInstance.put(`/feedbacks/${feedbackId}/seen`);
       return res.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["adminFeedbacks"] });
-    },
-    onError: (error) => {
-      toast.error("Failed to mark feedback as seen");
-    },
+    onSuccess: () => queryClient.invalidateQueries(["adminFeedbacks"]),
   });
 
-  // Mark all reports seen mutation
   const markAllReportsSeenMutation = useMutation({
     mutationFn: async () => {
-      const res = await axiosInstance.put('/reports/mark-all-seen');
+      const res = await axiosInstance.put("/reports/mark-all-seen");
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["adminReports"] });
+      queryClient.invalidateQueries(["adminReports"]);
       toast.success("All reports marked as seen");
-    },
-    onError: (error) => {
-      toast.error("Failed to mark all reports as seen");
     },
   });
 
-  // Mark all feedbacks seen mutation
   const markAllFeedbacksSeenMutation = useMutation({
     mutationFn: async () => {
-      const res = await axiosInstance.put('/feedbacks/mark-all-seen');
+      const res = await axiosInstance.put("/feedbacks/mark-all-seen");
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["adminFeedbacks"] });
+      queryClient.invalidateQueries(["adminFeedbacks"]);
       toast.success("All feedbacks marked as seen");
-    },
-    onError: (error) => {
-      toast.error("Failed to mark all feedbacks as seen");
     },
   });
 
   if (statsLoading || usersLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-48">
         <Loader className="animate-spin text-primary" size={48} />
       </div>
     );
   }
-  // Helpers to generate daily counts for last N days
-  const getDailyCounts = (items = [], dateField = 'createdAt', days = 14) => {
-    const counts = []
-    const labels = []
-    const now = new Date()
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(now)
-      d.setDate(now.getDate() - i)
-      const start = new Date(d.setHours(0,0,0,0))
-      const end = new Date(d.setHours(23,59,59,999))
-      const dayCount = items.filter(it => {
-        const t = new Date(it[dateField])
-        return t >= start && t <= end
-      }).length
-      labels.push(start.toLocaleDateString())
-      counts.push(dayCount)
-    }
-    return { labels, counts }
-  }
-
-  const _usersSeries = getDailyCounts(users || [], 'createdAt', 14)
-  const _reportsSeries = getDailyCounts(reports || [], 'createdAt', 14)
 
   return (
     <div className="container mx-auto px-4 py-6">
       <h1 className="text-3xl font-bold mb-4">Admin Dashboard</h1>
 
-      {/* Top Tabs: Users / Feedback & Reports */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex gap-2">
           <button onClick={() => setSearchParams({ tab: 'users' })} className={`px-4 py-2 rounded ${activeTab === 'users' ? 'bg-primary text-white' : 'bg-gray-100'}`}>Users</button>
@@ -226,10 +150,8 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Users Tab */}
       {activeTab === 'users' && (
         <>
-          {/* Stats Cards (moved into Users tab) - compact style like Reports */}
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4 mb-6">
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
@@ -240,7 +162,6 @@ const AdminDashboard = () => {
                 <Users className="text-blue-500" size={36} />
               </div>
             </div>
-
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -250,7 +171,6 @@ const AdminDashboard = () => {
                 <UserCheck className="text-green-500" size={36} />
               </div>
             </div>
-
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -260,160 +180,55 @@ const AdminDashboard = () => {
                 <UserX className="text-red-500" size={36} />
               </div>
             </div>
-
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-500 text-sm">Admins</p>
-                  <p className="text-2xl font-bold mt-1">{stats?.adminUsers || 0}</p>
-                </div>
-                <Shield className="text-purple-500" size={36} />
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-500 text-sm">Regular Users</p>
-                  <p className="text-2xl font-bold mt-1">{stats?.regularUsers || 0}</p>
-                </div>
-                <Activity className="text-orange-500" size={36} />
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-500 text-sm">New (7 days)</p>
-                  <p className="text-2xl font-bold mt-1">{stats?.recentUsers || 0}</p>
-                </div>
-                <TrendingUp className="text-teal-500" size={36} />
-              </div>
-            </div>
           </div>
 
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-6 py-4 border-b">
               <h2 className="text-xl font-semibold">All Users</h2>
             </div>
-
             <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
-                    Role
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">
-                    Joined
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {users?.map((user) => (
-                  <tr key={user._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 w-1/4">
-                      <div className="flex items-center">
-                        <img
-                          className="h-10 w-10 rounded-full flex-shrink-0"
-                          src={user.profilePicture || "/avatar.png"}
-                          alt={user.name}
-                        />
-                        <div className="ml-4 min-w-0 flex-1">
-                          <div 
-                            className="text-sm font-medium text-gray-900 truncate"
-                            title={user.name}
-                          >
-                            {user.name}
-                          </div>
-                          <div 
-                            className="text-sm text-gray-500 truncate"
-                            title={`@${user.username}`}
-                          >
-                            @{user.username}
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {users?.map(user => (
+                    <tr key={user._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <img className="h-10 w-10 rounded-full" src={user.profilePicture || '/avatar.png'} alt={user.name} />
+                          <div className="ml-3">
+                            <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                            <div className="text-sm text-gray-500">@{user.username}</div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 w-1/4">
-                      <div 
-                        className="text-sm text-gray-900 truncate"
-                        title={user.email}
-                      >
-                        {user.email}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 w-1/6 text-center">
-                      {user._id === authUser._id || (user.isSuperAdmin && !authUser.isSuperAdmin) ? (
-                        <span className={`w-20 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
-                          user.isSuperAdmin 
-                            ? 'bg-purple-100 text-purple-800' 
-                            : user.role === 'admin' 
-                              ? 'bg-purple-100 text-purple-800' 
-                              : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {user.isSuperAdmin ? 'Admin+' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                        </span>
-                      ) : (
-                        <select
-                          value={user.role}
-                          onChange={(e) => updateRoleMutation.mutate({ userId: user._id, role: e.target.value })}
-                          disabled={updateRoleMutation.isPending}
-                          className={`w-20 px-2 py-1 text-xs leading-5 font-semibold rounded-full border text-center ${
-                            user.role === 'admin' 
-                              ? 'bg-purple-100 text-purple-800 border-purple-300' 
-                              : 'bg-gray-100 text-gray-800 border-gray-300'
-                          } cursor-pointer hover:opacity-80`}
-                        >
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">{user.email}</td>
+                      <td className="px-6 py-4 text-sm text-center">
+                        <select value={user.role} onChange={e => updateRoleMutation.mutate({ userId: user._id, role: e.target.value })} className="w-24 text-sm p-1 rounded">
                           <option value="user">User</option>
                           <option value="admin">Admin</option>
                         </select>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 w-1/6 text-center">
-                      <span className={`w-20 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
-                        user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {user.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 w-1/12 text-center">
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium w-1/12 text-center">
-                      {user._id !== authUser._id && !(user.isSuperAdmin && !authUser.isSuperAdmin) && (
-                        <button
-                          onClick={() => toggleStatusMutation.mutate(user._id)}
-                          disabled={toggleStatusMutation.isPending}
-                          className={`w-24 px-3 py-1 rounded text-xs ${
-                            user.isActive 
-                              ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                              : 'bg-green-100 text-green-700 hover:bg-green-200'
-                          } transition-colors disabled:opacity-50`}
-                        >
-                          {user.isActive ? 'Deactivate' : 'Activate'}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-center"><span className={`w-20 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{user.isActive ? 'Active' : 'Inactive'}</span></td>
+                      <td className="px-6 py-4 text-sm text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 text-sm text-center">
+                        <button onClick={() => toggleStatusMutation.mutate(user._id)} className="px-3 py-1 rounded text-xs bg-red-100 text-red-700">{user.isActive ? 'Deactivate' : 'Activate'}</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      </>
+        </>
       )}
 
       {activeTab === 'reports' && (
@@ -425,7 +240,7 @@ const AdminDashboard = () => {
                   <p className="text-gray-500 text-sm">Total Reports</p>
                   <p className="text-2xl font-bold mt-1">{reports ? reports.length : 0}</p>
                 </div>
-                <Flag className='text-red-500' size={36} />
+                <Flag className="text-red-500" size={36} />
               </div>
             </div>
 
@@ -435,7 +250,7 @@ const AdminDashboard = () => {
                   <p className="text-gray-500 text-sm">Open Reports</p>
                   <p className="text-2xl font-bold mt-1">{reports ? reports.filter(r => r.status === 'open').length : 0}</p>
                 </div>
-                <Eye className='text-yellow-500' size={36} />
+                <Eye className="text-yellow-500" size={36} />
               </div>
             </div>
 
@@ -445,7 +260,7 @@ const AdminDashboard = () => {
                   <p className="text-gray-500 text-sm">Feedback Messages</p>
                   <p className="text-2xl font-bold mt-1">{feedbacks ? feedbacks.length : 0}</p>
                 </div>
-                <MessageSquare className='text-indigo-500' size={36} />
+                <MessageSquare className="text-indigo-500" size={36} />
               </div>
             </div>
           </div>
@@ -455,64 +270,50 @@ const AdminDashboard = () => {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold">{reportsView === 'recent' ? 'Recent Reports' : 'All Reports'}</h3>
                 {reportsView === 'recent' ? (
-                  <button
-                    className="text-sm text-primary underline"
-                    onClick={() => setReportsView('all')}
-                  >
-                    View All
-                  </button>
+                  <button className="text-sm text-primary underline" onClick={() => setReportsView('all')}>View All</button>
                 ) : (
-                  <button
-                    className="text-sm text-primary underline"
-                    onClick={() => setReportsView('recent')}
-                  >
-                    Back to Recent
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm" onClick={() => markAllReportsSeenMutation.mutate()}>Mark All as Seen</button>
+                    <button className="text-sm text-primary underline" onClick={() => setReportsView('recent')}>Back to Recent</button>
+                    
+                  </div>
                 )}
               </div>
+
               {reportsView === 'recent' ? (
                 <div className="space-y-2 max-h-72 overflow-auto">
-                  {reports && reports.length > 0 ? reports.slice(0, 5).map(r => (
+                  {reports && reports.slice(0, 5).map(r => (
                     <div key={r._id} className={`p-3 border rounded flex items-start justify-between cursor-pointer ${!r.seen ? 'border-red-500' : ''}`} onClick={() => { setSelectedReport(r); setShowReportModal(true); markReportSeenMutation.mutate(r._id); }}>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-semibold">{r.type.toUpperCase()}</div>
                         <div className="text-xs text-gray-500">{new Date(r.createdAt).toLocaleString()}</div>
-                        <div className="text-sm mt-2 truncate" onClick={(e) => { e.stopPropagation(); setSelectedReport(r); setShowReportModal(true); markReportSeenMutation.mutate(r._id); }}>{r.details || <span className="text-gray-400">No details provided</span>}</div>
+                        <div className="text-sm mt-2 truncate">{r.details || <span className="text-gray-400">No details provided</span>}</div>
                       </div>
-                      <div className="flex flex-col items-end gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
-                        <a href={
-                          r.type === 'post' ? `/post/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` :
-                          r.type === 'discussion' ? `/discussion/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` :
-                          r.type === 'job' ? `/job/${r.target}` :
-                          r.type === 'event' ? `/event/${r.target}` :
-                          '#'
-                        } className="text-sm text-primary underline whitespace-nowrap">View {r.type.charAt(0).toUpperCase() + r.type.slice(1)}</a>
-                        <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded whitespace-nowrap" onClick={() => markReportSeenMutation.mutate(r._id)}>Mark Seen</button>
+                      <div className="flex flex-col items-end gap-1 ml-2">
+                        <a href={r.type === 'post' ? `/post/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` : r.type === 'discussion' ? `/discussion/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` : r.type === 'job' ? `/job/${r.target}` : r.type === 'event' ? `/event/${r.target}` : '#'} className="text-sm text-primary underline">View {r.type}</a>
+                        <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded" onClick={() => markReportSeenMutation.mutate(r._id)}>Mark Seen</button>
                       </div>
                     </div>
-                  )) : <div className="text-gray-500">No reports yet</div>}
+                  ))}
                 </div>
               ) : (
                 <div>
                   <div className="mb-3 flex items-center space-x-4">
-                    <button className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm" onClick={() => markAllReportsSeenMutation.mutate()}>Mark All as Seen</button>
-                    <input
-                      type="search"
-                      placeholder="Search reports"
-                      value={reportSearch}
-                      onChange={e => setReportSearch(e.target.value)}
-                      className="border rounded px-3 py-1 w-48"
-                    />
-                    <select
-                      value={reportFilter}
-                      onChange={e => setReportFilter(e.target.value)}
-                      className="border rounded px-3 py-1"
-                    >
+                    <input type="search" placeholder="Search reports" value={reportSearch} onChange={e => setReportSearch(e.target.value)} className="border rounded px-3 py-1 w-48" />
+                    <select value={reportFilter} onChange={e => setReportFilter(e.target.value)} className="border rounded px-3 py-1">
                       <option value="all">All</option>
                       <option value="seen">Seen</option>
                       <option value="unseen">Unseen</option>
                     </select>
+                    <select value={reportTypeFilter} onChange={e => setReportTypeFilter(e.target.value)} className="border rounded px-3 py-1">
+                      <option value="all">All types</option>
+                      <option value="post">Posts</option>
+                      <option value="discussion">Discussions</option>
+                      <option value="job">Jobs</option>
+                      <option value="event">Events</option>
+                    </select>
                   </div>
+
                   <div className="space-y-2 max-h-72 overflow-auto">
                     {reports?.filter(r => {
                       if (!reportSearch) return true
@@ -523,22 +324,19 @@ const AdminDashboard = () => {
                       if (reportFilter === 'seen') return r.seen
                       if (reportFilter === 'unseen') return !r.seen
                       return true
+                    }).filter(r => {
+                      if (reportTypeFilter === 'all') return true
+                      return (r.type || '') === reportTypeFilter
                     }).map(r => (
-                      <div key={r._id} className={`p-3 border rounded flex items-start justify-between cursor-pointer ${!r.seen ? 'border-red-500' : ''}`} onClick={() => { setSelectedReport(r); setShowReportModal(true); markReportSeenMutation.mutate(r._id); }}>
+                      <div key={r._1d} className={`p-3 border rounded flex items-start justify-between cursor-pointer ${!r.seen ? 'border-red-500' : ''}`} onClick={() => { setSelectedReport(r); setShowReportModal(true); markReportSeenMutation.mutate(r._id); }}>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-semibold">{r.type.toUpperCase()}</div>
                           <div className="text-xs text-gray-500">{new Date(r.createdAt).toLocaleString()}</div>
-                          <div className="text-sm mt-2 truncate" onClick={(e) => { e.stopPropagation(); setSelectedReport(r); setShowReportModal(true); markReportSeenMutation.mutate(r._id); }}>{r.details || <span className="text-gray-400">No details provided</span>}</div>
+                          <div className="text-sm mt-2 truncate">{r.details || <span className="text-gray-400">No details provided</span>}</div>
                         </div>
-                        <div className="flex flex-col items-end gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
-                          <a href={
-                            r.type === 'post' ? `/post/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` :
-                            r.type === 'discussion' ? `/discussion/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` :
-                            r.type === 'job' ? `/job/${r.target}` :
-                            r.type === 'event' ? `/event/${r.target}` :
-                            '#'
-                          } className="text-sm text-primary underline whitespace-nowrap">View {r.type.charAt(0).toUpperCase() + r.type.slice(1)}</a>
-                          <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded whitespace-nowrap" onClick={() => markReportSeenMutation.mutate(r._id)}>Mark Seen</button>
+                        <div className="flex flex-col items-end gap-1 ml-2">
+                          <a href={r.type === 'post' ? `/post/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` : r.type === 'discussion' ? `/discussion/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` : r.type === 'job' ? `/job/${r.target}` : r.type === 'event' ? `/event/${r.target}` : '#'} className="text-sm text-primary underline">View {r.type}</a>
+                          <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded" onClick={() => markReportSeenMutation.mutate(r._id)}>Mark Seen</button>
                         </div>
                       </div>
                     ))}
@@ -551,49 +349,32 @@ const AdminDashboard = () => {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold">{feedbackView === 'recent' ? 'Recent Feedback' : 'All Feedback'}</h3>
                 {feedbackView === 'recent' ? (
-                  <button
-                    className="text-sm text-primary underline"
-                    onClick={() => setFeedbackView('all')}
-                  >
-                    View All
-                  </button>
+                  <button className="text-sm text-primary underline" onClick={() => setFeedbackView('all')}>View All</button>
                 ) : (
-                  <button
-                    className="text-sm text-primary underline"
-                    onClick={() => setFeedbackView('recent')}
-                  >
-                    Back to Recent
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm" onClick={() => markAllFeedbacksSeenMutation.mutate()}>Mark All as Seen</button>
+                    <button className="text-sm text-primary underline" onClick={() => setFeedbackView('recent')}>Back to Recent</button>
+                  </div>
                 )}
               </div>
+
               {feedbackView === 'recent' ? (
                 <div className="space-y-2 max-h-72 overflow-auto">
-                  {feedbacks && feedbacks.length > 0 ? feedbacks.slice(0, 5).map(f => (
+                  {feedbacks && feedbacks.slice(0, 5).map(f => (
                     <div key={f._id} className={`p-3 border rounded cursor-pointer ${!f.seen ? 'border-red-500' : ''}`} onClick={() => { setSelectedFeedback(f); setShowFeedbackModal(true); markFeedbackSeenMutation.mutate(f._id); }}>
                       <div className="text-xs text-gray-400">{new Date(f.createdAt).toLocaleString()}</div>
-                      <div className="mt-2 truncate" onClick={(e) => { e.stopPropagation(); setSelectedFeedback(f); setShowFeedbackModal(true); markFeedbackSeenMutation.mutate(f._id); }}>{f.message}</div>
-                      <div className="mt-2 flex justify-end" onClick={(e) => e.stopPropagation()}>
+                      <div className="mt-2 truncate">{f.message}</div>
+                      <div className="mt-2 flex justify-end">
                         <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded" onClick={() => markFeedbackSeenMutation.mutate(f._id)}>Mark Seen</button>
                       </div>
                     </div>
-                  )) : <div className="text-gray-500">No feedback yet</div>}
+                  ))}
                 </div>
               ) : (
                 <div>
                   <div className="mb-3 flex items-center space-x-4">
-                    <button className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm" onClick={() => markAllFeedbacksSeenMutation.mutate()}>Mark All as Seen</button>
-                    <input
-                      type="search"
-                      placeholder="Search feedback"
-                      value={feedbackSearch}
-                      onChange={e => setFeedbackSearch(e.target.value)}
-                      className="border rounded px-3 py-1 w-48"
-                    />
-                    <select
-                      value={feedbackFilter}
-                      onChange={e => setFeedbackFilter(e.target.value)}
-                      className="border rounded px-3 py-1"
-                    >
+                    <input type="search" placeholder="Search feedback" value={feedbackSearch} onChange={e => setFeedbackSearch(e.target.value)} className="border rounded px-3 py-1 w-48" />
+                    <select value={feedbackFilter} onChange={e => setFeedbackFilter(e.target.value)} className="border rounded px-3 py-1">
                       <option value="all">All</option>
                       <option value="seen">Seen</option>
                       <option value="unseen">Unseen</option>
@@ -611,9 +392,9 @@ const AdminDashboard = () => {
                       return true
                     }).map(f => (
                       <div key={f._id} className={`p-3 border rounded cursor-pointer ${!f.seen ? 'border-red-500' : ''}`} onClick={() => { setSelectedFeedback(f); setShowFeedbackModal(true); markFeedbackSeenMutation.mutate(f._id); }}>
-                        <div className="text-xs text-gray-400">{new Date(f.createdAt).toLocaleString()}</div>
-                        <div className="mt-2 truncate" onClick={(e) => { e.stopPropagation(); setSelectedFeedback(f); setShowFeedbackModal(true); markFeedbackSeenMutation.mutate(f._id); }}>{f.message}</div>
-                        <div className="mt-2 flex justify-end" onClick={(e) => e.stopPropagation()}>
+                        <div className="text-xs text-gray-400">{new Date(f.createdAt).toLocaleDateString()}</div>
+                        <div className="mt-2 truncate">{f.message}</div>
+                        <div className="mt-2 flex justify-end">
                           <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded" onClick={() => markFeedbackSeenMutation.mutate(f._id)}>Mark Seen</button>
                         </div>
                       </div>
