@@ -1,29 +1,58 @@
-import Feedback from '../models/Feedback.js';
+import Feedback from '../models/Feedback.js'
 
 export const createFeedback = async (req, res) => {
   try {
-    const { message, page, imageBase64 } = req.body;
-    const user = req.user?.id || null;
+    const { message, metadata } = req.body
 
-    if (!message || message.trim().length === 0) {
-      return res.status(400).json({ message: 'Message is required' });
+    if (!message || !message.trim()) {
+      return res.status(400).json({ message: 'Message is required' })
     }
 
-    const fb = new Feedback({ user, message, page, imageBase64 });
-    await fb.save();
-    return res.status(201).json({ message: 'Feedback submitted' });
-  } catch (err) {
-    console.error('Error creating feedback', err);
-    return res.status(500).json({ message: 'Server error' });
-  }
-};
+    const feedback = new Feedback({
+      message: message.trim(),
+      user: req.user ? req.user._id : undefined,
+      metadata: metadata || {}
+    })
 
-export const listFeedback = async (req, res) => {
-  try {
-    const items = await Feedback.find().populate('user', 'name username profilePicture').sort({ createdAt: -1 });
-    res.json(items);
+    await feedback.save()
+
+    res.status(201).json(feedback)
   } catch (err) {
-    console.error('Error listing feedback', err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error creating feedback:', err.message)
+    res.status(500).json({ message: 'Internal server error' })
   }
-};
+}
+
+export const listFeedbacks = async (req, res) => {
+  try {
+    const feedbacks = await Feedback.find().populate('user', 'name username email').sort({ createdAt: -1 })
+    res.status(200).json(feedbacks)
+  } catch (err) {
+    console.error('Error listing feedbacks:', err.message)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+export const markFeedbackSeen = async (req, res) => {
+  try {
+    const { id } = req.params
+    const feedback = await Feedback.findByIdAndUpdate(id, { seen: true }, { new: true })
+    if (!feedback) {
+      return res.status(404).json({ message: 'Feedback not found' })
+    }
+    res.status(200).json(feedback)
+  } catch (err) {
+    console.error('Error marking feedback seen:', err.message)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+export const markAllFeedbacksSeen = async (req, res) => {
+  try {
+    await Feedback.updateMany({ seen: false }, { seen: true })
+    res.status(200).json({ message: 'All feedbacks marked as seen' })
+  } catch (err) {
+    console.error('Error marking all feedbacks seen:', err.message)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}

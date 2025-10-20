@@ -1,22 +1,15 @@
-import express from 'express';
-import { createFeedback, listFeedback } from '../controllers/feedbackController.js';
-import { protectRoute } from '../middleware/authMiddleware.js';
+import express from 'express'
+import { protectRoute } from '../middleware/authMiddleware.js'
+import { createFeedback, listFeedbacks, markFeedbackSeen, markAllFeedbacksSeen } from '../controllers/feedbackController.js'
 
-// middleware to require admin role after protectRoute
-const requireAdmin = (req, res, next) => {
-	if (!req.user || req.user.role !== 'admin') {
-		return res.status(403).json({ message: 'Admin access required' });
-	}
-	next();
-};
+const router = express.Router()
 
-const router = express.Router();
+// Anyone can send general feedback, but if they are authenticated we attach their user
+router.post('/', protectRoute, createFeedback)
 
-// public submission endpoint (optionally authenticated)
-// public submission endpoint (authenticated optional)
-router.post('/', createFeedback);
+// Admin or protected route to list feedbacks
+router.get('/', protectRoute, listFeedbacks)
+router.put('/:id/seen', protectRoute, markFeedbackSeen)
+router.put('/mark-all-seen', protectRoute, markAllFeedbacksSeen)
 
-// admin listing
-router.get('/', protectRoute, requireAdmin, listFeedback);
-
-export default router;
+export default router

@@ -19,6 +19,7 @@ import streamRoutes from "./routes/streamRoute.js"
 import messageRoutes from "./routes/messageRoute.js"
 import achievementsRoutes from "./routes/achievementsRoute.js"
 import feedbackRoutes from "./routes/feedbackRoute.js"
+import reportRoutes from "./routes/reportRoute.js"
 
 import { connectDB } from "./lib/db.js";
 import { initializeSocket } from "./lib/socket.js";
@@ -55,7 +56,8 @@ app.use("/api/v1/mentorships", mentorshipRoutes)
 app.use("/api/v1/stream", streamRoutes)
 app.use("/api/v1/messages", messageRoutes)
 app.use("/api/v1/achievements", achievementsRoutes)
-app.use("/api/v1/feedback", feedbackRoutes)
+app.use("/api/v1/feedbacks", feedbackRoutes)
+app.use("/api/v1/reports", reportRoutes)
 
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)

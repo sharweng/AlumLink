@@ -68,7 +68,9 @@ const Navbar = () => {
   const { mutate: logout } = useMutation({
     mutationFn: () => axiosInstance.post("/auth/logout"),
     onSuccess: () => {
+      queryClient.setQueryData(["authUser"], null)
       queryClient.invalidateQueries({ queryKey: ["authUser"] })
+      navigate("/login")
     }
   })
 
