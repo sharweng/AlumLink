@@ -17,9 +17,11 @@ import {
   X as XIcon,
   Loader
 } from "lucide-react";
+import { Flag } from 'lucide-react';
 import { formatDistanceToNow, format } from "date-fns";
 import ConfirmModal from "../common/ConfirmModal";
-import ReportMenuItem from '../feedback/ReportMenuItem'
+import ReportModal from '../common/ReportModal'
+import { MoreVertical } from 'lucide-react';
 
 const EventPost = ({ event }) => {
   const queryClient = useQueryClient();
@@ -27,6 +29,8 @@ const EventPost = ({ event }) => {
   const authUser = queryClient.getQueryData(["authUser"]);
   const isOrganizer = authUser?._id === event.organizer._id;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   
   const userRsvp = event.attendees?.find(a => a.user._id === authUser?._id);
   const userStatus = userRsvp?.rsvpStatus;
@@ -63,6 +67,8 @@ const EventPost = ({ event }) => {
       toast.error(error.response?.data?.message || "Failed to delete event");
     },
   });
+
+  // Report handled by ReportModal
 
   const getStatusBadge = () => {
     const badges = {
@@ -121,8 +127,14 @@ const EventPost = ({ event }) => {
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
       {/* Event Content */}
-      <Link to={`/event/${event._id}`}>
-        <div className="p-4 cursor-pointer hover:bg-gray-50 transition-colors">
+      <div
+        className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+        onClick={(e) => {
+          // only navigate when user clicks on the card area (not on buttons)
+          if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.dropdown-menu')) return;
+          navigate(`/event/${event._id}`);
+        }}
+      >
           {/* Header with Type and Status Badges */}
           <div className="flex items-start justify-between gap-2 mb-3">
             <div className="flex-1">
@@ -138,12 +150,40 @@ const EventPost = ({ event }) => {
                 {event.title}
               </h2>
             </div>
-          </div>
-          {!isOrganizer && (
-            <div className="flex items-center">
-              <ReportMenuItem page={`event:${event._id}`} />
+            <div className='relative ml-2 flex-shrink-0'>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowActions(!showActions); }}
+                className='p-1 hover:bg-gray-100 rounded-full transition-colors'
+              >
+                <MoreVertical size={18} className='text-gray-700' />
+              </button>
+              {showActions && (
+                <>
+                  <div className='fixed inset-0 z-10' onClick={() => setShowActions(false)} />
+                  <div className='absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
+                    {!isOrganizer && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowReportModal(true); setShowActions(false); }}
+                        className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                      >
+                        <Flag size={14} className='text-red-500' />
+                        Report
+                      </button>
+                    )}
+                    {isOrganizer && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); setShowActions(false); }}
+                        className='w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2'
+                      >
+                        <Trash2 size={16} />
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Organizer */}
           <div 
@@ -210,7 +250,6 @@ const EventPost = ({ event }) => {
             )}
           </div>
         </div>
-      </Link>
 
       {/* RSVP Buttons - Outside the Link */}
       <div className="px-4 pb-4">
@@ -298,6 +337,12 @@ const EventPost = ({ event }) => {
         isLoading={isDeleting}
         loadingText="Deleting..."
         confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        defaultType='event'
+        targetId={event._id}
       />
     </div>
   );

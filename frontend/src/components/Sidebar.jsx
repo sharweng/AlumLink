@@ -1,11 +1,15 @@
-import { Bell, Home, UserPlus, Briefcase, Calendar, Trophy } from "lucide-react"
+import { Bell, Home, UserPlus, Briefcase, Calendar, Trophy, MessageSquare } from "lucide-react"
 import { Link } from "react-router-dom"
+import { useState } from 'react'
+import FeedbackModal from './common/FeedbackModal'
 
 const Sidebar = ({ user }) => {
-  if (!user) return null; // Handle loading state
+    const [showFeedback, setShowFeedback] = useState(false)
+    if (!user) return null; // Handle loading state
   
-  return (
-    <div className='bg-secondary rounded-lg shadow'>
+    return (
+        <>
+            <div className='bg-secondary rounded-lg shadow'>
         <div className='p-4 text-center'>
             <div
                 className='h-16 rounded-t-lg bg-cover bg-center'
@@ -83,8 +87,30 @@ const Sidebar = ({ user }) => {
                 Visit your profile
             </Link>
         </div>
-    </div>
-  )
+            </div>
+            {/* Feedback island separate from sidebar (visual island) */}
+            <div className='mt-4'>
+                <div className='bg-white rounded-lg shadow p-4 text-sm border border-red-100'>
+                    <div className='flex items-start gap-3'>
+                        <MessageSquare size={20} className='text-red-600' />
+                        <div className='flex-1'>
+                            <div className='font-semibold text-red-700'>Help improve AlumLink</div>
+                            <div className='text-xs text-red-500'>Send general feedback or report issues</div>
+                        </div>
+                    </div>
+                    <div className='mt-3 text-right'>
+                        <button
+                            onClick={() => setShowFeedback(true)}
+                            className='px-3 py-1 text-sm rounded bg-red-50 text-red-700 hover:bg-red-100'
+                        >
+                            Send Feedback
+                        </button>
+                    </div>
+                </div>
+                <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} />
+            </div>
+        </>
+    )
 }
 
 export default Sidebar

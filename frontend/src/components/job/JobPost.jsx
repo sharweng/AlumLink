@@ -12,12 +12,14 @@ import {
   Calendar,
   PhilippinePeso,
   MoreVertical,
+  Flag,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import JobPostEdit from './JobPostEdit';
 import { Link, useNavigate } from 'react-router-dom';
 import ConfirmModal from '../common/ConfirmModal';
-import ReportMenuItem from '../feedback/ReportMenuItem';
+import FeedbackModal from '../common/FeedbackModal';
+import ReportModal from '../common/ReportModal';
 
 const JobPost = ({ jobPost, isDetailPage = false }) => {
   const queryClient = useQueryClient();
@@ -26,6 +28,7 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   
   const isOwner = authUser._id === jobPost.author._id;
   const hasApplied = jobPost.applicants?.some(applicant => {
@@ -62,6 +65,9 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
       toast.error(error.response?.data?.message || 'Failed to delete job post');
     }
   });
+
+  // We'll use ReportModal to submit reports
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const getJobTypeStyle = (type) => {
     const styles = {
@@ -171,7 +177,7 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
             }}
             className='p-1 hover:bg-green-50 rounded-full transition-colors'
           >
-            <MoreVertical size={18} className='text-green-600' />
+            <MoreVertical size={18} className='text-gray-700' />
           </button>
 
           {showDropdown && (
@@ -195,10 +201,17 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
                   Share
                 </button>
                 {!isOwner && (
-                  <>
-                    {/* Report option for non-owners */}
-                    <ReportMenuItem page={`job:${jobPost._id}`} onClickExtra={() => setShowDropdown(false)} />
-                  </>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowReportModal(true);
+                      setShowDropdown(false);
+                    }}
+                    className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                  >
+                    <Flag size={16} className='text-red-500' />
+                    Report
+                  </button>
                 )}
                 {isOwner && (
                   <>
@@ -275,6 +288,18 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
         loadingText="Deleting..."
         confirmButtonClass="bg-red-500 hover:bg-red-600"
       />
+
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        defaultType='job'
+        targetId={jobPost._id}
+      />
+
+      {/* Feedback modal (optional quick access from card) */}
+      {showFeedbackModal && (
+        <FeedbackModal isOpen={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} />
+      )}
     </div>
   );
 };

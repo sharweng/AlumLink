@@ -24,9 +24,10 @@ import {
   ChevronDown,
   ChevronRight as ChevronRightIcon
 } from "lucide-react";
+import { MoreVertical, Flag } from 'lucide-react';
 import { formatDistanceToNow } from "date-fns";
 import ConfirmModal from "../common/ConfirmModal";
-import ReportMenuItem from '../feedback/ReportMenuItem'
+import ReportModal from '../common/ReportModal'
 
 const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = null }) => {
   const navigate = useNavigate();
@@ -58,6 +59,8 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   const [editFileError, setEditFileError] = useState("");
   const [showEditErrors, setShowEditErrors] = useState({ title: false, content: false });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showActionsDropdown, setShowActionsDropdown] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [showDeleteCommentConfirm, setShowDeleteCommentConfirm] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState(null);
   const [showDeleteReplyConfirm, setShowDeleteReplyConfirm] = useState(false);
@@ -300,6 +303,18 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
     onError: (error) => {
       toast.error(error.response?.data?.message || "Failed to delete discussion");
     },
+  });
+
+  const { mutate: reportDiscussion, isPending: isReportingDiscussion } = useMutation({
+    mutationFn: async (payload) => {
+      await axiosInstance.post('/reports', payload);
+    },
+    onSuccess: () => {
+      toast.success('Report submitted. Our team will review this discussion.');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to submit report');
+    }
   });
 
   const { mutate: likeDiscussion } = useMutation({
@@ -712,28 +727,48 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
               </p>
             </div>
           </div>
-          {isOwner && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setIsEditing(true)}
-                className="text-green-600 hover:bg-green-50 p-2 rounded"
-              >
-                <Edit size={18} />
-              </button>
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={isDeletingDiscussion}
-                className="text-red-600 hover:bg-red-50 p-2 rounded"
-              >
-                <Trash2 size={18} />
-              </button>
-            </div>
-          )}
-          {!isOwner && (
-            <div className="flex gap-2">
-              <ReportMenuItem page={`discussion:${discussion._id}`} />
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {isOwner ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="text-green-600 hover:bg-green-50 p-2 rounded"
+                >
+                  <Edit size={18} />
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={isDeletingDiscussion}
+                  className="text-red-600 hover:bg-red-50 p-2 rounded"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            ) : (
+              <div className='relative'>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowActionsDropdown(!showActionsDropdown); }}
+                  className='p-2 hover:bg-green-50 rounded-full transition-colors'
+                >
+                  <MoreVertical size={18} className='text-gray-700' />
+                </button>
+                {showActionsDropdown && (
+                  <>
+                    <div className='fixed inset-0 z-10' onClick={() => setShowActionsDropdown(false)} />
+                    <div className='absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowReportModal(true); setShowActionsDropdown(false); }}
+                        className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                      >
+                        <Flag size={14} className='text-red-500' />
+                        Report
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1592,6 +1627,12 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         isLoading={isDeletingReply}
         loadingText="Deleting..."
         confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        defaultType='discussion'
+        targetId={discussion._id}
       />
     </div>
   );

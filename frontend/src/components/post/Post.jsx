@@ -1,4 +1,4 @@
-import { useQueryClient, useMutation, mutationOptions } from "@tanstack/react-query"
+import { useQueryClient, useMutation } from "@tanstack/react-query"
 import { useState, useRef, useEffect } from "react"
 import { axiosInstance } from "../../lib/axios"
 import toast from "react-hot-toast"
@@ -21,10 +21,11 @@ import {
   ChevronLeft,
   ChevronRight
 } from "lucide-react"
+import { MoreVertical, Flag } from 'lucide-react'
 import PostAction from "./PostAction"
 import { formatDistanceToNow } from "date-fns"
 import ConfirmModal from "../common/ConfirmModal"
-import ReportMenuItem from '../feedback/ReportMenuItem'
+import ReportModal from '../common/ReportModal'
 
 const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   const { postId } = useParams()
@@ -53,6 +54,8 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   const [isImageTall, setIsImageTall] = useState(false)
   const [selectedImageIndex, setSelectedImageIndex] = useState(null)
   const [showDeletePostConfirm, setShowDeletePostConfirm] = useState(false)
+  const [showActionsDropdown, setShowActionsDropdown] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(false)
   const [showDeleteCommentConfirm, setShowDeleteCommentConfirm] = useState(false)
   const [commentToDelete, setCommentToDelete] = useState(null)
   const [showDeleteReplyConfirm, setShowDeleteReplyConfirm] = useState(false)
@@ -78,6 +81,8 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
       return part;
     });
   };
+
+  // Report handled by ReportModal
 
   // Format numbers with K notation
   const formatCount = (count) => {
@@ -608,35 +613,52 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
           </div>
         
           <div className='flex items-center gap-2'>
-                    {isOwner && (
-                      <>
-                        <li>
-                          <button
-                            onClick={() => setEditMode(true)}
-                            className="flex items-center gap-2 w-full px-2 py-1 hover:bg-gray-100"
-                          >
-                            <Edit size={16} /> Edit
-                          </button>
-                        </li>
-                        <li>
-                          <button
-                            onClick={() => setShowDeleteConfirm(true)}
-                            className="flex items-center gap-2 w-full px-2 py-1 hover:bg-gray-100 text-red-600"
-                          >
-                            <Trash2 size={16} /> Delete
-                          </button>
-                        </li>
-                      </>
-                    )}
-                    {!isOwner && (
-                      <>
-                        <li>
-                          <ReportMenuItem
-                            page={`post:${post._id}`}
-                          />
-                        </li>
-                      </>
-                    )}
+            {isOwner ? (
+              <>
+                <button 
+                  onClick={handleEditPost} 
+                  disabled={isEditingPost}
+                  className="text-green-600 hover:bg-green-50 p-2 rounded transition-colors disabled:opacity-50"
+                >
+                  <Edit size={18} />
+                </button>
+                <button 
+                  onClick={handleDeletePost} 
+                  disabled={isDeletingPost}
+                  className="text-red-600 hover:bg-red-50 p-2 rounded transition-colors disabled:opacity-50"
+                >
+                  {isDeletingPost ? (
+                    <Loader className="animate-spin" size={16} />
+                  ) : (
+                    <Trash2 size={18} />
+                  )}
+                </button>
+              </>
+            ) : (
+              <div className='relative'>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowActionsDropdown(!showActionsDropdown); }}
+                  className='p-2 hover:bg-green-50 rounded-full transition-colors'
+                  title='More actions'
+                >
+                  <MoreVertical size={18} className='text-gray-700' />
+                </button>
+                {showActionsDropdown && (
+                  <>
+                    <div className='fixed inset-0 z-10' onClick={() => setShowActionsDropdown(false)} />
+                    <div className='absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setShowReportModal(true); setShowActionsDropdown(false); }}
+                              className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                            >
+                              <Flag size={14} className='text-red-500' />
+                              Report
+                            </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1339,6 +1361,12 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
         isLoading={isDeletingPost}
         loadingText="Deleting..."
         confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        defaultType='post'
+        targetId={post._id}
       />
 
       {/* Delete Comment Confirmation Modal */}
