@@ -3,7 +3,7 @@ import { X, Loader } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { axiosInstance } from '../../lib/axios'
 
-const ReportModal = ({ isOpen, onClose, defaultType = 'post', targetId = null }) => {
+const ReportModal = ({ isOpen, onClose, defaultType = 'post', targetId = null, subTarget = null }) => {
   const [type, setType] = useState(defaultType)
   const [details, setDetails] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -22,7 +22,9 @@ const ReportModal = ({ isOpen, onClose, defaultType = 'post', targetId = null })
     }
     setIsLoading(true)
     try {
-      await axiosInstance.post('/reports', { type, target: targetId, details })
+      const payload = { type, target: targetId, details }
+      if (subTarget) payload.subTarget = subTarget
+      await axiosInstance.post('/reports', payload)
       toast.success('Report submitted. Our team will review it.')
       onClose()
     } catch (err) {

@@ -4,7 +4,7 @@ import User from '../models/User.js'
 
 export const createReport = async (req, res) => {
   try {
-    const { type, target, details } = req.body
+    const { type, target, details, subTarget } = req.body
 
     if (!type || !target) {
       return res.status(400).json({ message: 'type and target are required' })
@@ -13,6 +13,7 @@ export const createReport = async (req, res) => {
     const report = new Report({
       type,
       target,
+      subTarget,
       details: details || '',
       reporter: req.user ? req.user._id : undefined,
     })

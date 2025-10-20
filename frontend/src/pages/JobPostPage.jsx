@@ -23,6 +23,8 @@ import {
   MoreVertical,
   X,
 } from 'lucide-react';
+import { Flag } from 'lucide-react';
+import ReportModal from '../components/common/ReportModal';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import JobPostEdit from '../components/job/JobPostEdit';
@@ -34,6 +36,7 @@ const JobPostPage = () => {
   const authUser = queryClient.getQueryData(['authUser']);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [showApplyConfirm, setShowApplyConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -233,9 +236,9 @@ const JobPostPage = () => {
             <div className='relative ml-2 flex-shrink-0'>
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
-                className='p-1 hover:bg-green-50 rounded-full transition-colors'
+                className='p-1 hover:bg-gray-100 rounded-full transition-colors'
               >
-                <MoreVertical size={18} className='text-green-600' />
+                <MoreVertical size={18} className='text-gray-700' />
               </button>
 
               {showDropdown && (
@@ -252,6 +255,15 @@ const JobPostPage = () => {
                       <Share2 size={16} />
                       Share
                     </button>
+                    {!isOwner && (
+                      <button
+                        onClick={(e) => { setShowReportModal(true); setShowDropdown(false); }}
+                        className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                      >
+                        <Flag size={16} className='text-red-500' />
+                        Report
+                      </button>
+                    )}
                     {isOwner && (
                       <>
                         <button
@@ -419,6 +431,13 @@ const JobPostPage = () => {
             onClose={() => setShowEditModal(false)} 
           />
         )}
+
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          defaultType='job'
+          targetId={jobPost?._id}
+        />
 
         {/* Apply Confirmation Modal */}
         {showApplyConfirm && (

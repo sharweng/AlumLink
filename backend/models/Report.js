@@ -11,6 +11,10 @@ const reportSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     required: true,
   },
+  // optional finer-grained target (e.g., comment or reply id under a post/discussion)
+  subTarget: {
+    type: mongoose.Schema.Types.Mixed,
+  },
   details: {
     type: String,
     default: ''

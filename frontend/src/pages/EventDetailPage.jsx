@@ -23,6 +23,9 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import { MoreVertical } from 'lucide-react';
+import { Flag } from 'lucide-react';
+import ReportModal from '../components/common/ReportModal';
 import { format, formatDistanceToNow } from 'date-fns';
 
 const EventDetailPage = () => {
@@ -33,6 +36,8 @@ const EventDetailPage = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
   const [showCancelEventConfirm, setShowCancelEventConfirm] = useState(false);
   const [showDeleteEventConfirm, setShowDeleteEventConfirm] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const { data: event, isLoading } = useQuery({
     queryKey: ['event', id],
@@ -191,6 +196,31 @@ const EventDetailPage = () => {
                 </span>
               </div>
               <h1 className="text-3xl font-bold mb-4">{event.title}</h1>
+            </div>
+            <div className='relative ml-2'>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowDropdown(prev => !prev); }}
+                className='p-2 hover:bg-gray-100 rounded-full'
+                title='More actions'
+              >
+                <MoreVertical size={18} className='text-gray-700' />
+              </button>
+              {showDropdown && (
+                <>
+                  <div className='fixed inset-0 z-10' onClick={() => setShowDropdown(false)} />
+                  <div className='absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
+                    {!isOrganizer && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowDropdown(false); setShowReportModal(true); }}
+                        className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                      >
+                        <Flag size={14} className='text-red-500' />
+                        Report
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -520,6 +550,12 @@ const EventDetailPage = () => {
         isLoading={isDeleting}
         loadingText="Deleting..."
         confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        defaultType='event'
+        targetId={event?._id}
       />
     </div>
   );

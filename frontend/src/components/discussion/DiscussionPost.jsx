@@ -61,6 +61,9 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [reportSubTarget, setReportSubTarget] = useState(null);
+  const [openCommentMenu, setOpenCommentMenu] = useState(null);
+  const [openReplyMenu, setOpenReplyMenu] = useState(null);
   const [showDeleteCommentConfirm, setShowDeleteCommentConfirm] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState(null);
   const [showDeleteReplyConfirm, setShowDeleteReplyConfirm] = useState(false);
@@ -1289,6 +1292,32 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                               </button>
                             </>
                           )}
+                          {!isCommentOwner && (
+                            <div className='relative'>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setOpenCommentMenu(openCommentMenu === comment._id ? null : comment._id); }}
+                                className='p-1 hover:bg-gray-100 rounded-full'
+                                title='More'
+                              >
+                                <MoreVertical size={12} />
+                              </button>
+                              {openCommentMenu === comment._1d /* fallback, will be replaced below */ && null}
+                              {openCommentMenu === comment._id && (
+                                <>
+                                  <div className='fixed inset-0 z-10' onClick={() => setOpenCommentMenu(null)} />
+                                  <div className='absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setReportSubTarget(comment._id); setShowReportModal(true); setOpenCommentMenu(null); }}
+                                      className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                    >
+                                      <Flag size={12} className='text-red-500' />
+                                      Report
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                       {isEditingThisComment ? (
@@ -1394,6 +1423,31 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                                       {formatDistanceToNow(new Date(reply.createdAt), { addSuffix: true })}
                                       {reply.editedAt && ' (edited)'}
                                     </span>
+                                    {!isReplyOwner && (
+                                      <div className='relative'>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setOpenReplyMenu(openReplyMenu === reply._id ? null : reply._id); }}
+                                          className='p-1 hover:bg-gray-100 rounded-full'
+                                          title='More'
+                                        >
+                                          <MoreVertical size={10} />
+                                        </button>
+                                        {openReplyMenu === reply._id && (
+                                          <>
+                                            <div className='fixed inset-0 z-10' onClick={() => setOpenReplyMenu(null)} />
+                                            <div className='absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
+                                              <button
+                                                onClick={(e) => { e.stopPropagation(); setReportSubTarget(reply._id); setShowReportModal(true); setOpenReplyMenu(null); }}
+                                                className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                              >
+                                                <Flag size={12} className='text-red-500' />
+                                                Report
+                                              </button>
+                                            </div>
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
                                     {isReplyOwner && !isEditingThisReply && (
                                       <>
                                         <button
@@ -1630,9 +1684,10 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
       />
       <ReportModal
         isOpen={showReportModal}
-        onClose={() => setShowReportModal(false)}
+        onClose={() => { setShowReportModal(false); setReportSubTarget(null); }}
         defaultType='discussion'
         targetId={discussion._id}
+        subTarget={reportSubTarget}
       />
     </div>
   );

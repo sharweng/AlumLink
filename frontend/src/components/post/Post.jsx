@@ -56,6 +56,9 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   const [showDeletePostConfirm, setShowDeletePostConfirm] = useState(false)
   const [showActionsDropdown, setShowActionsDropdown] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
+  const [reportSubTarget, setReportSubTarget] = useState(null)
+  const [openCommentMenu, setOpenCommentMenu] = useState(null)
+  const [openReplyMenu, setOpenReplyMenu] = useState(null)
   const [showDeleteCommentConfirm, setShowDeleteCommentConfirm] = useState(false)
   const [commentToDelete, setCommentToDelete] = useState(null)
   const [showDeleteReplyConfirm, setShowDeleteReplyConfirm] = useState(false)
@@ -648,7 +651,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                     <div className='fixed inset-0 z-10' onClick={() => setShowActionsDropdown(false)} />
                     <div className='absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
                             <button
-                              onClick={(e) => { e.stopPropagation(); setShowReportModal(true); setShowActionsDropdown(false); }}
+                              onClick={(e) => { e.stopPropagation(); setReportSubTarget(null); setShowReportModal(true); setShowActionsDropdown(false); }}
                               className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                             >
                               <Flag size={14} className='text-red-500' />
@@ -995,6 +998,31 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                               {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
                               {comment.editedAt && ' (edited)'}
                             </span>
+                            {!isCommentOwner && (
+                              <div className='relative'>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setOpenCommentMenu(openCommentMenu === comment._id ? null : comment._id); }}
+                                  className='p-1 hover:bg-gray-100 rounded-full'
+                                  title='More'
+                                >
+                                  <MoreVertical size={12} />
+                                </button>
+                                {openCommentMenu === comment._id && (
+                                  <>
+                                    <div className='fixed inset-0 z-10' onClick={() => setOpenCommentMenu(null)} />
+                                    <div className='absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); setReportSubTarget(comment._id); setShowReportModal(true); setOpenCommentMenu(null); }}
+                                        className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                      >
+                                        <Flag size={12} className='text-red-500' />
+                                        Report
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            )}
                             {isCommentOwner && !isEditingComment && (
                               <>
                                 <button
@@ -1139,6 +1167,31 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                         {formatDistanceToNow(new Date(reply.createdAt), { addSuffix: true })}
                                         {reply.editedAt && ' (edited)'}
                                       </span>
+                                      {!isReplyOwner && (
+                                        <div className='relative'>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); setOpenReplyMenu(openReplyMenu === reply._id ? null : reply._id); }}
+                                            className='p-1 hover:bg-gray-100 rounded-full'
+                                            title='More'
+                                          >
+                                            <MoreVertical size={10} />
+                                          </button>
+                                          {openReplyMenu === reply._id && (
+                                            <>
+                                              <div className='fixed inset-0 z-10' onClick={() => setOpenReplyMenu(null)} />
+                                              <div className='absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
+                                                <button
+                                                  onClick={(e) => { e.stopPropagation(); setReportSubTarget(reply._id); setShowReportModal(true); setOpenReplyMenu(null); }}
+                                                  className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                                >
+                                                  <Flag size={12} className='text-red-500' />
+                                                  Report
+                                                </button>
+                                              </div>
+                                            </>
+                                          )}
+                                        </div>
+                                      )}
                                       {isReplyOwner && !isEditingReply && (
                                         <>
                                           <button
@@ -1364,9 +1417,10 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
       />
       <ReportModal
         isOpen={showReportModal}
-        onClose={() => setShowReportModal(false)}
+        onClose={() => { setShowReportModal(false); setReportSubTarget(null); }}
         defaultType='post'
         targetId={post._id}
+        subTarget={reportSubTarget}
       />
 
       {/* Delete Comment Confirmation Modal */}

@@ -480,7 +480,13 @@ const AdminDashboard = () => {
                         <div className="text-sm mt-2 truncate" onClick={(e) => { e.stopPropagation(); setSelectedReport(r); setShowReportModal(true); markReportSeenMutation.mutate(r._id); }}>{r.details || <span className="text-gray-400">No details provided</span>}</div>
                       </div>
                       <div className="flex flex-col items-end gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
-                        <a href={r.type === 'post' ? `/post/${r.target}` : r.type === 'discussion' ? `/discussion/${r.target}` : r.type === 'job' ? `/job/${r.target}` : r.type === 'event' ? `/event/${r.target}` : '#'} className="text-sm text-primary underline whitespace-nowrap">View {r.type.charAt(0).toUpperCase() + r.type.slice(1)}</a>
+                        <a href={
+                          r.type === 'post' ? `/post/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` :
+                          r.type === 'discussion' ? `/discussion/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` :
+                          r.type === 'job' ? `/job/${r.target}` :
+                          r.type === 'event' ? `/event/${r.target}` :
+                          '#'
+                        } className="text-sm text-primary underline whitespace-nowrap">View {r.type.charAt(0).toUpperCase() + r.type.slice(1)}</a>
                         <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded whitespace-nowrap" onClick={() => markReportSeenMutation.mutate(r._id)}>Mark Seen</button>
                       </div>
                     </div>
@@ -525,7 +531,13 @@ const AdminDashboard = () => {
                           <div className="text-sm mt-2 truncate" onClick={(e) => { e.stopPropagation(); setSelectedReport(r); setShowReportModal(true); markReportSeenMutation.mutate(r._id); }}>{r.details || <span className="text-gray-400">No details provided</span>}</div>
                         </div>
                         <div className="flex flex-col items-end gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
-                          <a href={r.type === 'post' ? `/post/${r.target}` : r.type === 'discussion' ? `/discussion/${r.target}` : r.type === 'job' ? `/job/${r.target}` : r.type === 'event' ? `/event/${r.target}` : '#'} className="text-sm text-primary underline whitespace-nowrap">View {r.type.charAt(0).toUpperCase() + r.type.slice(1)}</a>
+                          <a href={
+                            r.type === 'post' ? `/post/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` :
+                            r.type === 'discussion' ? `/discussion/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` :
+                            r.type === 'job' ? `/job/${r.target}` :
+                            r.type === 'event' ? `/event/${r.target}` :
+                            '#'
+                          } className="text-sm text-primary underline whitespace-nowrap">View {r.type.charAt(0).toUpperCase() + r.type.slice(1)}</a>
                           <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded whitespace-nowrap" onClick={() => markReportSeenMutation.mutate(r._id)}>Mark Seen</button>
                         </div>
                       </div>
