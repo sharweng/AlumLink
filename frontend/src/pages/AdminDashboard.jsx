@@ -578,39 +578,41 @@ const AdminDashboard = () => {
               </div>
             ) : (
               <div className="overflow-auto max-h-96">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm table-fixed">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-3 py-2 text-left">Action</th>
-                      <th className="px-3 py-2 text-left">Target</th>
-                      <th className="px-3 py-2 text-left">Go</th>
-                      <th className="px-3 py-2 text-left">By</th>
-                      <th className="px-3 py-2 text-left">At</th>
+                      <th className="px-3 py-2 text-center w-1/5">Action</th>
+                      <th className="px-3 py-2 text-center w-1/5">Target</th>
+                      <th className="px-3 py-2 text-center w-1/5">By</th>
+                      <th className="px-3 py-2 text-center w-1/5">Date-Time</th>
+                      <th className="px-3 py-2 text-center w-1/5">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {moderationLogs?.map((log) => (
                       <tr key={log._id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => { setSelectedLog(log); setShowLogModal(true); }}>
-                        <td className="px-3 py-2">{log.action.toUpperCase()}</td>
-                        <td className="px-3 py-2">{log.targetType}</td>
-                        <td className="px-3 py-2">
-                          <a
-                            href={
-                              log.targetType === 'post' ? `/post/${log.targetId}` :
-                              log.targetType === 'comment' ? `/post/${log.parentId}?comment=${log.targetId}` :
-                              log.targetType === 'reply' ? `/post/${log.parentId}?reply=${log.targetId}&comment=${log.parentId}` :
-                              log.targetType === 'job' ? `/job/${log.targetId}` :
-                              log.targetType === 'event' ? `/event/${log.targetId}` :
-                              log.targetType === 'discussion' ? `/discussion/${log.targetId}` : '#'
-                            }
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-sm text-primary underline"
+                        <td className="px-3 py-2 text-center">{log.action.toUpperCase()}</td>
+                        <td className="px-3 py-2 text-center">{log.targetType}</td>
+                        <td className="px-3 py-2 text-center">{log.performedBy?.name || log.performedBy?.username}</td>
+                        <td className="px-3 py-2 text-center">{new Date(log.performedAt).toLocaleString()}</td>
+                        <td className="px-3 py-2 text-center">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const url =
+                                log.targetType === 'post' ? `/post/${log.targetId}` :
+                                log.targetType === 'comment' ? `/post/${log.parentId}?comment=${log.targetId}` :
+                                log.targetType === 'reply' ? `/post/${log.parentId}?reply=${log.targetId}&comment=${log.parentId}` :
+                                log.targetType === 'job' ? `/job/${log.targetId}` :
+                                log.targetType === 'event' ? `/event/${log.targetId}` :
+                                log.targetType === 'discussion' ? `/discussion/${log.targetId}` : '#';
+                              navigate(url);
+                            }}
+                            className="w-28 px-3 py-1 rounded text-xs bg-red-100 text-red-700 hover:bg-red-200"
                           >
-                            Go
-                          </a>
+                            View {log.targetType}
+                          </button>
                         </td>
-                        <td className="px-3 py-2">{log.performedBy?.name || log.performedBy?.username}</td>
-                        <td className="px-3 py-2">{new Date(log.performedAt).toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
