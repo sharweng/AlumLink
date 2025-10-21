@@ -6,6 +6,7 @@ import {
     toggleUserStatus,
     getDashboardStats
 } from "../controllers/adminController.js";
+import { getModerationLogs } from "../controllers/moderationController.js";
 
 const router = express.Router();
 
@@ -13,5 +14,6 @@ router.get("/stats", protectRoute, getDashboardStats);
 router.get("/users", protectRoute, getAllUsers);
 router.put("/users/:userId/role", protectRoute, updateUserRole);
 router.put("/users/:userId/toggle-status", protectRoute, toggleUserStatus);
+router.get('/moderation-logs', protectRoute, getModerationLogs);
 
 export default router;

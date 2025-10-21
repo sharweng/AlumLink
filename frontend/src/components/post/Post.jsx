@@ -738,7 +738,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
               <div className='relative'>
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowActionsDropdown(!showActionsDropdown); }}
-                  className='p-2 hover:bg-green-50 rounded-full transition-colors'
+                  className='p-2 hover:bg-gray-50 rounded-full transition-colors'
                   title='More actions'
                 >
                   <MoreVertical size={18} className='text-gray-700' />

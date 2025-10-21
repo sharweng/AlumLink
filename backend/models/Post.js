@@ -22,6 +22,7 @@ const postSchema = new mongoose.Schema({
     comments: [{
         content: { type: String },
         user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        banned: { type: Boolean, default: false },
         createdAt: { type: Date, default: Date.now },
         editedAt: { type: Date },
         likes: [{ 
@@ -35,10 +36,12 @@ const postSchema = new mongoose.Schema({
         replies: [{
             content: { type: String },
             user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+            banned: { type: Boolean, default: false },
             createdAt: { type: Date, default: Date.now },
             editedAt: { type: Date },
         }]
     }],
+    banned: { type: Boolean, default: false },
     editedAt: { 
         type: Date 
     },

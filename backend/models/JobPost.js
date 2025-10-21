@@ -99,6 +99,7 @@ const jobPostSchema = new mongoose.Schema({
         createdAt: { type: Date, default: Date.now },
         editedAt: { type: Date },
     }],
+    banned: { type: Boolean, default: false },
 }, { timestamps: true });
 
 // Index for better search performance

@@ -15,6 +15,13 @@ import {
     updateReply,
     likeComment,
     dislikeComment
+    ,
+    banPost,
+    unbanPost,
+    banComment,
+    unbanComment,
+    banReply,
+    unbanReply
 } from "../controllers/postController.js";
 
 const router = express.Router();
@@ -33,5 +40,13 @@ router.delete("/:id/comment/:commentId/reply/:replyId", protectRoute, deleteRepl
 router.put("/:id/comment/:commentId/reply/:replyId", protectRoute, updateReply);
 router.post("/:id/comment/:commentId/like", protectRoute, likeComment);
 router.post("/:id/comment/:commentId/dislike", protectRoute, dislikeComment);
+    
+    // Admin ban/unban endpoints for posts, comments and replies
+    router.put('/:id/ban', protectRoute, banPost);
+    router.put('/:id/unban', protectRoute, unbanPost);
+    router.put('/:id/comment/:commentId/ban', protectRoute, banComment);
+    router.put('/:id/comment/:commentId/unban', protectRoute, unbanComment);
+    router.put('/:id/comment/:commentId/reply/:replyId/ban', protectRoute, banReply);
+    router.put('/:id/comment/:commentId/reply/:replyId/unban', protectRoute, unbanReply);
 
 export default router;

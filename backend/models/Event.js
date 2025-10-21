@@ -84,6 +84,7 @@ const eventSchema = new mongoose.Schema({
     editedAt: {
         type: Date
     },
+    banned: { type: Boolean, default: false },
 }, { timestamps: true });
 
 const Event = mongoose.model("Event", eventSchema);

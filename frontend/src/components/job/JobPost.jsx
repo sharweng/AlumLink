@@ -175,7 +175,7 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
               e.stopPropagation();
               setShowDropdown(!showDropdown);
             }}
-            className='p-1 hover:bg-green-50 rounded-full transition-colors'
+            className='p-1 hover:bg-gray-50 rounded-full transition-colors'
           >
             <MoreVertical size={18} className='text-gray-700' />
           </button>
