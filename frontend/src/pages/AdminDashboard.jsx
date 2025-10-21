@@ -37,6 +37,8 @@ const AdminDashboard = () => {
   const [selectedFeedback, setSelectedFeedback] = useState(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [selectedLog, setSelectedLog] = useState(null);
 
   // Check if current user is deactivated on mount and periodically
   useEffect(() => {
@@ -581,17 +583,32 @@ const AdminDashboard = () => {
                     <tr>
                       <th className="px-3 py-2 text-left">Action</th>
                       <th className="px-3 py-2 text-left">Target</th>
-                      <th className="px-3 py-2 text-left">Parent</th>
+                      <th className="px-3 py-2 text-left">Go</th>
                       <th className="px-3 py-2 text-left">By</th>
                       <th className="px-3 py-2 text-left">At</th>
                     </tr>
                   </thead>
                   <tbody>
                     {moderationLogs?.map((log) => (
-                      <tr key={log._id} className="border-b">
+                      <tr key={log._id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => { setSelectedLog(log); setShowLogModal(true); }}>
                         <td className="px-3 py-2">{log.action.toUpperCase()}</td>
-                        <td className="px-3 py-2">{log.targetType} {log.targetId}</td>
-                        <td className="px-3 py-2">{log.parentId || '-'}</td>
+                        <td className="px-3 py-2">{log.targetType}</td>
+                        <td className="px-3 py-2">
+                          <a
+                            href={
+                              log.targetType === 'post' ? `/post/${log.targetId}` :
+                              log.targetType === 'comment' ? `/post/${log.parentId}?comment=${log.targetId}` :
+                              log.targetType === 'reply' ? `/post/${log.parentId}?reply=${log.targetId}&comment=${log.parentId}` :
+                              log.targetType === 'job' ? `/job/${log.targetId}` :
+                              log.targetType === 'event' ? `/event/${log.targetId}` :
+                              log.targetType === 'discussion' ? `/discussion/${log.targetId}` : '#'
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-sm text-primary underline"
+                          >
+                            Go
+                          </a>
+                        </td>
                         <td className="px-3 py-2">{log.performedBy?.name || log.performedBy?.username}</td>
                         <td className="px-3 py-2">{new Date(log.performedAt).toLocaleString()}</td>
                       </tr>
@@ -600,6 +617,25 @@ const AdminDashboard = () => {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Moderation log detail modal */}
+      {showLogModal && selectedLog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-lg w-full mx-4">
+            <h3 className="text-lg font-semibold mb-2">Moderation Log</h3>
+            <div className="text-sm text-gray-600 mb-2">Action: {selectedLog.action.toUpperCase()}</div>
+            <div className="text-sm text-gray-600 mb-2">Target Type: {selectedLog.targetType}</div>
+            <div className="text-sm text-gray-600 mb-2">Target ID: {selectedLog.targetId}</div>
+            <div className="text-sm text-gray-600 mb-2">Parent ID: {selectedLog.parentId || '-'}</div>
+            <div className="text-sm text-gray-600 mb-2">By: {selectedLog.performedBy?.name || selectedLog.performedBy?.username}</div>
+            <div className="text-sm text-gray-600 mb-2">At: {new Date(selectedLog.performedAt).toLocaleString()}</div>
+            <div className="mt-3 whitespace-pre-wrap">Reason: {selectedLog.reason || 'No reason provided'}</div>
+            <div className="mt-4 flex justify-end">
+              <button className="px-3 py-1 bg-primary text-white rounded" onClick={() => { setShowLogModal(false); setSelectedLog(null); }}>Close</button>
+            </div>
           </div>
         </div>
       )}

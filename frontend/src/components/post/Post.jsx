@@ -54,6 +54,9 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   const [isImageTall, setIsImageTall] = useState(false)
   const [selectedImageIndex, setSelectedImageIndex] = useState(null)
   const [showDeletePostConfirm, setShowDeletePostConfirm] = useState(false)
+  const [showBanPostConfirm, setShowBanPostConfirm] = useState(false)
+  const [showUnbanPostConfirm, setShowUnbanPostConfirm] = useState(false)
+  const [banReason, setBanReason] = useState("")
   const [showActionsDropdown, setShowActionsDropdown] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
   const [reportSubTarget, setReportSubTarget] = useState(null)
@@ -63,6 +66,15 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   const [commentToDelete, setCommentToDelete] = useState(null)
   const [showDeleteReplyConfirm, setShowDeleteReplyConfirm] = useState(false)
   const [replyToDelete, setReplyToDelete] = useState(null)
+  // Moderation modal state for comments/replies
+  const [showBanCommentConfirm, setShowBanCommentConfirm] = useState(false)
+  const [showUnbanCommentConfirm, setShowUnbanCommentConfirm] = useState(false)
+  const [moderationCommentId, setModerationCommentId] = useState(null)
+  const [banCommentReason, setBanCommentReason] = useState("")
+  const [showBanReplyConfirm, setShowBanReplyConfirm] = useState(false)
+  const [showUnbanReplyConfirm, setShowUnbanReplyConfirm] = useState(false)
+  const [moderationReply, setModerationReply] = useState(null) // { commentId, replyId }
+  const [banReplyReason, setBanReplyReason] = useState("")
   const fileInputRef = useRef(null)
   const imageContainerRef = useRef(null)
   const isOwner = authUser._id === post.author._id
@@ -483,8 +495,8 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
 
   // Ban/Unban mutations for admin moderation
   const { mutate: banPostMutate, isPending:isBanningPost } = useMutation({
-    mutationFn: async () => {
-      await axiosInstance.put(`/posts/${post._id}/ban`)
+    mutationFn: async ({ reason } = {}) => {
+      await axiosInstance.put(`/posts/${post._id}/ban`, { reason })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] })
@@ -510,9 +522,9 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     }
   })
 
-  const { mutate: banCommentMutate } = useMutation({
-    mutationFn: async ({ commentId }) => {
-      await axiosInstance.put(`/posts/${post._id}/comment/${commentId}/ban`)
+  const { mutate: banCommentMutate, isLoading: isBanningComment } = useMutation({
+    mutationFn: async ({ commentId, reason } = {}) => {
+      await axiosInstance.put(`/posts/${post._id}/comment/${commentId}/ban`, { reason })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] })
@@ -521,7 +533,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     }
   })
 
-  const { mutate: unbanCommentMutate } = useMutation({
+  const { mutate: unbanCommentMutate, isLoading: isUnbanningComment } = useMutation({
     mutationFn: async ({ commentId }) => {
       await axiosInstance.put(`/posts/${post._id}/comment/${commentId}/unban`)
     },
@@ -532,9 +544,9 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     }
   })
 
-  const { mutate: banReplyMutate } = useMutation({
-    mutationFn: async ({ commentId, replyId }) => {
-      await axiosInstance.put(`/posts/${post._id}/comment/${commentId}/reply/${replyId}/ban`)
+  const { mutate: banReplyMutate, isLoading: isBanningReply } = useMutation({
+    mutationFn: async ({ commentId, replyId, reason } = {}) => {
+      await axiosInstance.put(`/posts/${post._id}/comment/${commentId}/reply/${replyId}/ban`, { reason })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] })
@@ -543,7 +555,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     }
   })
 
-  const { mutate: unbanReplyMutate } = useMutation({
+  const { mutate: unbanReplyMutate, isLoading: isUnbanningReply } = useMutation({
     mutationFn: async ({ commentId, replyId }) => {
       await axiosInstance.put(`/posts/${post._id}/comment/${commentId}/reply/${replyId}/unban`)
     },
@@ -748,17 +760,17 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                     <div className='fixed inset-0 z-10' onClick={() => setShowActionsDropdown(false)} />
                     <div className='absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
                               {/* Admins only see Ban/Unban, regular users see Report */}
-                              {authUser?.role === 'admin' ? (
+                                {authUser?.role === 'admin' ? (
                                 post.banned ? (
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); unbanPostMutate(); setShowActionsDropdown(false); }}
+                                    onClick={(e) => { e.stopPropagation(); setShowUnbanPostConfirm(true); setShowActionsDropdown(false); }}
                                     className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                                   >
                                     Unban
                                   </button>
                                 ) : (
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); banPostMutate(); setShowActionsDropdown(false); }}
+                                    onClick={(e) => { e.stopPropagation(); setShowBanPostConfirm(true); setShowActionsDropdown(false); }}
                                     className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                                   >
                                     Ban
@@ -1137,14 +1149,14 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                       {authUser?.role === 'admin' ? (
                                         comment.banned ? (
                                           <button
-                                            onClick={(e) => { e.stopPropagation(); unbanCommentMutate({ commentId: comment._id }); setOpenCommentMenu(null); }}
+                                            onClick={(e) => { e.stopPropagation(); setModerationCommentId(comment._id); setShowUnbanCommentConfirm(true); setOpenCommentMenu(null); }}
                                             className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                                           >
                                             Unban
                                           </button>
                                         ) : (
                                           <button
-                                            onClick={(e) => { e.stopPropagation(); banCommentMutate({ commentId: comment._id }); setOpenCommentMenu(null); }}
+                                            onClick={(e) => { e.stopPropagation(); setModerationCommentId(comment._id); setShowBanCommentConfirm(true); setOpenCommentMenu(null); }}
                                             className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                                           >
                                             Ban
@@ -1332,14 +1344,14 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                                 {authUser?.role === 'admin' ? (
                                                   reply.banned ? (
                                                     <button
-                                                      onClick={(e) => { e.stopPropagation(); unbanReplyMutate({ commentId: comment._id, replyId: reply._id }); setOpenReplyMenu(null); }}
+                                                      onClick={(e) => { e.stopPropagation(); setModerationReply({ commentId: comment._id, replyId: reply._id }); setShowUnbanReplyConfirm(true); setOpenReplyMenu(null); }}
                                                       className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                                                     >
                                                       Unban
                                                     </button>
                                                   ) : (
                                                     <button
-                                                      onClick={(e) => { e.stopPropagation(); banReplyMutate({ commentId: comment._id, replyId: reply._id }); setOpenReplyMenu(null); }}
+                                                      onClick={(e) => { e.stopPropagation(); setModerationReply({ commentId: comment._id, replyId: reply._id }); setShowBanReplyConfirm(true); setOpenReplyMenu(null); }}
                                                       className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                                                     >
                                                       Ban
@@ -1582,6 +1594,34 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
         loadingText="Deleting..."
         confirmButtonClass="bg-red-500 hover:bg-red-600"
       />
+      {/* Ban/Unban Post Confirmation Modals */}
+      <ConfirmModal
+        isOpen={showBanPostConfirm}
+        onClose={() => { setShowBanPostConfirm(false); setBanReason(""); }}
+        onConfirm={() => { banPostMutate({ reason: banReason }); setShowBanPostConfirm(false); setBanReason(""); }}
+        title="Ban Post"
+        message="Are you sure you want to ban this post? Banned posts are hidden from regular users."
+        confirmText="Yes, Ban"
+        cancelText="Cancel"
+        isLoading={isBanningPost}
+        loadingText="Banning..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+        showTextArea={true}
+        textAreaValue={banReason}
+        onTextAreaChange={(v) => setBanReason(v)}
+      />
+      <ConfirmModal
+        isOpen={showUnbanPostConfirm}
+        onClose={() => setShowUnbanPostConfirm(false)}
+        onConfirm={() => { unbanPostMutate(); setShowUnbanPostConfirm(false); }}
+        title="Unban Post"
+        message="Unban this post and restore it for regular users?"
+        confirmText="Yes, Unban"
+        cancelText="Cancel"
+        isLoading={isUnbanningPost}
+        loadingText="Unbanning..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
       <ReportModal
         isOpen={showReportModal}
         onClose={() => { setShowReportModal(false); setReportSubTarget(null); }}
@@ -1607,6 +1647,35 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
         confirmButtonClass="bg-red-500 hover:bg-red-600"
       />
 
+      {/* Ban/Unban Comment Confirmation Modals */}
+      <ConfirmModal
+        isOpen={showBanCommentConfirm}
+        onClose={() => { setShowBanCommentConfirm(false); setModerationCommentId(null); setBanCommentReason(""); }}
+        onConfirm={() => { banCommentMutate({ commentId: moderationCommentId, reason: banCommentReason }); setShowBanCommentConfirm(false); setModerationCommentId(null); setBanCommentReason(""); }}
+        title="Ban Comment"
+        message="Are you sure you want to ban this comment? Banned comments are hidden from regular users."
+        confirmText="Yes, Ban"
+        cancelText="Cancel"
+        isLoading={isBanningComment}
+        loadingText="Banning..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+        showTextArea={true}
+        textAreaValue={banCommentReason}
+        onTextAreaChange={(v) => setBanCommentReason(v)}
+      />
+      <ConfirmModal
+        isOpen={showUnbanCommentConfirm}
+        onClose={() => { setShowUnbanCommentConfirm(false); setModerationCommentId(null); }}
+        onConfirm={() => { unbanCommentMutate({ commentId: moderationCommentId }); setShowUnbanCommentConfirm(false); setModerationCommentId(null); }}
+        title="Unban Comment"
+        message="Unban this comment and restore it for regular users?"
+        confirmText="Yes, Unban"
+        cancelText="Cancel"
+        isLoading={isUnbanningComment}
+        loadingText="Unbanning..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
+
       {/* Delete Reply Confirmation Modal */}
       <ConfirmModal
         isOpen={showDeleteReplyConfirm}
@@ -1621,6 +1690,35 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
         cancelText="Cancel"
         isLoading={isDeletingReply}
         loadingText="Deleting..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
+
+      {/* Ban/Unban Reply Confirmation Modals */}
+      <ConfirmModal
+        isOpen={showBanReplyConfirm}
+        onClose={() => { setShowBanReplyConfirm(false); setModerationReply(null); setBanReplyReason(""); }}
+        onConfirm={() => { if (moderationReply) banReplyMutate({ ...moderationReply, reason: banReplyReason }); setShowBanReplyConfirm(false); setModerationReply(null); setBanReplyReason(""); }}
+        title="Ban Reply"
+        message="Are you sure you want to ban this reply? Banned replies are hidden from regular users."
+        confirmText="Yes, Ban"
+        cancelText="Cancel"
+        isLoading={isBanningReply}
+        loadingText="Banning..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+        showTextArea={true}
+        textAreaValue={banReplyReason}
+        onTextAreaChange={(v) => setBanReplyReason(v)}
+      />
+      <ConfirmModal
+        isOpen={showUnbanReplyConfirm}
+        onClose={() => { setShowUnbanReplyConfirm(false); setModerationReply(null); }}
+        onConfirm={() => { if (moderationReply) unbanReplyMutate(moderationReply); setShowUnbanReplyConfirm(false); setModerationReply(null); }}
+        title="Unban Reply"
+        message="Unban this reply and restore it for regular users?"
+        confirmText="Yes, Unban"
+        cancelText="Cancel"
+        isLoading={isUnbanningReply}
+        loadingText="Unbanning..."
         confirmButtonClass="bg-red-500 hover:bg-red-600"
       />
     </div>

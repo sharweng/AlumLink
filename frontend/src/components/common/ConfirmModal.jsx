@@ -11,6 +11,12 @@ const ConfirmModal = ({
   isLoading = false,
   loadingText = "Processing...",
   confirmButtonClass = "bg-red-500 hover:bg-red-600"
+  ,
+  // optional textarea for reason or extra info
+  showTextArea = false,
+  textAreaValue = "",
+  onTextAreaChange = null,
+  textAreaPlaceholder = "Optional reason (why you're banning)",
 }) => {
   if (!isOpen) return null;
 
@@ -29,6 +35,18 @@ const ConfirmModal = ({
         <p className='text-gray-600 mb-6'>
           {message}
         </p>
+        {showTextArea && (
+          <div className='mb-4'>
+            <textarea
+              value={textAreaValue}
+              onChange={(e) => onTextAreaChange && onTextAreaChange(e.target.value)}
+              placeholder={textAreaPlaceholder}
+              className='w-full p-2 border border-gray-300 rounded resize-none'
+              rows={3}
+            />
+          </div>
+        )}
+
         <div className='flex gap-3 justify-end'>
           <button
             onClick={onClose}
