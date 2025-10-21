@@ -98,21 +98,35 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   // Get total comment count including replies
   const getTotalCommentCount = () => {
     if (!post.comments) return 0
-    let total = post.comments.length
+
+    // Count only comments and replies that are not banned (exclude banned comments and their replies entirely)
+    let total = 0
     post.comments.forEach(comment => {
+      if (comment.banned) return // skip banned comment and its replies
+
+      total += 1
       if (comment.replies) {
-        total += comment.replies.length
+        // count only replies that are not banned
+        total += comment.replies.filter(r => !r.banned).length
       }
     })
+
     return total
   }
 
   // Sort comments based on selected order
   const getSortedComments = () => {
     if (!post.comments) return []
-    
-    const commentsCopy = [...post.comments]
-    
+
+    // Filter comments: include only those visible to user (not banned OR owner/admin)
+    const visibleComments = post.comments.filter(c => {
+      if (!c.banned) return true
+      // if banned, only include if current user is admin or the comment owner
+      return authUser?.role === 'admin' || authUser?._id === c.user._id
+    })
+
+    const commentsCopy = [...visibleComments]
+
     switch (commentSortOrder) {
       case 'topLiked':
         return commentsCopy.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0))
@@ -467,6 +481,79 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     }
   })
 
+  // Ban/Unban mutations for admin moderation
+  const { mutate: banPostMutate, isPending:isBanningPost } = useMutation({
+    mutationFn: async () => {
+      await axiosInstance.put(`/posts/${post._id}/ban`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] })
+      queryClient.invalidateQueries({ queryKey: ["post", post._id] })
+      toast.success('Post banned')
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to ban post')
+    }
+  })
+
+  const { mutate: unbanPostMutate, isPending:isUnbanningPost } = useMutation({
+    mutationFn: async () => {
+      await axiosInstance.put(`/posts/${post._id}/unban`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] })
+      queryClient.invalidateQueries({ queryKey: ["post", post._id] })
+      toast.success('Post unbanned')
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to unban post')
+    }
+  })
+
+  const { mutate: banCommentMutate } = useMutation({
+    mutationFn: async ({ commentId }) => {
+      await axiosInstance.put(`/posts/${post._id}/comment/${commentId}/ban`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] })
+      queryClient.invalidateQueries({ queryKey: ["post", post._id] })
+      toast.success('Comment banned')
+    }
+  })
+
+  const { mutate: unbanCommentMutate } = useMutation({
+    mutationFn: async ({ commentId }) => {
+      await axiosInstance.put(`/posts/${post._id}/comment/${commentId}/unban`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] })
+      queryClient.invalidateQueries({ queryKey: ["post", post._id] })
+      toast.success('Comment unbanned')
+    }
+  })
+
+  const { mutate: banReplyMutate } = useMutation({
+    mutationFn: async ({ commentId, replyId }) => {
+      await axiosInstance.put(`/posts/${post._id}/comment/${commentId}/reply/${replyId}/ban`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] })
+      queryClient.invalidateQueries({ queryKey: ["post", post._id] })
+      toast.success('Reply banned')
+    }
+  })
+
+  const { mutate: unbanReplyMutate } = useMutation({
+    mutationFn: async ({ commentId, replyId }) => {
+      await axiosInstance.put(`/posts/${post._id}/comment/${commentId}/reply/${replyId}/unban`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] })
+      queryClient.invalidateQueries({ queryKey: ["post", post._id] })
+      toast.success('Reply unbanned')
+    }
+  })
+
   const handleDeletePost = () => {
     setShowDeletePostConfirm(true)
   }
@@ -585,6 +672,11 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   }
 
 
+  // If post is banned and the current user is neither the owner nor an admin, don't render
+  if (post.banned && authUser?._id !== post.author._id && authUser?.role !== 'admin') {
+    return null
+  }
+
   return (
     <div className='bg-white rounded-lg shadow hover:shadow-md transition-shadow mb-4'>
       {/* Header */}
@@ -616,6 +708,11 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
           </div>
         
           <div className='flex items-center gap-2'>
+            {/* Show banned badge left of actions for admins/owners */}
+            {(post.banned && (authUser?.role === 'admin' || isOwner)) && (
+              <span className="mr-1 inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
+            )}
+
             {isOwner ? (
               <>
                 <button 
@@ -637,7 +734,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                   )}
                 </button>
               </>
-            ) : (
+              ) : (
               <div className='relative'>
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowActionsDropdown(!showActionsDropdown); }}
@@ -650,14 +747,33 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                   <>
                     <div className='fixed inset-0 z-10' onClick={() => setShowActionsDropdown(false)} />
                     <div className='absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setReportSubTarget(null); setShowReportModal(true); setShowActionsDropdown(false); }}
-                              className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
-                            >
-                              <Flag size={14} className='text-red-500' />
-                              Report
-                            </button>
-                    </div>
+                              {/* Admins only see Ban/Unban, regular users see Report */}
+                              {authUser?.role === 'admin' ? (
+                                post.banned ? (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); unbanPostMutate(); setShowActionsDropdown(false); }}
+                                    className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                  >
+                                    Unban
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); banPostMutate(); setShowActionsDropdown(false); }}
+                                    className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                  >
+                                    Ban
+                                  </button>
+                                )
+                              ) : (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setReportSubTarget(null); setShowReportModal(true); setShowActionsDropdown(false); }}
+                                  className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                >
+                                  <Flag size={14} className='text-red-500' />
+                                  Report
+                                </button>
+                              )}
+                        </div>
                   </>
                 )}
               </div>
@@ -970,6 +1086,10 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
           {/* Comments List */}
           <div className="space-y-3">
             {getSortedComments().map((comment) => {
+              // If comment is banned and current user is neither comment owner nor admin, skip rendering
+              if (comment.banned && authUser?._id !== comment.user._id && authUser?.role !== 'admin') {
+                return null
+              }
               const isCommentOwner = comment.user._id === authUser._id
               const isEditingComment = editingCommentId === comment._id
               const isCommentExpanded = expandedComments.has(comment._id)
@@ -994,6 +1114,9 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                             </h4>
                           </Link>
                           <div className="flex items-center gap-2">
+                            {comment.banned && (authUser?.role === 'admin' || isCommentOwner) && (
+                              <span className="inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
+                            )}
                             <span className="text-xs text-gray-500">
                               {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
                               {comment.editedAt && ' (edited)'}
@@ -1011,13 +1134,31 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                   <>
                                     <div className='fixed inset-0 z-10' onClick={() => setOpenCommentMenu(null)} />
                                     <div className='absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); setReportSubTarget(comment._id); setShowReportModal(true); setOpenCommentMenu(null); }}
-                                        className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
-                                      >
-                                        <Flag size={12} className='text-red-500' />
-                                        Report
-                                      </button>
+                                      {authUser?.role === 'admin' ? (
+                                        comment.banned ? (
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); unbanCommentMutate({ commentId: comment._id }); setOpenCommentMenu(null); }}
+                                            className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                          >
+                                            Unban
+                                          </button>
+                                        ) : (
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); banCommentMutate({ commentId: comment._id }); setOpenCommentMenu(null); }}
+                                            className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                          >
+                                            Ban
+                                          </button>
+                                        )
+                                      ) : (
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setReportSubTarget(comment._id); setShowReportModal(true); setOpenCommentMenu(null); }}
+                                          className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                        >
+                                          <Flag size={12} className='text-red-500' />
+                                          Report
+                                        </button>
+                                      )}
                                     </div>
                                   </>
                                 )}
@@ -1054,7 +1195,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                             )}
                           </div>
                         </div>
-                        {isEditingComment ? (
+                          {isEditingComment ? (
                           <form
                             onSubmit={(e) => {
                               e.preventDefault()
@@ -1096,8 +1237,11 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                             </div>
                           </form>
                         ) : (
-                          <>
-                            <p className="text-gray-700 text-sm">{renderTextWithMentions(comment.content)}</p>
+                            <> 
+                            <div className="flex items-center gap-2">
+                              <p className="text-gray-700 text-sm">{renderTextWithMentions(comment.content)}</p>
+                              {/* BANNED badge shown near timestamp instead; avoid duplicate here */}
+                            </div>
                             <div className="flex items-center gap-4 mt-2">
                               <button
                                 onClick={() => likeComment(comment._id)}
@@ -1139,22 +1283,24 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                       </div>
 
                       {/* Replies */}
-                      {repliesCount > 0 && isCommentExpanded && (
+                          {repliesCount > 0 && isCommentExpanded && (
                         <div className="mt-2 ml-4 space-y-2">
                           {comment.replies?.map((reply) => {
-                            const isReplyOwner = reply.user._id === authUser._id
-                            const isEditingReply = editingReplyId === reply._id
-                            
-                            return (
-                              <div key={reply._id} id={reply._id} className="flex gap-2">
-                                <Link to={`/profile/${reply.user.username}`}>
-                                  <img
-                                    src={reply.user.profilePicture || "/avatar.png"}
-                                    alt={reply.user.name}
-                                    className="w-6 h-6 rounded-full object-cover"
-                                  />
-                                </Link>
-                                <div className="flex-1 bg-gray-100 rounded-lg p-2 transition-colors duration-500">
+                                  // If reply is banned and current user is neither reply owner nor admin, skip
+                                  if (reply.banned && authUser?._id !== reply.user._id && authUser?.role !== 'admin') return null
+                                  const isReplyOwner = reply.user._id === authUser._id
+                                  const isEditingReply = editingReplyId === reply._id
+                                  
+                                  return (
+                                    <div key={reply._id} id={reply._id} className="flex gap-2">
+                                      <Link to={`/profile/${reply.user.username}`}>
+                                        <img
+                                          src={reply.user.profilePicture || "/avatar.png"}
+                                          alt={reply.user.name}
+                                          className="w-6 h-6 rounded-full object-cover"
+                                        />
+                                      </Link>
+                                      <div className="flex-1 bg-gray-100 rounded-lg p-2 transition-colors duration-500">
                                   <div className="flex items-center justify-between mb-1">
                                     <Link to={`/profile/${reply.user.username}`}>
                                       <h5 className="font-medium text-sm text-gray-900 hover:underline">
@@ -1162,7 +1308,10 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                         <span className="text-gray-500 font-normal text-xs ml-1">@{reply.user.username}</span>
                                       </h5>
                                     </Link>
-                                    <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-2">
+                                      {reply.banned && (authUser?.role === 'admin' || isReplyOwner) && (
+                                        <span className="inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
+                                      )}
                                       <span className="text-xs text-gray-500">
                                         {formatDistanceToNow(new Date(reply.createdAt), { addSuffix: true })}
                                         {reply.editedAt && ' (edited)'}
@@ -1180,13 +1329,31 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                             <>
                                               <div className='fixed inset-0 z-10' onClick={() => setOpenReplyMenu(null)} />
                                               <div className='absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
-                                                <button
-                                                  onClick={(e) => { e.stopPropagation(); setReportSubTarget(reply._id); setShowReportModal(true); setOpenReplyMenu(null); }}
-                                                  className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
-                                                >
-                                                  <Flag size={12} className='text-red-500' />
-                                                  Report
-                                                </button>
+                                                {authUser?.role === 'admin' ? (
+                                                  reply.banned ? (
+                                                    <button
+                                                      onClick={(e) => { e.stopPropagation(); unbanReplyMutate({ commentId: comment._id, replyId: reply._id }); setOpenReplyMenu(null); }}
+                                                      className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                                    >
+                                                      Unban
+                                                    </button>
+                                                  ) : (
+                                                    <button
+                                                      onClick={(e) => { e.stopPropagation(); banReplyMutate({ commentId: comment._id, replyId: reply._id }); setOpenReplyMenu(null); }}
+                                                      className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                                    >
+                                                      Ban
+                                                    </button>
+                                                  )
+                                                ) : (
+                                                  <button
+                                                    onClick={(e) => { e.stopPropagation(); setReportSubTarget(reply._id); setShowReportModal(true); setOpenReplyMenu(null); }}
+                                                    className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                                  >
+                                                    <Flag size={12} className='text-red-500' />
+                                                    Report
+                                                  </button>
+                                                )}
                                               </div>
                                             </>
                                           )}

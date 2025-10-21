@@ -24,6 +24,7 @@ const AdminDashboard = () => {
   const [expandedUserId, setExpandedUserId] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "users";
+  const [moderationView, setModerationView] = useState('recent');
   const authUser = queryClient.getQueryData(["authUser"]);
   const [reportsView, setReportsView] = useState("recent");
   const [feedbackView, setFeedbackView] = useState("recent");
@@ -108,6 +109,16 @@ const AdminDashboard = () => {
       return res.data;
     },
   });
+
+  // Moderation logs (admins only)
+  const { data: moderationLogs, isLoading: moderationLoading } = useQuery({
+    queryKey: ["moderationLogs"],
+    queryFn: async () => {
+      const res = await axiosInstance.get('/admin/moderation-logs')
+      return res.data
+    },
+    enabled: authUser?.role === 'admin'
+  })
 
   // Update user role mutation
   const updateRoleMutation = useMutation({
@@ -209,6 +220,7 @@ const AdminDashboard = () => {
         <div className="flex gap-2">
           <button onClick={() => setSearchParams({ tab: 'users' })} className={`px-4 py-2 rounded ${activeTab === 'users' ? 'bg-primary text-white' : 'bg-gray-100'}`}>Users</button>
           <button onClick={() => setSearchParams({ tab: 'reports' })} className={`px-4 py-2 rounded ${activeTab === 'reports' ? 'bg-primary text-white' : 'bg-gray-100'}`}>Feedback & Reports</button>
+          <button onClick={() => setSearchParams({ tab: 'moderation' })} className={`px-4 py-2 rounded ${activeTab === 'moderation' ? 'bg-primary text-white' : 'bg-gray-100'}`}>Moderation</button>
         </div>
       </div>
 
@@ -431,8 +443,8 @@ const AdminDashboard = () => {
                         <div className="text-sm mt-2 truncate">{r.details || <span className="text-gray-400">No details provided</span>}</div>
                       </div>
                       <div className="flex flex-col items-end gap-1 ml-2">
-                        <a href={r.type === 'post' ? `/post/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` : r.type === 'discussion' ? `/discussion/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` : r.type === 'job' ? `/job/${r.target}` : r.type === 'event' ? `/event/${r.target}` : '#'} className="text-sm text-primary underline">View {r.type}</a>
-                        <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded" onClick={() => markReportSeenMutation.mutate(r._id)}>Mark Seen</button>
+                        <a href={r.type === 'post' ? `/post/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` : r.type === 'discussion' ? `/discussion/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` : r.type === 'job' ? `/job/${r.target}` : r.type === 'event' ? `/event/${r.target}` : '#'} className="text-sm text-primary underline" onClick={(e) => e.stopPropagation()}>View {r.type}</a>
+                        <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded" onClick={(e) => { e.stopPropagation(); markReportSeenMutation.mutate(r._id); }}>Mark Seen</button>
                       </div>
                     </div>
                   ))}
@@ -476,8 +488,8 @@ const AdminDashboard = () => {
                           <div className="text-sm mt-2 truncate">{r.details || <span className="text-gray-400">No details provided</span>}</div>
                         </div>
                         <div className="flex flex-col items-end gap-1 ml-2">
-                          <a href={r.type === 'post' ? `/post/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` : r.type === 'discussion' ? `/discussion/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` : r.type === 'job' ? `/job/${r.target}` : r.type === 'event' ? `/event/${r.target}` : '#'} className="text-sm text-primary underline">View {r.type}</a>
-                          <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded" onClick={() => markReportSeenMutation.mutate(r._id)}>Mark Seen</button>
+                          <a href={r.type === 'post' ? `/post/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` : r.type === 'discussion' ? `/discussion/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` : r.type === 'job' ? `/job/${r.target}` : r.type === 'event' ? `/event/${r.target}` : '#'} className="text-sm text-primary underline" onClick={(e) => e.stopPropagation()}>View {r.type}</a>
+                          <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded" onClick={(e) => { e.stopPropagation(); markReportSeenMutation.mutate(r._id); }}>Mark Seen</button>
                         </div>
                       </div>
                     ))}
@@ -506,7 +518,7 @@ const AdminDashboard = () => {
                       <div className="text-xs text-gray-400">{new Date(f.createdAt).toLocaleString()}</div>
                       <div className="mt-2 truncate">{f.message}</div>
                       <div className="mt-2 flex justify-end">
-                        <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded" onClick={() => markFeedbackSeenMutation.mutate(f._id)}>Mark Seen</button>
+                        <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded" onClick={(e) => { e.stopPropagation(); markFeedbackSeenMutation.mutate(f._id); }}>Mark Seen</button>
                       </div>
                     </div>
                   ))}
@@ -536,7 +548,7 @@ const AdminDashboard = () => {
                         <div className="text-xs text-gray-400">{new Date(f.createdAt).toLocaleDateString()}</div>
                         <div className="mt-2 truncate">{f.message}</div>
                         <div className="mt-2 flex justify-end">
-                          <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded" onClick={() => markFeedbackSeenMutation.mutate(f._id)}>Mark Seen</button>
+                          <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded" onClick={(e) => { e.stopPropagation(); markFeedbackSeenMutation.mutate(f._id); }}>Mark Seen</button>
                         </div>
                       </div>
                     ))}
@@ -544,6 +556,50 @@ const AdminDashboard = () => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'moderation' && (
+        <div>
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">Moderation Logs</h3>
+              <div>
+                <button className="px-3 py-1 bg-gray-100 rounded text-sm" onClick={() => queryClient.invalidateQueries(['moderationLogs'])}>Refresh</button>
+              </div>
+            </div>
+
+            {moderationLoading ? (
+              <div className="text-center py-6">
+                <Loader className="animate-spin mx-auto" />
+              </div>
+            ) : (
+              <div className="overflow-auto max-h-96">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left">Action</th>
+                      <th className="px-3 py-2 text-left">Target</th>
+                      <th className="px-3 py-2 text-left">Parent</th>
+                      <th className="px-3 py-2 text-left">By</th>
+                      <th className="px-3 py-2 text-left">At</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {moderationLogs?.map((log) => (
+                      <tr key={log._id} className="border-b">
+                        <td className="px-3 py-2">{log.action.toUpperCase()}</td>
+                        <td className="px-3 py-2">{log.targetType} {log.targetId}</td>
+                        <td className="px-3 py-2">{log.parentId || '-'}</td>
+                        <td className="px-3 py-2">{log.performedBy?.name || log.performedBy?.username}</td>
+                        <td className="px-3 py-2">{new Date(log.performedAt).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
