@@ -16,6 +16,8 @@ import {
     editCommentOnJobPost
 } from "../controllers/jobController.js";
 
+import { banJobPost, unbanJobPost } from "../controllers/jobController.js";
+
 const router = express.Router();
 
 // Public routes (protected but accessible to all authenticated users)
@@ -28,6 +30,10 @@ router.get("/:id", protectRoute, getJobPostById);
 router.post("/", protectRoute, createJobPost);
 router.put("/:id", protectRoute, updateJobPost);
 router.delete("/:id", protectRoute, deleteJobPost);
+
+// Admin moderation routes for job posts
+router.put('/:id/ban', protectRoute, banJobPost);
+router.put('/:id/unban', protectRoute, unbanJobPost);
 
 // Interaction routes
 router.post("/:id/like", protectRoute, likeJobPost);

@@ -40,6 +40,9 @@ const JobPostPage = () => {
   const [showApplyConfirm, setShowApplyConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showBanConfirm, setShowBanConfirm] = useState(false);
+  const [showUnbanConfirm, setShowUnbanConfirm] = useState(false);
+  const [banReason, setBanReason] = useState("");
 
   const { data: jobPost, isLoading, error } = useQuery({
     queryKey: ['jobPost', jobId],
@@ -103,6 +106,38 @@ const JobPostPage = () => {
       toast.error(error.response?.data?.message || 'Failed to delete job post');
     }
   });
+
+  // Ban / Unban mutations for admins
+  const { mutate: banJobPost, isPending: isBanningJob } = useMutation({
+    mutationFn: async ({ reason } = {}) => {
+      await axiosInstance.put(`/jobs/${jobPost._id}/ban`, { reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobPost', jobPost._id] });
+      queryClient.invalidateQueries({ queryKey: ['jobPosts'] });
+      toast.success('Job post banned');
+      setShowBanConfirm(false);
+      setBanReason("");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to ban job post');
+    }
+  })
+
+  const { mutate: unbanJobPost, isPending: isUnbanningJob } = useMutation({
+    mutationFn: async () => {
+      await axiosInstance.put(`/jobs/${jobPost._id}/unban`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobPost', jobPost._id] });
+      queryClient.invalidateQueries({ queryKey: ['jobPosts'] });
+      toast.success('Job post unbanned');
+      setShowUnbanConfirm(false);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to unban job post');
+    }
+  })
 
   const handleShare = () => {
     toast.success('Share functionality coming soon!');
@@ -255,6 +290,23 @@ const JobPostPage = () => {
                       <Share2 size={16} />
                       Share
                     </button>
+                          {authUser?.role === 'admin' && (
+                            jobPost?.banned ? (
+                              <button
+                                onClick={() => { setShowUnbanConfirm(true); setShowDropdown(false); }}
+                                className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                              >
+                                Unban
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => { setShowBanConfirm(true); setShowDropdown(false); }}
+                                className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                              >
+                                Ban
+                              </button>
+                            )
+                          )}
                     {!isOwner && (
                       <button
                         onClick={(e) => { setShowReportModal(true); setShowDropdown(false); }}
@@ -510,6 +562,37 @@ const JobPostPage = () => {
           cancelText="Cancel"
           isLoading={isDeleting}
           loadingText="Deleting..."
+          confirmButtonClass="bg-red-500 hover:bg-red-600"
+        />
+
+        {/* Ban Job Post Confirmation Modal */}
+        <ConfirmModal
+          isOpen={showBanConfirm}
+          onClose={() => { setShowBanConfirm(false); setBanReason(""); }}
+          onConfirm={() => { banJobPost({ reason: banReason }); }}
+          title="Ban Job Post"
+          message="Are you sure you want to ban this job post? Banned job posts are hidden from regular users."
+          confirmText="Yes, Ban"
+          cancelText="Cancel"
+          isLoading={isBanningJob}
+          loadingText="Banning..."
+          confirmButtonClass="bg-red-500 hover:bg-red-600"
+          showTextArea={true}
+          textAreaValue={banReason}
+          onTextAreaChange={(v) => setBanReason(v)}
+        />
+
+        {/* Unban Job Post Confirmation Modal */}
+        <ConfirmModal
+          isOpen={showUnbanConfirm}
+          onClose={() => setShowUnbanConfirm(false)}
+          onConfirm={() => { unbanJobPost(); }}
+          title="Unban Job Post"
+          message="Unban this job post and restore it for regular users?"
+          confirmText="Yes, Unban"
+          cancelText="Cancel"
+          isLoading={isUnbanningJob}
+          loadingText="Unbanning..."
           confirmButtonClass="bg-red-500 hover:bg-red-600"
         />
       </div>

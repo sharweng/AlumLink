@@ -1,5 +1,6 @@
 import JobPost from "../models/JobPost.js";
 import Notification from "../models/Notification.js";
+import ModerationLog from "../models/ModerationLog.js";
 
 export const getAllJobPosts = async (req, res) => {
     try {
@@ -442,6 +443,56 @@ export const deleteCommentFromJobPost = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+// Admin: ban a job post
+export const banJobPost = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Access denied. Admins only.' });
+        }
+
+        const { id } = req.params;
+        const jobPost = await JobPost.findById(id);
+        if (!jobPost) return res.status(404).json({ message: 'Job post not found' });
+
+        jobPost.banned = true;
+        await jobPost.save();
+
+        const reason = req.body?.reason;
+        await ModerationLog.create({ action: 'ban', targetType: 'job', targetId: id, performedBy: req.user._id, reason });
+
+        const populated = await JobPost.findById(id).populate('author', 'name username profilePicture headline').populate('comments.user', 'name username profilePicture');
+        res.status(200).json({ message: 'Job post banned', jobPost: populated });
+    } catch (error) {
+        console.log('Error in banJobPost:', error.message);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+// Admin: unban a job post
+export const unbanJobPost = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Access denied. Admins only.' });
+        }
+
+        const { id } = req.params;
+        const jobPost = await JobPost.findById(id);
+        if (!jobPost) return res.status(404).json({ message: 'Job post not found' });
+
+        jobPost.banned = false;
+        await jobPost.save();
+
+        const reason = req.body?.reason;
+        await ModerationLog.create({ action: 'unban', targetType: 'job', targetId: id, performedBy: req.user._id, reason });
+
+        const populated = await JobPost.findById(id).populate('author', 'name username profilePicture headline').populate('comments.user', 'name username profilePicture');
+        res.status(200).json({ message: 'Job post unbanned', jobPost: populated });
+    } catch (error) {
+        console.log('Error in unbanJobPost:', error.message);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
 
 export const editCommentOnJobPost = async (req, res) => {
     try {
