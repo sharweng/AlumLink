@@ -1,10 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
-import {
-  Users,
-  UserCheck,
-  UserX,
+import { 
+  Users, 
+  UserCheck, 
+  UserX, 
+  Shield, 
+  Activity, 
+  TrendingUp,
+  ChevronDown,
+  ChevronUp,
   Loader,
   Flag,
   MessageSquare,
@@ -16,8 +21,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 const AdminDashboard = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [expandedUserId, setExpandedUserId] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
-
+  const activeTab = searchParams.get("tab") || "users";
+  const authUser = queryClient.getQueryData(["authUser"]);
   const [reportsView, setReportsView] = useState("recent");
   const [feedbackView, setFeedbackView] = useState("recent");
   const [reportSearch, setReportSearch] = useState("");
@@ -30,7 +37,30 @@ const AdminDashboard = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
 
-  const activeTab = searchParams.get("tab") || "users";
+  // Check if current user is deactivated on mount and periodically
+  useEffect(() => {
+    const checkUserStatus = async () => {
+      try {
+        const res = await axiosInstance.get("/auth/me");
+        if (!res.data.isActive) {
+          queryClient.setQueryData(["authUser"], null);
+          toast.error("Your account has been deactivated");
+          navigate("/login");
+        }
+      } catch (error) {
+        // If user check fails, they're likely logged out
+        console.error("Error checking user status:", error);
+      }
+    };
+
+    // Check immediately
+    checkUserStatus();
+
+    // Check every 5 seconds
+    const interval = setInterval(checkUserStatus, 5000);
+
+    return () => clearInterval(interval);
+  }, [navigate, queryClient]);
 
   useEffect(() => {
     // basic auth check (non-blocking)
@@ -45,6 +75,7 @@ const AdminDashboard = () => {
     check();
   }, [navigate]);
 
+  // Get dashboard stats
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["adminStats"],
     queryFn: async () => {
@@ -53,6 +84,7 @@ const AdminDashboard = () => {
     },
   });
 
+  // Get all users
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ["adminUsers"],
     queryFn: async () => {
@@ -77,20 +109,36 @@ const AdminDashboard = () => {
     },
   });
 
+  // Update user role mutation
   const updateRoleMutation = useMutation({
     mutationFn: async ({ userId, role }) => {
       const res = await axiosInstance.put(`/admin/users/${userId}/role`, { role });
       return res.data;
     },
-    onSuccess: () => queryClient.invalidateQueries(["adminUsers", "adminStats"]),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["adminStats"] });
+      toast.success(data.message);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to update role");
+    },
   });
 
+  // Toggle user status mutation
   const toggleStatusMutation = useMutation({
     mutationFn: async (userId) => {
       const res = await axiosInstance.put(`/admin/users/${userId}/toggle-status`);
       return res.data;
     },
-    onSuccess: () => queryClient.invalidateQueries(["adminUsers", "adminStats"]),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["adminStats"] });
+      toast.success(data.message);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to update status");
+    },
   });
 
   const markReportSeenMutation = useMutation({
@@ -131,9 +179,21 @@ const AdminDashboard = () => {
     },
   });
 
+  // prepare sortedUsers: super-admins, admins, then users; each group newest-first
+  // Keep original array safe by creating a shallow copy
+  const sortedUsers = users
+    ? [...users].sort((a, b) => {
+        const rank = (u) => (u.isSuperAdmin ? 0 : u.role === "admin" ? 1 : 2);
+        const ra = rank(a);
+        const rb = rank(b);
+        if (ra !== rb) return ra - rb;
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      })
+    : [];
+
   if (statsLoading || usersLoading) {
     return (
-      <div className="flex items-center justify-center h-48">
+      <div className="flex items-center justify-center h-screen">
         <Loader className="animate-spin text-primary" size={48} />
       </div>
     );
@@ -141,7 +201,9 @@ const AdminDashboard = () => {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <h1 className="text-3xl font-bold mb-4">Admin Dashboard</h1>
+      <div className="flex items-center gap-3 mb-4">
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+      </div>
 
       <div className="flex items-center justify-between mb-6">
         <div className="flex gap-2">
@@ -152,7 +214,8 @@ const AdminDashboard = () => {
 
       {activeTab === 'users' && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4 mb-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -162,6 +225,7 @@ const AdminDashboard = () => {
                 <Users className="text-blue-500" size={36} />
               </div>
             </div>
+
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -171,6 +235,7 @@ const AdminDashboard = () => {
                 <UserCheck className="text-green-500" size={36} />
               </div>
             </div>
+
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -182,45 +247,121 @@ const AdminDashboard = () => {
             </div>
           </div>
 
+          {/* Users Table */}
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-6 py-4 border-b">
               <h2 className="text-xl font-semibold">All Users</h2>
             </div>
+
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                      User
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                      Role
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">
+                      Joined
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {users?.map(user => (
+                  {sortedUsers.map((user) => (
                     <tr key={user._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 w-1/4">
                         <div className="flex items-center">
-                          <img className="h-10 w-10 rounded-full" src={user.profilePicture || '/avatar.png'} alt={user.name} />
-                          <div className="ml-3">
-                            <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                            <div className="text-sm text-gray-500">@{user.username}</div>
+                          <img
+                            className="h-10 w-10 rounded-full flex-shrink-0"
+                            src={user.profilePicture || "/avatar.png"}
+                            alt={user.name}
+                          />
+                          <div className="ml-4 min-w-0 flex-1">
+                            <div 
+                              className="text-sm font-medium text-gray-900 truncate"
+                              title={user.name}
+                            >
+                              {user.name}
+                            </div>
+                            <div 
+                              className="text-sm text-gray-500 truncate"
+                              title={`@${user.username}`}
+                            >
+                              @{user.username}
+                            </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">{user.email}</td>
-                      <td className="px-6 py-4 text-sm text-center">
-                        <select value={user.role} onChange={e => updateRoleMutation.mutate({ userId: user._id, role: e.target.value })} className="w-24 text-sm p-1 rounded">
-                          <option value="user">User</option>
-                          <option value="admin">Admin</option>
-                        </select>
+                      <td className="px-6 py-4 w-1/4">
+                        <div 
+                          className="text-sm text-gray-900 truncate"
+                          title={user.email}
+                        >
+                          {user.email}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-center"><span className={`w-20 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{user.isActive ? 'Active' : 'Inactive'}</span></td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-sm text-center">
-                        <button onClick={() => toggleStatusMutation.mutate(user._id)} className="px-3 py-1 rounded text-xs bg-red-100 text-red-700">{user.isActive ? 'Deactivate' : 'Activate'}</button>
+                      <td className="px-6 py-4 w-1/6 text-center">
+                        {user._id === authUser._id || (user.isSuperAdmin && !authUser.isSuperAdmin) ? (
+                          <span className={`w-20 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
+                            user.isSuperAdmin 
+                              ? 'bg-purple-100 text-purple-800' 
+                              : user.role === 'admin' 
+                                ? 'bg-purple-100 text-purple-800' 
+                                : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {user.isSuperAdmin ? 'Admin+' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                          </span>
+                        ) : (
+                          <select
+                            value={user.role}
+                            onChange={(e) => updateRoleMutation.mutate({ userId: user._id, role: e.target.value })}
+                            disabled={updateRoleMutation.isPending}
+                            className={`w-20 px-2 py-1 text-xs leading-5 font-semibold rounded-full border text-center ${
+                              user.role === 'admin' 
+                                ? 'bg-purple-100 text-purple-800 border-purple-300' 
+                                : 'bg-gray-100 text-gray-800 border-gray-300'
+                            } cursor-pointer hover:opacity-80`}
+                          >
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 w-1/6 text-center">
+                        <span className={`w-20 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
+                          user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {user.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500 w-1/12 text-center">
+                        {new Date(user.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium w-1/12 text-center">
+                        {user._id !== authUser._id && !(user.isSuperAdmin && !authUser.isSuperAdmin) && (
+                          <button
+                            onClick={() => toggleStatusMutation.mutate(user._id)}
+                            disabled={toggleStatusMutation.isPending}
+                            className={`w-24 px-3 py-1 rounded text-xs ${
+                              user.isActive 
+                                ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                            } transition-colors disabled:opacity-50`}
+                          >
+                            {user.isActive ? 'Deactivate' : 'Activate'}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -298,14 +439,14 @@ const AdminDashboard = () => {
                 </div>
               ) : (
                 <div>
-                  <div className="mb-3 flex items-center space-x-4">
-                    <input type="search" placeholder="Search reports" value={reportSearch} onChange={e => setReportSearch(e.target.value)} className="border rounded px-3 py-1 w-48" />
-                    <select value={reportFilter} onChange={e => setReportFilter(e.target.value)} className="border rounded px-3 py-1">
+                  <div className="mb-3 flex items-center gap-4">
+                    <input type="search" placeholder="Search reports" value={reportSearch} onChange={e => setReportSearch(e.target.value)} className="border rounded px-3 py-1 flex-1 min-w-0" />
+                    <select value={reportFilter} onChange={e => setReportFilter(e.target.value)} className="border rounded px-3 py-1 flex-shrink-0">
                       <option value="all">All</option>
                       <option value="seen">Seen</option>
                       <option value="unseen">Unseen</option>
                     </select>
-                    <select value={reportTypeFilter} onChange={e => setReportTypeFilter(e.target.value)} className="border rounded px-3 py-1">
+                    <select value={reportTypeFilter} onChange={e => setReportTypeFilter(e.target.value)} className="border rounded px-3 py-1 flex-shrink-0">
                       <option value="all">All types</option>
                       <option value="post">Posts</option>
                       <option value="discussion">Discussions</option>
@@ -372,9 +513,9 @@ const AdminDashboard = () => {
                 </div>
               ) : (
                 <div>
-                  <div className="mb-3 flex items-center space-x-4">
-                    <input type="search" placeholder="Search feedback" value={feedbackSearch} onChange={e => setFeedbackSearch(e.target.value)} className="border rounded px-3 py-1 w-48" />
-                    <select value={feedbackFilter} onChange={e => setFeedbackFilter(e.target.value)} className="border rounded px-3 py-1">
+                  <div className="mb-3 flex items-center gap-4">
+                    <input type="search" placeholder="Search feedback" value={feedbackSearch} onChange={e => setFeedbackSearch(e.target.value)} className="border rounded px-3 py-1 flex-1 min-w-0" />
+                    <select value={feedbackFilter} onChange={e => setFeedbackFilter(e.target.value)} className="border rounded px-3 py-1 flex-shrink-0">
                       <option value="all">All</option>
                       <option value="seen">Seen</option>
                       <option value="unseen">Unseen</option>
