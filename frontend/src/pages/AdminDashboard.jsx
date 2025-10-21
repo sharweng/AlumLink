@@ -14,6 +14,8 @@ import {
   Flag,
   MessageSquare,
   Eye,
+  Trash2,
+  X,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -39,6 +41,9 @@ const AdminDashboard = () => {
   const [selectedReport, setSelectedReport] = useState(null);
   const [showLogModal, setShowLogModal] = useState(false);
   const [selectedLog, setSelectedLog] = useState(null);
+  const [showDeleteLogConfirm, setShowDeleteLogConfirm] = useState(false);
+  const [deleteTargetLogId, setDeleteTargetLogId] = useState(null);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 
   // Check if current user is deactivated on mount and periodically
   useEffect(() => {
@@ -120,6 +125,34 @@ const AdminDashboard = () => {
       return res.data
     },
     enabled: authUser?.role === 'admin'
+  })
+
+  const deleteLogMutation = useMutation({
+    mutationFn: async (id) => {
+      const res = await axiosInstance.delete(`/admin/moderation-logs/${id}`)
+      return res.data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries(['moderationLogs'])
+      toast.success(data.message || 'Deleted')
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to delete')
+    }
+  })
+
+  const deleteAllLogsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await axiosInstance.delete(`/admin/moderation-logs`)
+      return res.data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries(['moderationLogs'])
+      toast.success(data.message || 'All logs deleted')
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to delete all')
+    }
   })
 
   // Update user role mutation
@@ -565,10 +598,16 @@ const AdminDashboard = () => {
       {activeTab === 'moderation' && (
         <div>
           <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold">Moderation Logs</h3>
-              <div>
+              <div className="flex items-center gap-2">
                 <button className="px-3 py-1 bg-gray-100 rounded text-sm" onClick={() => queryClient.invalidateQueries(['moderationLogs'])}>Refresh</button>
+                <button
+                  className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm"
+                  onClick={() => setShowDeleteAllConfirm(true)}
+                >
+                  Delete All
+                </button>
               </div>
             </div>
 
@@ -596,22 +635,36 @@ const AdminDashboard = () => {
                         <td className="px-3 py-2 text-center">{log.performedBy?.name || log.performedBy?.username}</td>
                         <td className="px-3 py-2 text-center">{new Date(log.performedAt).toLocaleString()}</td>
                         <td className="px-3 py-2 text-center">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const url =
-                                log.targetType === 'post' ? `/post/${log.targetId}` :
-                                log.targetType === 'comment' ? `/post/${log.parentId}?comment=${log.targetId}` :
-                                log.targetType === 'reply' ? `/post/${log.parentId}?reply=${log.targetId}&comment=${log.parentId}` :
-                                log.targetType === 'job' ? `/job/${log.targetId}` :
-                                log.targetType === 'event' ? `/event/${log.targetId}` :
-                                log.targetType === 'discussion' ? `/discussion/${log.targetId}` : '#';
-                              navigate(url);
-                            }}
-                            className="w-28 px-3 py-1 rounded text-xs bg-red-100 text-red-700 hover:bg-red-200"
-                          >
-                            View {log.targetType}
-                          </button>
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const url =
+                                  log.targetType === 'post' ? `/post/${log.targetId}` :
+                                  log.targetType === 'comment' ? `/post/${log.parentId}?comment=${log.targetId}` :
+                                  log.targetType === 'reply' ? `/post/${log.parentId}?reply=${log.targetId}&comment=${log.parentId}` :
+                                  log.targetType === 'job' ? `/job/${log.targetId}` :
+                                  log.targetType === 'event' ? `/event/${log.targetId}` :
+                                  log.targetType === 'discussion' ? `/discussion/${log.targetId}` : '#';
+                                navigate(url);
+                              }}
+                              className="w-28 px-3 py-1 rounded text-xs bg-red-100 text-red-700 hover:bg-red-200"
+                            >
+                              View {log.targetType}
+                            </button>
+
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteTargetLogId(log._id);
+                                setShowDeleteLogConfirm(true);
+                              }}
+                              title="Delete log"
+                              className="p-2 rounded text-xs text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -664,6 +717,34 @@ const AdminDashboard = () => {
             <p className="text-sm text-gray-600 mb-4">{new Date(selectedReport.createdAt).toLocaleString()}</p>
             <p className="whitespace-pre-wrap">{selectedReport.details || 'No details provided'}</p>
             <button className="mt-4 px-4 py-2 bg-primary text-white rounded" onClick={() => setShowReportModal(false)}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete single moderation log confirm modal */}
+      {showDeleteLogConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-2">Delete Moderation Log</h3>
+            <p className="text-sm text-gray-600 mb-4">Are you sure you want to permanently delete this moderation log? This action cannot be undone.</p>
+            <div className="flex justify-end gap-3">
+              <button className="px-3 py-1 bg-gray-100 rounded" onClick={() => { setShowDeleteLogConfirm(false); setDeleteTargetLogId(null); }}>Cancel</button>
+              <button className="px-3 py-1 bg-red-600 text-white rounded" onClick={async () => { await deleteLogMutation.mutateAsync(deleteTargetLogId); setShowDeleteLogConfirm(false); setDeleteTargetLogId(null); }}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete all moderation logs confirm modal */}
+      {showDeleteAllConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-2">Delete All Moderation Logs</h3>
+            <p className="text-sm text-gray-600 mb-4">This will permanently delete all moderation logs. Are you sure you want to proceed?</p>
+            <div className="flex justify-end gap-3">
+              <button className="px-3 py-1 bg-gray-100 rounded" onClick={() => setShowDeleteAllConfirm(false)}>Cancel</button>
+              <button className="px-3 py-1 bg-red-600 text-white rounded" onClick={async () => { await deleteAllLogsMutation.mutateAsync(); setShowDeleteAllConfirm(false); }}>Delete All</button>
+            </div>
           </div>
         </div>
       )}
