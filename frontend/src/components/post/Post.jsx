@@ -19,7 +19,9 @@ import {
   ChevronDown,
   ChevronRight as ChevronRightIcon,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CheckCircle,
+  XCircle
 } from "lucide-react"
 import { MoreVertical, Flag } from 'lucide-react'
 import PostAction from "./PostAction"
@@ -766,6 +768,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                     onClick={(e) => { e.stopPropagation(); setShowUnbanPostConfirm(true); setShowActionsDropdown(false); }}
                                     className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                                   >
+                                    <CheckCircle size={16} className='text-red-600' />
                                     Unban
                                   </button>
                                 ) : (
@@ -773,6 +776,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                     onClick={(e) => { e.stopPropagation(); setShowBanPostConfirm(true); setShowActionsDropdown(false); }}
                                     className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                                   >
+                                    <XCircle size={16} className='text-red-500' />
                                     Ban
                                   </button>
                                 )
@@ -1152,6 +1156,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                             onClick={(e) => { e.stopPropagation(); setModerationCommentId(comment._id); setShowUnbanCommentConfirm(true); setOpenCommentMenu(null); }}
                                             className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                                           >
+                                            <CheckCircle size={16} className='text-red-600' />
                                             Unban
                                           </button>
                                         ) : (
@@ -1159,6 +1164,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                             onClick={(e) => { e.stopPropagation(); setModerationCommentId(comment._id); setShowBanCommentConfirm(true); setOpenCommentMenu(null); }}
                                             className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                                           >
+                                            <XCircle size={16} className='text-red-500' />
                                             Ban
                                           </button>
                                         )

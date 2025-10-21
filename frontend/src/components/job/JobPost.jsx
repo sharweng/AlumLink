@@ -13,6 +13,8 @@ import {
   PhilippinePeso,
   MoreVertical,
   Flag,
+  XCircle,
+  CheckCircle,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import JobPostEdit from './JobPostEdit';
@@ -36,6 +38,45 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
     return applicantUserId === authUser._id;
   });
 
+  const isAdmin = authUser?.role === 'admin';
+
+  // Ban/Unban state for card-level admin actions
+  const [showBanConfirm, setShowBanConfirm] = useState(false);
+  const [showUnbanConfirm, setShowUnbanConfirm] = useState(false);
+  const [banReason, setBanReason] = useState('');
+
+  // Ban / Unban mutations for card (admin)
+  const { mutate: banJobPost, isPending: isBanning } = useMutation({
+    mutationFn: async ({ reason } = {}) => {
+      await axiosInstance.put(`/jobs/${jobPost._id}/ban`, { reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobPosts'] });
+      queryClient.invalidateQueries({ queryKey: ['jobPost', jobPost._id] });
+      setShowBanConfirm(false);
+      setBanReason('');
+      toast.success('Job post banned');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to ban job post');
+    }
+  });
+
+  const { mutate: unbanJobPost, isPending: isUnbanning } = useMutation({
+    mutationFn: async () => {
+      await axiosInstance.put(`/jobs/${jobPost._id}/unban`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobPosts'] });
+      queryClient.invalidateQueries({ queryKey: ['jobPost', jobPost._id] });
+      setShowUnbanConfirm(false);
+      toast.success('Job post unbanned');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to unban job post');
+    }
+  });
+
   const handleCardClick = (e) => {
     // Don't navigate if clicking on buttons, links, dropdown menu, or if modal is open
     if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.dropdown-menu') || showEditModal || isDetailPage) {
@@ -43,6 +84,11 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
     }
     navigate(`/job/${jobPost._id}`);
   };
+
+  // Hide banned job posts from regular users (only admin and owner can see)
+  if (jobPost?.banned && !isAdmin && !isOwner) {
+    return null;
+  }
 
   const handleShare = () => {
     // Share functionality to be implemented later
@@ -169,7 +215,14 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
         </div>
 
         {/* Actions Menu */}
-        <div className='relative ml-2 flex-shrink-0'>
+        <div className='relative ml-2 flex-shrink-0 flex items-center'>
+          {/* Banned badge rendered inline left of the more options button */}
+          {jobPost?.banned && (
+            <span className='mr-2 px-2 py-0.5 bg-red-100 text-red-800 rounded text-xs font-semibold'>
+              BANNED
+            </span>
+          )}
+
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -200,48 +253,74 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
                   <Share2 size={16} />
                   Share
                 </button>
-                {!isOwner && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowReportModal(true);
-                      setShowDropdown(false);
-                    }}
-                    className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
-                  >
-                    <Flag size={16} className='text-red-500' />
-                    Report
-                  </button>
-                )}
-                {isOwner && (
-                  <>
+
+                {isAdmin ? (
+                  // Admins only see Share + Ban/Unban
+                  (jobPost?.banned) ? (
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowEditModal(true);
-                        setShowDropdown(false);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); setShowUnbanConfirm(true); setShowDropdown(false); }}
                       className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                     >
-                      <Edit size={16} />
-                      Edit
+                      <CheckCircle size={16} className='text-red-600' />
+                      Unban
                     </button>
+                  ) : (
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowDeleteConfirm(true);
-                        setShowDropdown(false);
-                      }}
-                      disabled={isDeleting}
-                      className='w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 disabled:opacity-50'
+                      onClick={(e) => { e.stopPropagation(); setShowBanConfirm(true); setShowDropdown(false); }}
+                      className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                     >
-                      {isDeleting ? (
-                        <div className='w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin' />
-                      ) : (
-                        <Trash2 size={16} />
-                      )}
-                      Delete
+                      <XCircle size={16} className='text-red-500' />
+                      Ban
                     </button>
+                  )
+                ) : (
+                  // Non-admins keep existing behavior
+                  <>
+                    {!isOwner && !(jobPost?.banned) && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowReportModal(true);
+                          setShowDropdown(false);
+                        }}
+                        className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                      >
+                        <Flag size={16} className='text-red-500' />
+                        Report
+                      </button>
+                    )}
+
+                    {isOwner ? (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowEditModal(true);
+                            setShowDropdown(false);
+                          }}
+                          className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                        >
+                          <Edit size={16} />
+                          Edit
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDeleteConfirm(true);
+                            setShowDropdown(false);
+                          }}
+                          disabled={isDeleting}
+                          className='w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 disabled:opacity-50'
+                        >
+                          {isDeleting ? (
+                            <div className='w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin' />
+                          ) : (
+                            <Trash2 size={16} />
+                          )}
+                          Delete
+                        </button>
+                      </>
+                    ) : null}
                   </>
                 )}
               </div>
@@ -294,6 +373,37 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
         onClose={() => setShowReportModal(false)}
         defaultType='job'
         targetId={jobPost._id}
+      />
+
+      {/* Ban Confirmation Modal (card-level) */}
+      <ConfirmModal
+        isOpen={showBanConfirm}
+        onClose={() => { setShowBanConfirm(false); setBanReason(''); }}
+        onConfirm={() => { banJobPost({ reason: banReason }); }}
+        title="Ban Job Post"
+        message="Are you sure you want to ban this job post? Banned job posts are hidden from regular users."
+        confirmText="Yes, Ban"
+        cancelText="Cancel"
+        isLoading={isBanning}
+        loadingText="Banning..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+        showTextArea={true}
+        textAreaValue={banReason}
+        onTextAreaChange={(v) => setBanReason(v)}
+      />
+
+      {/* Unban Confirmation Modal (card-level) */}
+      <ConfirmModal
+        isOpen={showUnbanConfirm}
+        onClose={() => setShowUnbanConfirm(false)}
+        onConfirm={() => { unbanJobPost(); }}
+        title="Unban Job Post"
+        message="Unban this job post and restore it for regular users?"
+        confirmText="Yes, Unban"
+        cancelText="Cancel"
+        isLoading={isUnbanning}
+        loadingText="Unbanning..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
       />
 
       {/* Feedback modal (optional quick access from card) */}

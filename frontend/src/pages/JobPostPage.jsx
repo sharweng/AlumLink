@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react';
 import { Flag } from 'lucide-react';
+import { XCircle as XCircleIcon, CheckCircle } from 'lucide-react';
 import ReportModal from '../components/common/ReportModal';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -58,6 +59,34 @@ const JobPostPage = () => {
     const applicantUserId = typeof applicant.user === 'object' ? applicant.user._id : applicant.user;
     return applicantUserId === authUser._id;
   });
+
+  const isAdmin = authUser?.role === 'admin';
+
+  // If job is banned, hide from regular users and show a banned notice for non-owner/admin
+  if (jobPost?.banned && !isAdmin && !isOwner) {
+    return (
+      <div className='grid grid-cols-1 lg:grid-cols-4 gap-6'>
+        <div className='lg:col-span-1'>
+          <Sidebar user={authUser} />
+        </div>
+
+        <div className='lg:col-span-3'>
+          <Link
+            to='/jobs'
+            className='inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors'
+          >
+            <ArrowLeft size={16} />
+            Back to Job Board
+          </Link>
+          <div className='flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow'>
+            <XCircle className='h-12 w-12 text-red-400 mb-3' />
+            <span className='text-xl font-semibold text-gray-700'>This job post has been banned</span>
+            <span className='text-info mt-1'>Only the author and administrators can view this job post.</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Apply mutation
   const { mutate: applyToJob, isPending: isApplying } = useMutation({
@@ -268,7 +297,13 @@ const JobPostPage = () => {
             </div>
 
             {/* Actions Menu */}
-            <div className='relative ml-2 flex-shrink-0'>
+            <div className='relative ml-2 flex-shrink-0 flex items-center'>
+              {jobPost?.banned && (
+                <span className='mr-2 px-2 py-0.5 bg-red-100 text-red-800 rounded text-xs font-semibold'>
+                  BANNED
+                </span>
+              )}
+
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
                 className='p-1 hover:bg-gray-100 rounded-full transition-colors'
@@ -290,59 +325,68 @@ const JobPostPage = () => {
                       <Share2 size={16} />
                       Share
                     </button>
-                          {authUser?.role === 'admin' && (
-                            jobPost?.banned ? (
-                              <button
-                                onClick={() => { setShowUnbanConfirm(true); setShowDropdown(false); }}
-                                className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
-                              >
-                                Unban
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => { setShowBanConfirm(true); setShowDropdown(false); }}
-                                className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
-                              >
-                                Ban
-                              </button>
-                            )
-                          )}
-                    {!isOwner && (
-                      <button
-                        onClick={(e) => { setShowReportModal(true); setShowDropdown(false); }}
-                        className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
-                      >
-                        <Flag size={16} className='text-red-500' />
-                        Report
-                      </button>
-                    )}
-                    {isOwner && (
-                      <>
+
+                    {isAdmin ? (
+                      // Admins only see Share + Ban/Unban
+                      jobPost?.banned ? (
                         <button
-                          onClick={() => {
-                            setShowEditModal(true);
-                            setShowDropdown(false);
-                          }}
+                          onClick={() => { setShowUnbanConfirm(true); setShowDropdown(false); }}
                           className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                         >
-                          <Edit size={16} />
-                          Edit
+                          <CheckCircle size={16} className='text-red-600' />
+                          Unban
                         </button>
+                      ) : (
                         <button
-                          onClick={() => {
-                            setShowDeleteConfirm(true);
-                            setShowDropdown(false);
-                          }}
-                          disabled={isDeleting}
-                          className='w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 disabled:opacity-50'
+                          onClick={() => { setShowBanConfirm(true); setShowDropdown(false); }}
+                          className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                         >
-                          {isDeleting ? (
-                            <Loader className='animate-spin' size={16} />
-                          ) : (
-                            <Trash2 size={16} />
-                          )}
-                          Delete
+                          <XCircle size={16} className='text-red-500' />
+                          Ban
                         </button>
+                      )
+                    ) : (
+                      // Non-admins keep existing behavior
+                      <>
+                        {!isOwner && !(jobPost?.banned) && (
+                          <button
+                            onClick={(e) => { setShowReportModal(true); setShowDropdown(false); }}
+                            className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                          >
+                            <Flag size={16} className='text-red-500' />
+                            Report
+                          </button>
+                        )}
+
+                        {isOwner && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setShowEditModal(true);
+                                setShowDropdown(false);
+                              }}
+                              className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                            >
+                              <Edit size={16} />
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowDeleteConfirm(true);
+                                setShowDropdown(false);
+                              }}
+                              disabled={isDeleting}
+                              className='w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 disabled:opacity-50'
+                            >
+                              {isDeleting ? (
+                                <Loader className='animate-spin' size={16} />
+                              ) : (
+                                <Trash2 size={16} />
+                              )}
+                              Delete
+                            </button>
+                          </>
+                        )}
                       </>
                     )}
                   </div>

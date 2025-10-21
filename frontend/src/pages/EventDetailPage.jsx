@@ -162,6 +162,28 @@ const EventDetailPage = () => {
     );
   }
 
+  // If event has been banned, show a banned notice for non-admin/non-organizer (like PostPage behavior)
+  if (event.banned && !(authUser?.role === 'admin' || authUser?._id === event.organizer._id)) {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-1">
+          <Sidebar user={authUser} />
+        </div>
+        <div className="lg:col-span-3">
+          <Link to="/events" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors">
+            <ArrowLeft size={16} />
+            Back to Events
+          </Link>
+          <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow p-6">
+            <XCircle className="h-12 w-12 text-red-400 mb-3" />
+            <h2 className="text-2xl font-semibold mb-2">This event has been banned</h2>
+            <p className="text-gray-600">The content you're trying to view has been removed by the admins.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const isOrganizer = authUser?._id === event.organizer._id;
   const userRsvp = event.attendees?.find(a => a.user._id === authUser?._id);
   const userStatus = userRsvp?.rsvpStatus;
