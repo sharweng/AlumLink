@@ -1664,7 +1664,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
         onClose={() => { setShowBanCommentConfirm(false); setModerationCommentId(null); setBanCommentReason(""); }}
         onConfirm={() => { banCommentMutate({ commentId: moderationCommentId, reason: banCommentReason }); setShowBanCommentConfirm(false); setModerationCommentId(null); setBanCommentReason(""); }}
         title="Ban Comment"
-        message="Are you sure you want to ban this comment? Banned comments are hidden from regular users."
+        message="Are you sure you want to ban this comment? This will hide it (and its replies) from regular users."
         confirmText="Yes, Ban"
         cancelText="Cancel"
         isLoading={isBanningComment}

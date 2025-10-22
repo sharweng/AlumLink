@@ -1886,9 +1886,9 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         isOpen={showBanDiscussionConfirm}
         onClose={() => { setShowBanDiscussionConfirm(false); setBanDiscussionReason(''); }}
         onConfirm={() => { banDiscussionMutate({ discussionId: discussion._id, reason: banDiscussionReason }); setShowBanDiscussionConfirm(false); setBanDiscussionReason(''); }}
-        title="Ban Discussion"
-        message="Are you sure you want to ban this discussion? This will hide it from regular users. You can provide an optional reason."
-        confirmText="Ban"
+        title="Ban Discussion Post"
+        message="Are you sure you want to ban this discussion post? Banned discussion posts are hidden from regular users."
+        confirmText="Yes, Ban"
         cancelText="Cancel"
         isLoading={isBanningDiscussion}
         showTextArea={true}
@@ -1901,12 +1901,12 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         isOpen={showUnbanDiscussionConfirm}
         onClose={() => setShowUnbanDiscussionConfirm(false)}
         onConfirm={() => { unbanDiscussionMutate({ discussionId: discussion._id }); setShowUnbanDiscussionConfirm(false); }}
-        title="Unban Discussion"
-        message="Are you sure you want to unban this discussion?"
-        confirmText="Unban"
+        title="Unban Discussion Post"
+        message="Unban this discussion post and restore it for regular users?"
+        confirmText="Yes, Unban"
         cancelText="Cancel"
         isLoading={isUnbanningDiscussion}
-        confirmButtonClass="bg-green-500 hover:bg-green-600"
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
       />
 
       {/* Ban/Unban Comment */}
@@ -1915,8 +1915,8 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         onClose={() => { setShowBanCommentConfirm(false); setBanCommentReason(''); setModerationCommentId(null); }}
         onConfirm={() => { if (moderationCommentId) banDiscussionCommentMutate({ commentId: moderationCommentId, reason: banCommentReason }); setShowBanCommentConfirm(false); setBanCommentReason(''); setModerationCommentId(null); }}
         title="Ban Comment"
-        message="Are you sure you want to ban this comment? This will hide it (and its replies) from regular users. You can provide an optional reason."
-        confirmText="Ban"
+        message="Are you sure you want to ban this comment? This will hide it (and its replies) from regular users."
+        confirmText="Yes, Ban"
         cancelText="Cancel"
         isLoading={isBanningComment}
         showTextArea={true}
@@ -1930,11 +1930,11 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         onClose={() => { setShowUnbanCommentConfirm(false); setModerationCommentId(null); }}
         onConfirm={() => { if (moderationCommentId) unbanDiscussionCommentMutate({ commentId: moderationCommentId }); setShowUnbanCommentConfirm(false); setModerationCommentId(null); }}
         title="Unban Comment"
-        message="Are you sure you want to unban this comment?"
-        confirmText="Unban"
+        message="Unban this comment and restore it for regular users?"
+        confirmText="Yes, Unban"
         cancelText="Cancel"
         isLoading={isUnbanningComment}
-        confirmButtonClass="bg-green-500 hover:bg-green-600"
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
       />
 
       {/* Ban/Unban Reply */}
@@ -1943,8 +1943,8 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         onClose={() => { setShowBanReplyConfirm(false); setBanReplyReason(''); setModerationReply(null); }}
         onConfirm={() => { if (moderationReply) banDiscussionReplyMutate({ commentId: moderationReply.commentId, replyId: moderationReply.replyId, reason: banReplyReason }); setShowBanReplyConfirm(false); setBanReplyReason(''); setModerationReply(null); }}
         title="Ban Reply"
-        message="Are you sure you want to ban this reply? This will hide it from regular users. You can provide an optional reason."
-        confirmText="Ban"
+        message="Are you sure you want to ban this reply? Banned replies are hidden from regular users."
+        confirmText="Yes, Ban"
         cancelText="Cancel"
         isLoading={isBanningReply}
         showTextArea={true}
@@ -1958,11 +1958,11 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         onClose={() => { setShowUnbanReplyConfirm(false); setModerationReply(null); }}
         onConfirm={() => { if (moderationReply) unbanDiscussionReplyMutate({ commentId: moderationReply.commentId, replyId: moderationReply.replyId }); setShowUnbanReplyConfirm(false); setModerationReply(null); }}
         title="Unban Reply"
-        message="Are you sure you want to unban this reply?"
-        confirmText="Unban"
+        message="Unban this reply and restore it for regular users?"
+        confirmText="Yes, Unban"
         cancelText="Cancel"
         isLoading={isUnbanningReply}
-        confirmButtonClass="bg-green-500 hover:bg-green-600"
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
       />
     </div>
   );
