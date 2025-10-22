@@ -146,6 +146,59 @@ export const getUserLinks = async (req, res) => {
     }
 }
 
+export const getUserLinksByUsername = async (req, res) => {
+    try {
+        const { username } = req.params;
+        const currentUserId = req.user._id;
+
+        const user = await User.findOne({ username });
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const isOwner = user._id.toString() === currentUserId.toString();
+        const isLinked = user.links.includes(currentUserId);
+        const isAdmin = req.user.role === 'admin';
+
+        let canView = false;
+        if (isOwner || isAdmin) {
+            canView = true;
+        } else if (user.linksVisibility === 'public') {
+            canView = true;
+        } else if (user.linksVisibility === 'links' && isLinked) {
+            canView = true;
+        }
+
+        if (!canView) {
+            return res.json({ visibility: 'private', message: 'Links are set to private' });
+        }
+
+        const populatedUser = await User.findById(user._id)
+            .populate("links", "name username profilePicture headline");
+
+        res.json({ links: populatedUser.links, visibility: user.linksVisibility });
+    } catch (error) {
+        console.log("Error in getUserLinksByUsername linkController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export const updateLinksVisibility = async (req, res) => {
+    try {
+        const { visibility } = req.body;
+        const userId = req.user._id;
+
+        if (!['private', 'public', 'links'].includes(visibility)) {
+            return res.status(400).json({ message: "Invalid visibility option" });
+        }
+
+        await User.findByIdAndUpdate(userId, { linksVisibility: visibility });
+
+        res.json({ message: "Links visibility updated successfully" });
+    } catch (error) {
+        console.log("Error in updateLinksVisibility linkController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
 export const removeLink = async (req, res) => {
     try {
         const myId = req.user._id;

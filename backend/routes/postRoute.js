@@ -14,8 +14,8 @@ import {
     deleteReply,
     updateReply,
     likeComment,
-    dislikeComment
-    ,
+    dislikeComment,
+    getUserPosts,
     banPost,
     unbanPost,
     banComment,
@@ -27,6 +27,7 @@ import {
 const router = express.Router();
 
 router.get("/", protectRoute, getFeedPosts);
+router.get("/user/:username", protectRoute, getUserPosts);
 router.post("/create", protectRoute, createPost);
 router.delete("/delete/:id", protectRoute, deletePost);
 router.put("/edit/:id", protectRoute, editPost);

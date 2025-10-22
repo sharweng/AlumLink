@@ -60,6 +60,11 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
     }],
+    linksVisibility: {
+        type: String,
+        enum: ['private', 'public', 'links'],
+        default: 'public',
+    },
     role: {
         type: String,
         enum: ['user', 'admin'],

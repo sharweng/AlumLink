@@ -43,7 +43,8 @@ export const updateProfile = async (req, res) => {
             "profilePicture", 
             "bannerImg", 
             "skills", 
-            "experience"
+            "experience",
+            "linksVisibility"
         ];
 
         const updatedData = {};

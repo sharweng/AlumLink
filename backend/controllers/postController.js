@@ -22,6 +22,35 @@ export const getFeedPosts = async (req, res) => {
     }
 }
 
+export const getUserPosts = async (req, res) => {
+    try {
+        const { username } = req.params;
+        const isAdmin = req.user.role === 'admin';
+        const isOwner = req.user.username === username;
+
+        // Find user by username to get _id
+        const User = (await import("../models/User.js")).default;
+        const user = await User.findOne({ username });
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        let query = { author: user._id };
+        if (!isAdmin && !isOwner) {
+            query.banned = { $ne: true };
+        }
+
+        const posts = await Post.find(query)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture")
+            .sort({ createdAt: -1 });
+
+        res.status(200).json(posts);
+    } catch (error) {
+        console.log("Error in getUserPosts postController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
 export const createPost = async (req, res) => {
     try {
         const { content, image, images } = req.body;
