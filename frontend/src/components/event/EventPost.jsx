@@ -15,7 +15,10 @@ import {
   Edit,
   Check,
   X as XIcon,
-  Loader
+  XCircle,
+  Share2,
+  Loader,
+  CheckCircle
 } from "lucide-react";
 import { Flag } from 'lucide-react';
 import { formatDistanceToNow, format } from "date-fns";
@@ -28,6 +31,7 @@ const EventPost = ({ event }) => {
   const navigate = useNavigate();
   const authUser = queryClient.getQueryData(["authUser"]);
   const isOrganizer = authUser?._id === event.organizer._id;
+  const isAdmin = authUser?.role === 'admin';
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showActions, setShowActions] = useState(false);
@@ -37,6 +41,11 @@ const EventPost = ({ event }) => {
   
   const goingCount = event.attendees?.filter(a => a.rsvpStatus === 'going').length || 0;
   const interestedCount = event.attendees?.filter(a => a.rsvpStatus === 'interested').length || 0;
+
+  // Hide banned events from regular users
+  if (event?.banned && !isAdmin && !isOrganizer) {
+    return null;
+  }
 
   const { mutate: rsvpEvent, isPending: isRsvping } = useMutation({
     mutationFn: async (status) => {
@@ -66,6 +75,42 @@ const EventPost = ({ event }) => {
     onError: (error) => {
       toast.error(error.response?.data?.message || "Failed to delete event");
     },
+  });
+
+  // Ban / Unban mutations for admins
+  const [showBanConfirm, setShowBanConfirm] = useState(false);
+  const [showUnbanConfirm, setShowUnbanConfirm] = useState(false);
+  const [banReason, setBanReason] = useState('');
+
+  const { mutate: banEvent, isPending: isBanning } = useMutation({
+    mutationFn: async ({ reason } = {}) => {
+      await axiosInstance.put(`/events/${event._id}/ban`, { reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', event._id] });
+      setShowBanConfirm(false);
+      setBanReason('');
+      toast.success('Event banned');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to ban event');
+    }
+  });
+
+  const { mutate: unbanEvent, isPending: isUnbanning } = useMutation({
+    mutationFn: async () => {
+      await axiosInstance.put(`/events/${event._id}/unban`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', event._id] });
+      setShowUnbanConfirm(false);
+      toast.success('Event unbanned');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to unban event');
+    }
   });
 
   // Report handled by ReportModal
@@ -150,7 +195,11 @@ const EventPost = ({ event }) => {
                 {event.title}
               </h2>
             </div>
-            <div className='relative ml-2 flex-shrink-0'>
+            <div className='relative ml-2 flex-shrink-0 flex items-center'>
+              {/* Banned badge for admins/owner */}
+              {event?.banned && (isAdmin || isOrganizer) && (
+                <span className="mr-1 inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
+              )}
               <button
                 onClick={(e) => { e.stopPropagation(); setShowActions(!showActions); }}
                 className='p-1 hover:bg-gray-100 rounded-full transition-colors'
@@ -161,7 +210,33 @@ const EventPost = ({ event }) => {
                 <>
                   <div className='fixed inset-0 z-10' onClick={() => setShowActions(false)} />
                   <div className='absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
-                    {!isOrganizer && (
+                    {/* Share - available to everyone */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowActions(false);
+                        const url = `${window.location.origin}/event/${event._id}`;
+                        if (navigator.share) {
+                          navigator.share({ title: event.title, url }).catch(() => {});
+                        } else if (navigator.clipboard) {
+                          navigator.clipboard.writeText(url).then(() => {
+                            toast.success('Event link copied to clipboard');
+                          });
+                        } else {
+                          // fallback
+                          const tmp = document.createElement('input');
+                          document.body.appendChild(tmp);
+                          tmp.value = url;
+                          tmp.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(tmp);
+                          toast.success('Event link copied to clipboard');
+                        }
+                      }}
+                      className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                    >
+                      <Share2 size={14} />
+                      Share
+                    </button>
+                    {!isOrganizer && !isAdmin && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setShowReportModal(true); setShowActions(false); }}
                         className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
@@ -170,6 +245,28 @@ const EventPost = ({ event }) => {
                         Report
                       </button>
                     )}
+
+                    {/* Admin ban/unban */}
+                    {isAdmin && (
+                      event?.banned ? (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowUnbanConfirm(true); setShowActions(false); }}
+                          className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                        >
+                          <CheckCircle size={16} className='text-red-600' />
+                          Unban
+                        </button>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowBanConfirm(true); setShowActions(false); }}
+                          className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                        >
+                          <XCircle size={16} className='text-red-500' />
+                          Ban
+                        </button>
+                      )
+                    )}
+
                     {isOrganizer && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); setShowActions(false); }}
@@ -179,6 +276,7 @@ const EventPost = ({ event }) => {
                         Delete
                       </button>
                     )}
+                                      
                   </div>
                 </>
               )}
@@ -336,6 +434,34 @@ const EventPost = ({ event }) => {
         cancelText="Cancel"
         isLoading={isDeleting}
         loadingText="Deleting..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
+      {/* Ban/Unban Confirm Modals for Admins */}
+      <ConfirmModal
+        isOpen={showBanConfirm}
+        onClose={() => { setShowBanConfirm(false); setBanReason(''); }}
+        onConfirm={() => { banEvent({ reason: banReason }); }}
+        title="Ban Event"
+        message="Are you sure you want to ban this event? Banned events are hidden from regular users."
+        confirmText="Yes, Ban"
+        cancelText="Cancel"
+        isLoading={isBanning}
+        loadingText="Banning..."
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+        showTextArea={true}
+        textAreaValue={banReason}
+        onTextAreaChange={(v) => setBanReason(v)}
+      />
+      <ConfirmModal
+        isOpen={showUnbanConfirm}
+        onClose={() => setShowUnbanConfirm(false)}
+        onConfirm={() => { unbanEvent(); }}
+        title="Unban Event"
+        message="Unban this event and restore it for regular users?"
+        confirmText="Yes, Unban"
+        cancelText="Cancel"
+        isLoading={isUnbanning}
+        loadingText="Unbanning..."
         confirmButtonClass="bg-red-500 hover:bg-red-600"
       />
       <ReportModal

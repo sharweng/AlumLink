@@ -1,6 +1,7 @@
 import Event from "../models/Event.js";
 import Notification from "../models/Notification.js";
 import DeletedReminder from "../models/DeletedReminder.js";
+import ModerationLog from "../models/ModerationLog.js";
 import cloudinary from "../lib/cloudinary.js";
 import { v4 as uuidv4 } from "uuid";
 
@@ -741,6 +742,55 @@ export const getMyEvents = async (req, res) => {
     } catch (error) {
         console.log("Error in getMyEvents:", error.message);
         res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+// Ban an event (admin only)
+export const banEvent = async (req, res) => {
+    try {
+        const eventId = req.params.id;
+        const { reason } = req.body;
+
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+
+        // Only admins can ban
+        if (req.user.role !== 'admin') return res.status(403).json({ message: 'Not authorized' });
+
+        event.banned = true;
+        await event.save();
+
+        // create moderation log
+        await ModerationLog.create({ action: 'ban', targetType: 'event', targetId: eventId, performedBy: req.user._id, reason });
+
+        const populated = await Event.findById(eventId).populate('organizer', 'name username profilePicture');
+        res.status(200).json(populated);
+    } catch (error) {
+        console.log('Error in banEvent:', error.message);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+// Unban an event (admin only)
+export const unbanEvent = async (req, res) => {
+    try {
+        const eventId = req.params.id;
+
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+
+        if (req.user.role !== 'admin') return res.status(403).json({ message: 'Not authorized' });
+
+        event.banned = false;
+        await event.save();
+
+        await ModerationLog.create({ action: 'unban', targetType: 'event', targetId: eventId, performedBy: req.user._id });
+
+        const populated = await Event.findById(eventId).populate('organizer', 'name username profilePicture');
+        res.status(200).json(populated);
+    } catch (error) {
+        console.log('Error in unbanEvent:', error.message);
+        res.status(500).json({ message: 'Internal server error' });
     }
 };
 
