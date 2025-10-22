@@ -48,11 +48,12 @@ const ReportModal = ({ isOpen, onClose, defaultType = 'post', targetId = null, s
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>Category</label>
             {targetId ? (
-              // When opened from a specific item, make category read-only so admins can map reports back
+              // When opened from a specific item, make category read-only.
+              // If reporting a user we keep storing type='other' but display 'User' to the reporter.
               <input
                 type='text'
                 value={
-                  ({ post: 'Post', job: 'Job', event: 'Event', discussion: 'Discussion', other: 'Other' }[type] || type)
+                  (type === 'other' && targetId) ? 'User' : ({ post: 'Post', job: 'Job', event: 'Event', discussion: 'Discussion', other: 'Other' }[type] || type)
                 }
                 readOnly
                 className='w-full border rounded p-2 bg-gray-100 cursor-default'

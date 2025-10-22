@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import VideoCallModal from '../components/mentorship/VideoCallModal';
 import CallInvitationModal from '../components/mentorship/CallInvitationModal';
+import ReportModal from '../components/common/ReportModal';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -23,6 +24,8 @@ const MessagesPage = () => {
     const [invitationCallId, setInvitationCallId] = useState(null);
     const [isCaller, setIsCaller] = useState(false);
     const [otherUserForCall, setOtherUserForCall] = useState(null);
+    const [showReportModal, setShowReportModal] = useState(false);
+    const [showMoreMenu, setShowMoreMenu] = useState(false);
     const messagesEndRef = useRef(null);
     const typingTimeoutRef = useRef(null);
     const queryClient = useQueryClient();
@@ -358,9 +361,24 @@ const MessagesPage = () => {
                                             >
                                                 <Video size={20} className="text-gray-600" />
                                             </button>
-                                            <button className="p-2 hover:bg-gray-100 rounded-full transition">
-                                                <MoreVertical size={20} className="text-gray-600" />
-                                            </button>
+                                            <div className="relative">
+                                                <button className="p-2 hover:bg-gray-100 rounded-full transition" onClick={() => setShowMoreMenu(v => !v)}>
+                                                    <MoreVertical size={20} className="text-gray-600" />
+                                                </button>
+                                                {showMoreMenu && (
+                                                    <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-md z-20">
+                                                        <button
+                                                            className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                                                            onClick={() => {
+                                                                setShowMoreMenu(false);
+                                                                setShowReportModal(true);
+                                                            }}
+                                                        >
+                                                            Report user
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -409,6 +427,17 @@ const MessagesPage = () => {
                                             </>
                                         )}
                                     </div>
+
+                                                            {/* Report Modal for reporting the other user in the conversation */}
+                                                            {showReportModal && selectedConversation && (
+                                                                <ReportModal
+                                                                    isOpen={showReportModal}
+                                                                    onClose={() => setShowReportModal(false)}
+                                                                    defaultType={'other'}
+                                                                    // Use username so AdminDashboard links to /profile/:username
+                                                                    targetId={getOtherUser(selectedConversation)?.username}
+                                                                />
+                                                            )}
 
                                     {/* Typing indicator removed — not functional and was wasting space */}
 

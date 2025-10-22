@@ -478,7 +478,19 @@ const AdminDashboard = () => {
                         <div className="text-sm mt-2 truncate">{r.details || <span className="text-gray-400">No details provided</span>}</div>
                       </div>
                       <div className="flex flex-col items-end gap-1 ml-2">
-                        <a href={r.type === 'post' ? `/post/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` : r.type === 'discussion' ? `/discussion/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` : r.type === 'job' ? `/job/${r.target}` : r.type === 'event' ? `/event/${r.target}` : '#'} className="text-sm text-primary underline" onClick={(e) => e.stopPropagation()}>View {r.type}</a>
+                        <a
+                          href={
+                            r.type === 'post' ? `/post/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` :
+                            r.type === 'discussion' ? `/discussion/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` :
+                            r.type === 'job' ? `/job/${r.target}` :
+                            r.type === 'event' ? `/event/${r.target}` :
+                            (r.type === 'other' && r.target) ? `/profile/${r.target}` : '#'
+                          }
+                          className="text-sm text-primary underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          View {r.type === 'other' && r.target ? 'User' : r.type}
+                        </a>
                         <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded" onClick={(e) => { e.stopPropagation(); markReportSeenMutation.mutate(r._id); }}>Mark Seen</button>
                       </div>
                     </div>
@@ -523,7 +535,19 @@ const AdminDashboard = () => {
                           <div className="text-sm mt-2 truncate">{r.details || <span className="text-gray-400">No details provided</span>}</div>
                         </div>
                         <div className="flex flex-col items-end gap-1 ml-2">
-                          <a href={r.type === 'post' ? `/post/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` : r.type === 'discussion' ? `/discussion/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` : r.type === 'job' ? `/job/${r.target}` : r.type === 'event' ? `/event/${r.target}` : '#'} className="text-sm text-primary underline" onClick={(e) => e.stopPropagation()}>View {r.type}</a>
+                          <a
+                            href={
+                              r.type === 'post' ? `/post/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` :
+                              r.type === 'discussion' ? `/discussion/${r.target}${r.subTarget ? `?comment=${r.subTarget}` : ''}` :
+                              r.type === 'job' ? `/job/${r.target}` :
+                              r.type === 'event' ? `/event/${r.target}` :
+                              (r.type === 'other' && r.target) ? `/profile/${r.target}` : '#'
+                            }
+                            className="text-sm text-primary underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            View {r.type === 'other' && r.target ? 'User' : r.type}
+                          </a>
                           <button className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded" onClick={(e) => { e.stopPropagation(); markReportSeenMutation.mutate(r._id); }}>Mark Seen</button>
                         </div>
                       </div>
@@ -639,14 +663,19 @@ const AdminDashboard = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const url =
-                                  log.targetType === 'post' ? `/post/${log.targetId}` :
-                                  log.targetType === 'comment' ? `/post/${log.parentId}?comment=${log.targetId}` :
-                                  log.targetType === 'reply' ? `/post/${log.parentId}?reply=${log.targetId}&comment=${log.parentId}` :
-                                  log.targetType === 'job' ? `/job/${log.targetId}` :
-                                  log.targetType === 'event' ? `/event/${log.targetId}` :
-                                  log.targetType === 'discussion' ? `/discussion/${log.targetId}` : '#';
-                                navigate(url);
+                                // Allow admin to navigate to user profile if the moderation log targets a user
+                                if (log.targetType === 'user') {
+                                  navigate(`/profile/${log.targetId}`);
+                                } else {
+                                  const url =
+                                    log.targetType === 'post' ? `/post/${log.targetId}` :
+                                    log.targetType === 'comment' ? `/post/${log.parentId}?comment=${log.targetId}` :
+                                    log.targetType === 'reply' ? `/post/${log.parentId}?reply=${log.targetId}&comment=${log.parentId}` :
+                                    log.targetType === 'job' ? `/job/${log.targetId}` :
+                                    log.targetType === 'event' ? `/event/${log.targetId}` :
+                                    log.targetType === 'discussion' ? `/discussion/${log.targetId}` : '#';
+                                  navigate(url);
+                                }
                               }}
                               className="w-28 px-3 py-1 rounded text-xs bg-red-100 text-red-700 hover:bg-red-200"
                             >
