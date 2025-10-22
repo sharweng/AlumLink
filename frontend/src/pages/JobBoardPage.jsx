@@ -52,6 +52,9 @@ const JobBoardPage = () => {
       }
     }
   });
+  
+  // Filter out job posts by banned authors
+  const jobPosts = jobPostsData?.jobPosts?.filter(j => !j.author?.banned) || [];
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -180,8 +183,8 @@ const JobBoardPage = () => {
             <div className='col-span-full text-center py-8'>
               <Loader className='animate-spin h-12 w-12 text-primary mx-auto' />
             </div>
-          ) : jobPostsData?.jobPosts?.length > 0 ? (
-            jobPostsData.jobPosts.map(jobPost => (
+          ) : jobPosts.length > 0 ? (
+            jobPosts.map(jobPost => (
               <JobPost key={jobPost._id} jobPost={jobPost} />
             ))
           ) : (

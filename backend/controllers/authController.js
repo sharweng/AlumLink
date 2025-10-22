@@ -93,6 +93,11 @@ export const login = async (req, res) => {
             return res.status(400).json({ message: "Invalid credentials" });
         }
 
+        // Check if user is banned
+        if (user.banned) {
+            return res.status(403).json({ message: "Your account has been banned." });
+        }
+
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ message: "Invalid credentials" });
@@ -134,6 +139,10 @@ export const logout = (req, res) => {
 
 export const getCurrentUser = async (req, res) => {
     try { 
+        if (req.user.banned) {
+            res.clearCookie("jwt-alumnilink");
+            return res.status(403).json({ message: "Your account has been banned. You have been logged out." });
+        }
         res.json(req.user);
     } catch (error) {
         console.log("Error in getCurrentUser authController:", error.message);
@@ -143,6 +152,10 @@ export const getCurrentUser = async (req, res) => {
 
 export const getSocketToken = async (req, res) => {
     try {
+        if (req.user.banned) {
+            res.clearCookie("jwt-alumnilink");
+            return res.status(403).json({ message: "Your account has been banned. You have been logged out." });
+        }
         // Generate a token for Socket.IO authentication
         const token = jwt.sign({ userId: req.user._id }, process.env.JWT_SECRET, { expiresIn: "3d" });
         res.json({ token });

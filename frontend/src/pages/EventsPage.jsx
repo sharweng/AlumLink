@@ -139,7 +139,7 @@ const EventsPage = () => {
               <Loader className="animate-spin h-12 w-12 text-primary mx-auto" />
             </div>
           ) : events && events.length > 0 ? (
-            events.map((event) => (
+            events.filter(e => !e.organizer?.banned).map((event) => (
               <EventPost key={event._id} event={event} />
             ))
           ) : (

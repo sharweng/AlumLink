@@ -8,15 +8,15 @@ export const getAllMentors = async (req, res) => {
     try {
         const { expertise, search } = req.query;
         
-        const filter = { isMentor: true, isActive: true };
+        const filter = { isMentor: true, isActive: true, banned: { $ne: true } };
         
         if (expertise) {
             filter.mentorExpertise = { $in: [expertise] };
         }
         
         let mentors = await User.find(filter)
-            .select("name username profilePicture headline location about skills mentorBio mentorExpertise mentorAvailability experience batch course")
-            .sort({ createdAt: -1 });
+        .select("name username profilePicture headline location about skills mentorBio mentorExpertise mentorAvailability experience batch course banned")
+        .sort({ createdAt: -1 });
         
         if (search) {
             const searchLower = search.toLowerCase();

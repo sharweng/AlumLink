@@ -10,9 +10,10 @@ export const getFeedPosts = async (req, res) => {
 
 
         const posts = await Post.find({ author:{$in: [...userLinks, req.user._id]} })
-            .populate("author", "name username profilePicture headline")
+            .populate("author", "name username profilePicture headline banned")
             .populate("comments.user", "name username profilePicture")
             .populate("comments.replies.user", "name username profilePicture")
+            .where('author.banned').ne(true) // Exclude banned users
             .sort({ createdAt: -1 });
 
             res.status(200).json(posts);
@@ -39,9 +40,10 @@ export const getUserPosts = async (req, res) => {
         }
 
         const posts = await Post.find(query)
-            .populate("author", "name username profilePicture headline")
+            .populate("author", "name username profilePicture headline banned")
             .populate("comments.user", "name username profilePicture")
             .populate("comments.replies.user", "name username profilePicture")
+            .where('author.banned').ne(true) // Exclude banned users
             .sort({ createdAt: -1 });
 
         res.status(200).json(posts);
@@ -218,10 +220,10 @@ export const editPost = async (req, res) => {
 export const getPostById = async (req, res) => {
     try {
         const postId = req.params.id;
-        const post = await Post.findById(postId)
-        .populate("author", "name username profilePicture headline")
-        .populate("comments.user", "name username profilePicture headline")
-        .populate("comments.replies.user", "name username profilePicture")
+    const post = await Post.findById(postId)
+    .populate("author", "name username profilePicture headline banned")
+    .populate("comments.user", "name username profilePicture headline")
+    .populate("comments.replies.user", "name username profilePicture")
 
         res.status(200).json(post);
     } catch (error) {

@@ -19,7 +19,7 @@ const ProfilePage = () => {
     updateProfile(updatedData);
   };
   const { username } = useParams();
-  const queryClient = useQueryClient(); 
+  const queryClient = useQueryClient();
   const authUser = queryClient.getQueryData(["authUser"]);
   const [activeTab, setActiveTab] = useState('posts');
   const [profileSubTab, setProfileSubTab] = useState('about');
@@ -73,10 +73,50 @@ const ProfilePage = () => {
     }
   });
 
-  if (isUserProfileLoading) return null
+  const { data: userData, isLoading: loadingUser } = useQuery({
+    queryKey: ["profile", username],
+    queryFn: async () => axiosInstance.get(`/users/${username}`)
+  });
+
+  if (loadingUser) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
+        <Loader className="animate-spin h-10 w-10 text-primary mb-4" />
+        <span className="text-lg text-info font-medium">Loading profile...</span>
+      </div>
+    );
+  }
+
+  if (!userData?.data) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
+        <XCircle className="h-12 w-12 text-gray-400 mb-3" />
+        <span className="text-xl font-semibold text-gray-500">Profile not found</span>
+        <span className="text-info mt-1">The profile you are looking for does not exist or was removed.</span>
+      </div>
+    );
+  }
+
+  if (userData.data.banned && !(authUser?.role === 'admin' || authUser?._id === userData.data._id)) {
+    // Explicit banned page for non-admin and non-owner
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-1">
+          <Sidebar user={authUser} />
+        </div>
+        <div className="lg:col-span-3">
+          <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow p-6">
+            <XCircle className="h-12 w-12 text-red-400 mb-3" />
+            <h2 className="text-2xl font-semibold mb-2">This profile has been banned</h2>
+            <p className="text-gray-600">The user you're trying to view has been banned by the admins.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const isOwnProfile = authUser?.username === userProfile.data.username;
-  const userData = isOwnProfile ? authUser : userProfile.data;
+  const userDataFinal = isOwnProfile ? authUser : userProfile.data;
 
   const handleSaveHeader = (updatedData, onDone) => {
     updateProfile(updatedData, {
@@ -109,7 +149,7 @@ const ProfilePage = () => {
       {/* Main Content */}
       <div className="col-span-1 lg:col-span-3">
         <ProfileHeader 
-          userData={ userData }
+          userData={ userDataFinal }
           isOwnProfile={ isOwnProfile }
           onSave={ handleSaveHeader }
           isSaving={isSaving }
@@ -168,11 +208,11 @@ const ProfilePage = () => {
                 {/* Right column - Content */}
                 <div className="lg:col-span-3">
                   {profileSubTab === 'about' && (
-                    <AboutSection userData={ userData } isOwnProfile={ isOwnProfile } onSave={ handleSave } />
+                    <AboutSection userData={ userDataFinal } isOwnProfile={ isOwnProfile } onSave={ handleSave } />
                   )}
                   {profileSubTab === 'experience' && (
-                    userData.experience && userData.experience.length > 0 ? (
-                      <ExperienceSection userData={ userData } isOwnProfile={ isOwnProfile } onSave={ handleSave } />
+                    userDataFinal.experience && userDataFinal.experience.length > 0 ? (
+                      <ExperienceSection userData={ userDataFinal } isOwnProfile={ isOwnProfile } onSave={ handleSave } />
                     ) : (
                       <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
                         <XCircle className="h-12 w-12 text-gray-400 mb-3" />
@@ -181,11 +221,11 @@ const ProfilePage = () => {
                     )
                   )}
                   {profileSubTab === 'academic' && (
-                    <BatchCourseSection userData={ userData } />
+                    <BatchCourseSection userData={ userDataFinal } />
                   )}
                   {profileSubTab === 'skills' && (
-                    userData.skills && userData.skills.length > 0 ? (
-                      <SkillsSection userData={ userData } isOwnProfile={ isOwnProfile } onSave={ handleSave } />
+                    userDataFinal.skills && userDataFinal.skills.length > 0 ? (
+                      <SkillsSection userData={ userDataFinal } isOwnProfile={ isOwnProfile } onSave={ handleSave } />
                     ) : (
                       <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
                         <XCircle className="h-12 w-12 text-gray-400 mb-3" />
@@ -194,7 +234,7 @@ const ProfilePage = () => {
                     )
                   )}
                   {profileSubTab === 'mentor' && isOwnProfile && (
-                    <MentorSettingsSection userData={ userData } isOwnProfile={ isOwnProfile } />
+                    <MentorSettingsSection userData={ userDataFinal } isOwnProfile={ isOwnProfile } />
                   )}
                 </div>
               </div>
@@ -207,7 +247,7 @@ const ProfilePage = () => {
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Links Visibility</label>
                   <select
-                    value={userData.linksVisibility || 'public'}
+                    value={userDataFinal.linksVisibility || 'public'}
                     onChange={(e) => updateLinksVisibilityMutation.mutate(e.target.value)}
                     className="border rounded px-3 py-2"
                   >

@@ -813,6 +813,10 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
     return colors[category] || colors.Other;
   };
 
+  // If discussion is banned or author is banned and the current user is neither the owner nor an admin, don't render
+  if ((discussion.banned || discussion.author?.banned) && authUser?._id !== discussion.author._id && authUser?.role !== 'admin') {
+    return null;
+  }
   return (
     <div className="bg-white rounded-lg shadow hover:shadow-md transition-shadow">
       {/* Header */}

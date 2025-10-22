@@ -17,7 +17,8 @@ export const getAllJobPosts = async (req, res) => {
 
         const jobPosts = await JobPost.find(filter)
             .populate("author", "name username profilePicture headline")
-            .populate("comments.user", "name username profilePicture")
+                .populate({ path: 'author', select: 'name avatar banned' })
+            .where('author.banned').ne(true)
             .sort({ createdAt: -1 })
             .limit(limit * 1)
             .skip((page - 1) * limit);
@@ -42,7 +43,7 @@ export const getJobPostById = async (req, res) => {
         
         const jobPost = await JobPost.findById(id)
             .populate("author", "name username profilePicture headline")
-            .populate("comments.user", "name username profilePicture")
+                .populate({ path: 'author', select: 'name avatar banned' })
             .populate("applicants.user", "name username profilePicture headline");
 
         if (!jobPost) {
@@ -364,6 +365,7 @@ export const searchJobPosts = async (req, res) => {
 
         const jobPosts = await JobPost.find(searchFilter)
             .populate("author", "name username profilePicture headline")
+            .where('author.banned').ne(true)
             .sort({ score: { $meta: "textScore" }, createdAt: -1 })
             .limit(limit * 1)
             .skip((page - 1) * limit);

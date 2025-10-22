@@ -118,17 +118,15 @@ const DiscussionForumsPage = () => {
             <Loader className="animate-spin h-12 w-12 text-primary mx-auto" />
           </div>
         ) : discussions && discussions.length > 0 ? (
-          discussions
-            .filter(d => {
-              // hide banned discussions from regular users
-              if (d.banned) {
-                return authUser?.role === 'admin' || authUser?._id === d.author?._id
-              }
-              return true
-            })
-            .map((discussion) => (
-              <DiscussionPost key={discussion._id} discussion={discussion} />
-            ))
+          discussions?.filter(d => {
+            // hide banned discussions from regular users
+            if (d.banned || d.author?.banned) {
+              return authUser?.role === 'admin' || authUser?._id === d.author?._id
+            }
+            return true
+          }).map((discussion) => (
+            <DiscussionPost key={discussion._id} discussion={discussion} />
+          ))
         ) : (
           <div className="bg-white rounded-lg shadow p-8 text-center">
             <MessageSquare size={64} className="mx-auto text-gray-400 mb-4" />

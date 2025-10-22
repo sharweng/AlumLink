@@ -199,6 +199,9 @@ export const getAllEvents = async (req, res) => {
         let events = await Event.find(query)
             .populate("organizer", "name username profilePicture headline")
             .populate("attendees.user", "name username profilePicture")
+                .where('organizer.banned').ne(true) // Exclude banned organizers
+                // When populating organizer, include banned field
+                .populate({ path: 'organizer', select: 'name avatar banned' })
             .sort(sortOption);
 
         // Update event statuses based on current time
@@ -711,6 +714,7 @@ export const getMyEvents = async (req, res) => {
         })
             .populate("organizer", "name username profilePicture headline")
             .populate("attendees.user", "name username profilePicture")
+            .where('organizer.banned').ne(true) // Exclude banned organizers
             .sort({ eventDate: 1 }); // Sort by soonest first
 
         // Update event statuses and filter out invalid events

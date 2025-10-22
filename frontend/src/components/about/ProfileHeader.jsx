@@ -2,14 +2,24 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { axiosInstance } from "../../lib/axios";
 import toast from "react-hot-toast";
-import { Camera, Clock, MapPin, UserCheck, UserPlus, X, Loader, MessageCircle } from "lucide-react";
+import { Camera, Clock, MapPin, UserCheck, UserPlus, X, Loader, MessageCircle, MoreVertical, CheckCircle, XCircle } from "lucide-react";
+import ReportModal from "../common/ReportModal";
 import { useNavigate } from "react-router-dom";
 
 const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving, tabs, activeTab, setActiveTab }) => {
+  const [banReason, setBanReason] = useState("");
+  const [showUnbanModal, setShowUnbanModal] = useState(false);
   const [ isEditing, setIsEditing ] = useState(false);
   const [ editedData, setEditedData ] = useState({})
+  const [ showMoreMenu, setShowMoreMenu ] = useState(false);
+  const [ showReportModal, setShowReportModal ] = useState(false);
+  const [ showBanModal, setShowBanModal ] = useState(false);
+
   const queryClient = useQueryClient();
-  const authUser = queryClient.getQueryData(["authUser"])
+  const authUser = queryClient.getQueryData(["authUser"]);
+  // Assume authUser.role is 'admin' for admin check, and userData.banned for banned status
+  const isAdmin = authUser?.role === 'admin';
+  const isBanned = userData?.banned;
   const navigate = useNavigate();
 
   const { data: linkStatus, refetch:refetchLinkStatus } = useQuery({
@@ -97,24 +107,22 @@ const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving, tabs, activeT
   }
 
   const renderLinkButton = () => {
-    const baseClass = "text-white py-2 px-4 rounded-full transition duration-300 flex items-center justify-center";
+    const baseClass = "text-white py-2 px-4 rounded-full transition duration-300 flex items-center justify-center cursor-pointer";
     switch(computedLinkStatus){
       case "linked":
         return (
-          <div className="flex gap-2 justify-center">
-            <div className={`${baseClass} bg-green-500 hover:bg-green-600`}>
-              <UserCheck size={20} className='mr-2' />
-              Linked
-            </div>
-            <button className={`${baseClass} bg-red-500 hover:bg-red-600 text-sm`} onClick={() => removeLink(userData._id)}> 
-              <X size={20} className='mr-2' />
-              Remove Link
-            </button>
-          </div>
+          <button
+            className={`${baseClass} bg-green-500 hover:bg-red-600`}
+            title="Unlink"
+            onClick={() => removeLink(userData._id)}
+          >
+            <UserCheck size={20} className='mr-2' />
+            Linked
+          </button>
         )
       case "pending":
         return(
-          <button className={`${baseClass} bg-yellow-500 hover:bg-yellow-600`}>
+          <button className={`${baseClass} bg-yellow-500 hover:bg-yellow-600`} disabled>
             <Clock size={20} className='mr-2' />
             Pending
           </button>
@@ -165,6 +173,33 @@ const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving, tabs, activeT
 
   const handleMessage = () => {
     navigate(`/messages?user=${userData._id}`);
+  };
+
+  // Ban user handler
+  const handleBanUser = async (userId) => {
+    try {
+      await axiosInstance.put(`/admin/users/${userId}/ban`, { reason: banReason });
+      toast.success("User banned successfully");
+      setShowBanModal(false);
+      setBanReason("");
+      // Refetch user data to update badge/UI
+      queryClient.invalidateQueries(["profile", userId]);
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Failed to ban user");
+    }
+  };
+
+  // Unban user handler
+  const handleUnbanUser = async (userId) => {
+    try {
+      await axiosInstance.put(`/admin/users/${userId}/unban`);
+      toast.success("User unbanned successfully");
+      setShowUnbanModal(false);
+      // Refetch user data to update badge/UI
+      queryClient.invalidateQueries(["profile", userId]);
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Failed to unban user");
+    }
   };
 
   return (
@@ -249,7 +284,23 @@ const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving, tabs, activeT
           </div>
         </div>
 
-        {isOwnProfile ? (
+        {/* Inline link and message buttons */}
+        {!isOwnProfile && (
+          <div className='flex justify-center items-center gap-2'>
+            {renderLinkButton()}
+            {canMessageData?.canMessage && (
+              <button
+                onClick={handleMessage}
+                className='bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full transition duration-300 flex items-center justify-center'
+                title="Message"
+              >
+                <MessageCircle size={20} />
+              </button>
+            )}
+          </div>
+        )}
+
+        {isOwnProfile && (
           isEditing ? (
             <button
               className='w-full bg-primary text-white py-2 px-4 rounded-full hover:bg-red-700 transition duration-300 flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed'
@@ -262,48 +313,168 @@ const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving, tabs, activeT
           ) : (
             <button
               onClick={() => setIsEditing(true)}
-              className='w-full bg-primary text-white py-2 px-4 rounded-full hover:bg-red-700
-                 transition duration-300'
+              className='w-full bg-primary text-white py-2 px-4 rounded-full hover:bg-red-700 transition duration-300'
             >
               Edit Profile
             </button>
           )
-        ) : (
-          <div className='flex flex-col gap-2'>
-            <div className='flex justify-center'>{renderLinkButton()}</div>
-            {canMessageData?.canMessage && (
-              <button
-                onClick={handleMessage}
-                className='bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-full transition duration-300 flex items-center justify-center'
-              >
-                <MessageCircle size={20} className='mr-2' />
-                Message
-              </button>
-            )}
-          </div>
         )}
       </div>
 
-      {/* Tabs at the very bottom of header */}
+      {/* Tabs at the very bottom of header with more options and banned badge */}
       {tabs && setActiveTab && (
-        <div className="flex border-b border-gray-200 px-0 bg-white rounded-b-lg shadow-sm">
-          {tabs.map(tab => (
+        <div className="flex border-b border-gray-200 px-0 bg-white rounded-b-lg shadow-sm items-center justify-between">
+          <div className="flex">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-6 py-3 font-semibold text-base transition-colors duration-150 focus:outline-none ${
+                  activeTab === tab.id
+                    ? 'border-b-4 border-primary text-primary bg-gray-50'
+                    : 'text-gray-500 hover:text-primary hover:bg-gray-100'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          {/* BANNED badge and More options icon/menu */}
+          {!isOwnProfile && (
+            <div className="flex items-center mr-2 relative">
+              {isBanned && (
+                <span className="mr-1 inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
+              )}
+              <button
+                className="p-2 hover:bg-gray-100 rounded-full transition"
+                onClick={() => setShowMoreMenu(v => !v)}
+                title="More options"
+              >
+                <MoreVertical size={22} className="text-gray-600" />
+              </button>
+              {showMoreMenu && (
+                <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-md z-20">
+                  {isAdmin ? (
+                    isBanned ? (
+                      <button
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 text-red-600 flex items-center gap-2"
+                        onClick={() => {
+                          setShowMoreMenu(false);
+                          setShowUnbanModal(true);
+                        }}
+                      >
+                        <CheckCircle size={16} className='text-red-600' />
+                        Unban user
+                      </button>
+                    ) : (
+                      <button
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 text-red-600 flex items-center gap-2"
+                        onClick={() => {
+                          setShowMoreMenu(false);
+                          setShowBanModal(true);
+                        }}
+                      >
+                        <XCircle size={16} className='text-red-600' />
+                        Ban user
+                      </button>
+                    )
+                  ) : (
+                    <button
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        setShowReportModal(true);
+                      }}
+                    >
+                      Report user
+                    </button>
+                  )}
+                </div>
+              )}
+      {/* Unban Modal for admin */}
+      {showUnbanModal && isAdmin && !isOwnProfile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-6 py-3 font-semibold text-base transition-colors duration-150 focus:outline-none ${
-                activeTab === tab.id
-                  ? 'border-b-4 border-primary text-primary bg-gray-50'
-                  : 'text-gray-500 hover:text-primary hover:bg-gray-100'
-              }`}
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+              onClick={() => setShowUnbanModal(false)}
+              aria-label="Close"
             >
-              {tab.label}
+              <X size={22} />
             </button>
-          ))}
+            <h2 className="text-xl font-bold mb-2">Unban User</h2>
+            <p className="mb-4 text-gray-700">Are you sure you want to unban this user? They will regain access to login, messaging, and visibility.</p>
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                onClick={() => setShowUnbanModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 font-semibold"
+                onClick={() => handleUnbanUser(userData._id)}
+              >
+                Yes, Unban
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+            </div>
+          )}
+        </div>
+      )}
+      {/* Report Modal for reporting the user from profile header */}
+      {showReportModal && !isOwnProfile && !isAdmin && (
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          defaultType={'other'}
+          targetId={userData?.username}
+        />
+      )}
+      {/* Ban Modal for admin - matches provided image */}
+      {showBanModal && isAdmin && !isOwnProfile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+              onClick={() => setShowBanModal(false)}
+              aria-label="Close"
+            >
+              <X size={22} />
+            </button>
+            <h2 className="text-xl font-bold mb-2">Ban User</h2>
+            <p className="mb-4 text-gray-700">Are you sure you want to ban this user? Banned users cannot log in, message, or be seen by regular users.</p>
+            <textarea
+              className="w-full border border-gray-300 rounded-lg p-2 mb-4 resize-none"
+              rows={3}
+              placeholder="Optional reason (why you're banning)"
+              value={banReason}
+              onChange={e => setBanReason(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                onClick={() => setShowBanModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 font-semibold"
+                onClick={() => handleBanUser(userData._id)}
+              >
+                Yes, Ban
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
-  )
+  );
 }
+
+// ...existing code...
 
 export default ProfileHeader

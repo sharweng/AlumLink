@@ -34,13 +34,13 @@ const PostPage = () => {
           <span className="text-info mt-1">The post you are looking for does not exist or was removed.</span>
         </div>
       );
-    } else if (post.data.banned && !(authUser?.role === 'admin' || authUser?._id === post.data.author._id)) {
+    } else if ((post.data.banned || post.data.author?.banned) && !(authUser?.role === 'admin' || authUser?._id === post.data.author._id)) {
       // Explicit banned page for non-admin and non-owner
       return (
         <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow p-6">
           <XCircle className="h-12 w-12 text-red-400 mb-3" />
-          <h2 className="text-2xl font-semibold mb-2">This post has been banned</h2>
-          <p className="text-gray-600">The content you're trying to view has been removed by the admins.</p>
+          <h2 className="text-2xl font-semibold mb-2">{post.data.banned ? "This post has been banned" : "The user who created this post is banned"}</h2>
+          <p className="text-gray-600">{post.data.banned ? "The content you're trying to view has been removed by the admins." : "The user who created this post has been banned by the admins."}</p>
         </div>
       )
     } else {

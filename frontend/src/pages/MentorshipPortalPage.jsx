@@ -43,23 +43,19 @@ const MentorshipPortalPage = () => {
 	});
 
 		const filteredMentors = mentors?.filter((mentor) => {
-		// Skip own profile
-		if (mentor._id === authUser._id) return false;
-
-		// Filter by search query
-		if (searchQuery) {
-			const searchLower = searchQuery.toLowerCase();
-			const matchesName = mentor.name.toLowerCase().includes(searchLower);
-			const matchesHeadline = mentor.headline?.toLowerCase().includes(searchLower);
-			const matchesExpertise = mentor.mentorExpertise.some((exp) => exp.toLowerCase().includes(searchLower));
-
-			if (!matchesName && !matchesHeadline && !matchesExpertise) {
-				return false;
+			if (mentor.user?.banned) return false;
+			if (mentor._id === authUser._id) return false;
+			if (searchQuery) {
+				const searchLower = searchQuery.toLowerCase();
+				const matchesName = mentor.name.toLowerCase().includes(searchLower);
+				const matchesHeadline = mentor.headline?.toLowerCase().includes(searchLower);
+				const matchesExpertise = mentor.mentorExpertise.some((exp) => exp.toLowerCase().includes(searchLower));
+				if (!matchesName && !matchesHeadline && !matchesExpertise) {
+					return false;
+				}
 			}
-		}
-
-		return true;
-	});
+			return true;
+		});
 
 	const upcomingSessions = sessions?.filter(
 		(session) => session.status === "scheduled" && new Date(session.scheduledDate) > new Date()
@@ -71,8 +67,8 @@ const MentorshipPortalPage = () => {
 		(session) => session.status === "completed" || (session.status === "scheduled" && new Date(session.scheduledDate) <= new Date())
 	);
 
-	const activeMentorships = myMentorships?.filter((m) => m.status === "accepted");
-	const pendingMentorships = myMentorships?.filter((m) => m.status === "pending");
+		const activeMentorships = myMentorships?.filter((m) => m.status === "accepted" && !m.mentor?.user?.banned);
+		const pendingMentorships = myMentorships?.filter((m) => m.status === "pending" && !m.mentor?.user?.banned);
 
 	return (
 		<div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

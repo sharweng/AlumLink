@@ -156,3 +156,52 @@ export const getDashboardStats = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+// Ban a user (admin only)
+export const banUser = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: "Access denied. Admins only." });
+        }
+        const { userId } = req.params;
+        const { reason } = req.body;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        if (user.banned) {
+            return res.status(400).json({ message: "User is already banned." });
+        }
+        user.banned = true;
+        user.bannedReason = reason || "";
+        await user.save();
+        res.status(200).json({ message: "User banned successfully." });
+    } catch (error) {
+        console.log("Error in banUser adminController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+// Unban a user (admin only)
+export const unbanUser = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: "Access denied. Admins only." });
+        }
+        const { userId } = req.params;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        if (!user.banned) {
+            return res.status(400).json({ message: "User is not banned." });
+        }
+        user.banned = false;
+        user.bannedReason = "";
+        await user.save();
+        res.status(200).json({ message: "User unbanned successfully." });
+    } catch (error) {
+        console.log("Error in unbanUser adminController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};

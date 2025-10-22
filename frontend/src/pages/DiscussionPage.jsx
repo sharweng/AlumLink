@@ -115,6 +115,31 @@ const DiscussionPage = () => {
     )
   }
 
+  // If author is banned, show banned user UI for non-admin/non-owner
+  if (discussion?.data?.author?.banned && !(authUser?.role === 'admin' || authUser?._id === discussion.data.author._id)) {
+    return (
+      <div className='grid grid-cols-1 lg:grid-cols-4 gap-6'>
+        <div className='lg:col-span-1'>
+          <Sidebar user={authUser} />
+        </div>
+        <div className='lg:col-span-3'>
+          <Link
+            to='/forums'
+            className='inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors'
+          >
+            <ArrowLeft size={16} />
+            Back to Forums
+          </Link>
+          <div className='flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow p-6'>
+            <XCircle className='h-12 w-12 text-red-400 mb-3' />
+            <h2 className='text-2xl font-semibold mb-2'>The user who created this discussion is banned</h2>
+            <p className='text-gray-600'>The user who created this discussion has been banned by the admins.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className='grid grid-cols-1 lg:grid-cols-4 gap-6'>
       <div className='col-span-1 lg:col-span-1'>

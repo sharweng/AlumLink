@@ -40,9 +40,10 @@ export const getAllDiscussions = async (req, res) => {
         }
         
         const discussions = await Discussion.find(query)
-            .populate("author", "name username profilePicture headline")
+            .populate("author", "name username profilePicture headline banned")
             .populate("comments.user", "name username profilePicture")
             .populate("comments.replies.user", "name username profilePicture")
+            .where('author.banned').ne(true) // Exclude discussions where the author is banned
             .sort(sortOption);
 
         res.status(200).json(discussions);
@@ -57,7 +58,7 @@ export const getDiscussionById = async (req, res) => {
         const discussionId = req.params.id;
         
         const discussion = await Discussion.findById(discussionId)
-            .populate("author", "name username profilePicture headline")
+            .populate("author", "name username profilePicture headline banned")
             .populate("comments.user", "name username profilePicture headline")
             .populate("comments.replies.user", "name username profilePicture");
 

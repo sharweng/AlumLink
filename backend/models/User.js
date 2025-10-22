@@ -78,6 +78,14 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: true,
     },
+    banned: {
+        type: Boolean,
+        default: false,
+    },
+    bannedReason: {
+        type: String,
+        default: "",
+    },
     // Mentorship fields
     isMentor: {
         type: Boolean,
