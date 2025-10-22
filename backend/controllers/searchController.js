@@ -37,24 +37,28 @@ export const globalSearch = async (req, res) => {
             }
 
             userSearchResults = await User.find({
-                $or: userSearchConditions
+                $or: userSearchConditions,
+                banned: { $ne: true }
             })
-            .select("name username profilePicture headline location batch course skills")
+            .select("name username profilePicture headline location batch course skills banned")
             .limit(10);
         }
 
         // Search Posts
         if (!filter || filter === 'posts' || filter === 'all') {
             postSearchResults = await Post.find({
-                content: { $regex: searchQuery, $options: 'i' }
+                content: { $regex: searchQuery, $options: 'i' },
+                banned: { $ne: true }
             })
             .populate({
                 path: 'author',
-                select: 'name username profilePicture headline batch course'
+                select: 'name username profilePicture headline batch course banned'
             })
-            .select("content image createdAt")
+            .select("content image createdAt banned")
             .sort({ createdAt: -1 })
-            .limit(10);
+            .limit(20);
+            // Filter out posts by banned authors
+            postSearchResults = postSearchResults.filter(p => !p.author?.banned);
         }
 
         // Search Job Posts
@@ -72,16 +76,18 @@ export const globalSearch = async (req, res) => {
             jobPostSearchResults = await JobPost.find({
                 $and: [
                     { isActive: true },
-                    { $or: jobSearchConditions }
+                    { $or: jobSearchConditions },
+                    { banned: { $ne: true } }
                 ]
             })
             .populate({
                 path: 'author',
-                select: 'name username profilePicture headline'
+                select: 'name username profilePicture headline banned'
             })
-            .select("title company location type workType salary createdAt skills")
+            .select("title company location type workType salary createdAt skills banned")
             .sort({ createdAt: -1 })
-            .limit(10);
+            .limit(20);
+            jobPostSearchResults = jobPostSearchResults.filter(j => !j.author?.banned);
         }
 
         // Search Discussions
@@ -94,15 +100,17 @@ export const globalSearch = async (req, res) => {
             ];
 
             discussionSearchResults = await Discussion.find({
-                $or: discussionSearchConditions
+                $or: discussionSearchConditions,
+                banned: { $ne: true }
             })
             .populate({
                 path: 'author',
-                select: 'name username profilePicture headline'
+                select: 'name username profilePicture headline banned'
             })
-            .select("title content category tags createdAt images")
+            .select("title content category tags createdAt images banned")
             .sort({ createdAt: -1 })
-            .limit(10);
+            .limit(20);
+            discussionSearchResults = discussionSearchResults.filter(d => !d.author?.banned);
         }
 
         // Search Events
@@ -115,15 +123,17 @@ export const globalSearch = async (req, res) => {
             ];
 
             eventSearchResults = await Event.find({
-                $or: eventSearchConditions
+                $or: eventSearchConditions,
+                banned: { $ne: true }
             })
             .populate({
                 path: 'organizer',
-                select: 'name username profilePicture headline'
+                select: 'name username profilePicture headline banned'
             })
-            .select("title description location type eventDate startTime endTime status images createdAt")
+            .select("title description location type eventDate startTime endTime status images createdAt banned")
             .sort({ eventDate: -1 })
-            .limit(10);
+            .limit(20);
+            eventSearchResults = eventSearchResults.filter(e => !e.organizer?.banned);
         }
 
         res.json({
