@@ -3,6 +3,7 @@ import { uploadFileToR2, deleteFileFromR2, extractR2Key } from "../lib/r2.js";
 import Notification from "../models/Notification.js";
 import Discussion from "../models/Discussion.js";
 import User from "../models/User.js";
+import ModerationLog from "../models/ModerationLog.js";
 
 export const getAllDiscussions = async (req, res) => {
     try {
@@ -569,6 +570,186 @@ export const deleteReply = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+// Admin: ban a discussion
+export const banDiscussion = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Access denied. Admins only.' });
+        }
+
+        const id = req.params.id;
+        const discussion = await Discussion.findById(id);
+        if (!discussion) return res.status(404).json({ message: 'Discussion not found' });
+
+        discussion.banned = true;
+        await discussion.save();
+
+        const reason = req.body?.reason;
+        await ModerationLog.create({ action: 'ban', targetType: 'discussion', targetId: id, performedBy: req.user._id, reason });
+
+        const populated = await Discussion.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
+
+        res.status(200).json({ message: 'Discussion banned', discussion: populated });
+    } catch (error) {
+        console.log('Error in banDiscussion:', error.message);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+// Admin: unban a discussion
+export const unbanDiscussion = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Access denied. Admins only.' });
+        }
+
+        const id = req.params.id;
+        const discussion = await Discussion.findById(id);
+        if (!discussion) return res.status(404).json({ message: 'Discussion not found' });
+
+        discussion.banned = false;
+        await discussion.save();
+
+        const reason = req.body?.reason;
+        await ModerationLog.create({ action: 'unban', targetType: 'discussion', targetId: id, performedBy: req.user._id, reason });
+
+        const populated = await Discussion.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
+
+        res.status(200).json({ message: 'Discussion unbanned', discussion: populated });
+    } catch (error) {
+        console.log('Error in unbanDiscussion:', error.message);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+// Admin: ban a discussion comment
+export const banDiscussionComment = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admins only' });
+        const { id, commentId } = req.params;
+        const discussion = await Discussion.findById(id);
+        if (!discussion) return res.status(404).json({ message: 'Discussion not found' });
+
+        const comment = discussion.comments.id(commentId);
+        if (!comment) return res.status(404).json({ message: 'Comment not found' });
+
+        comment.banned = true;
+        await discussion.save();
+
+        const reason = req.body?.reason;
+        await ModerationLog.create({ action: 'ban', targetType: 'comment', targetId: commentId, parentId: id, performedBy: req.user._id, reason });
+
+        const populated = await Discussion.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
+
+        res.status(200).json({ message: 'Comment banned', discussion: populated });
+    } catch (error) {
+        console.log('Error in banDiscussionComment:', error.message);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+// Admin: unban a discussion comment
+export const unbanDiscussionComment = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admins only' });
+        const { id, commentId } = req.params;
+        const discussion = await Discussion.findById(id);
+        if (!discussion) return res.status(404).json({ message: 'Discussion not found' });
+
+        const comment = discussion.comments.id(commentId);
+        if (!comment) return res.status(404).json({ message: 'Comment not found' });
+
+        comment.banned = false;
+        await discussion.save();
+
+        const reason = req.body?.reason;
+        await ModerationLog.create({ action: 'unban', targetType: 'comment', targetId: commentId, parentId: id, performedBy: req.user._id, reason });
+
+        const populated = await Discussion.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
+
+        res.status(200).json({ message: 'Comment unbanned', discussion: populated });
+    } catch (error) {
+        console.log('Error in unbanDiscussionComment:', error.message);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+// Admin: ban a discussion reply
+export const banDiscussionReply = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admins only' });
+        const { id, commentId, replyId } = req.params;
+        const discussion = await Discussion.findById(id);
+        if (!discussion) return res.status(404).json({ message: 'Discussion not found' });
+
+        const comment = discussion.comments.id(commentId);
+        if (!comment) return res.status(404).json({ message: 'Comment not found' });
+
+        const reply = comment.replies.id(replyId);
+        if (!reply) return res.status(404).json({ message: 'Reply not found' });
+
+        reply.banned = true;
+        await discussion.save();
+
+        const reason = req.body?.reason;
+        await ModerationLog.create({ action: 'ban', targetType: 'reply', targetId: replyId, parentId: id, performedBy: req.user._id, reason });
+
+        const populated = await Discussion.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
+
+        res.status(200).json({ message: 'Reply banned', discussion: populated });
+    } catch (error) {
+        console.log('Error in banDiscussionReply:', error.message);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+// Admin: unban a discussion reply
+export const unbanDiscussionReply = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admins only' });
+        const { id, commentId, replyId } = req.params;
+        const discussion = await Discussion.findById(id);
+        if (!discussion) return res.status(404).json({ message: 'Discussion not found' });
+
+        const comment = discussion.comments.id(commentId);
+        if (!comment) return res.status(404).json({ message: 'Comment not found' });
+
+        const reply = comment.replies.id(replyId);
+        if (!reply) return res.status(404).json({ message: 'Reply not found' });
+
+        reply.banned = false;
+        await discussion.save();
+
+        const reason = req.body?.reason;
+        await ModerationLog.create({ action: 'unban', targetType: 'reply', targetId: replyId, parentId: id, performedBy: req.user._id, reason });
+
+        const populated = await Discussion.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("comments.user", "name username profilePicture")
+            .populate("comments.replies.user", "name username profilePicture");
+
+        res.status(200).json({ message: 'Reply unbanned', discussion: populated });
+    } catch (error) {
+        console.log('Error in unbanDiscussionReply:', error.message);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
 
 export const updateReply = async (req, res) => {
     try {

@@ -218,9 +218,7 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
         <div className='relative ml-2 flex-shrink-0 flex items-center'>
           {/* Banned badge rendered inline left of the more options button */}
           {jobPost?.banned && (
-            <span className='mr-2 px-2 py-0.5 bg-red-100 text-red-800 rounded text-xs font-semibold'>
-              BANNED
-            </span>
+            <span className="mr-1 inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
           )}
 
           <button

@@ -21,7 +21,8 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle,
-  XCircle
+  XCircle,
+  CircleCheck
 } from "lucide-react"
 import { MoreVertical, Flag } from 'lucide-react'
 import PostAction from "./PostAction"
@@ -1109,7 +1110,9 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
               const isCommentOwner = comment.user._id === authUser._id
               const isEditingComment = editingCommentId === comment._id
               const isCommentExpanded = expandedComments.has(comment._id)
-              const repliesCount = comment.replies?.length || 0
+              // Count only replies visible to the current user (exclude banned replies unless admin or reply owner)
+              const visibleReplies = (comment.replies || []).filter(r => !r.banned || authUser?._id === r.user._id || authUser?.role === 'admin')
+              const repliesCount = visibleReplies.length
               
               return (
                 <div key={comment._id} id={comment._id} className="flex gap-3">
@@ -1353,6 +1356,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                                       onClick={(e) => { e.stopPropagation(); setModerationReply({ commentId: comment._id, replyId: reply._id }); setShowUnbanReplyConfirm(true); setOpenReplyMenu(null); }}
                                                       className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                                                     >
+                                                      <CheckCircle size={16} className='text-red-500' />
                                                       Unban
                                                     </button>
                                                   ) : (
@@ -1360,6 +1364,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                                       onClick={(e) => { e.stopPropagation(); setModerationReply({ commentId: comment._id, replyId: reply._id }); setShowBanReplyConfirm(true); setOpenReplyMenu(null); }}
                                                       className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                                                     >
+                                                      <XCircle size={16} className='text-red-500' />
                                                       Ban
                                                     </button>
                                                   )

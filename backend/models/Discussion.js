@@ -41,6 +41,7 @@ const discussionSchema = new mongoose.Schema({
     comments: [{
         content: { type: String },
         user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        banned: { type: Boolean, default: false },
         createdAt: { type: Date, default: Date.now },
         editedAt: { type: Date },
         likes: [{ 
@@ -54,10 +55,12 @@ const discussionSchema = new mongoose.Schema({
         replies: [{
             content: { type: String },
             user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+            banned: { type: Boolean, default: false },
             createdAt: { type: Date, default: Date.now },
             editedAt: { type: Date },
         }]
     }],
+    banned: { type: Boolean, default: false },
     isPinned: {
         type: Boolean,
         default: false,

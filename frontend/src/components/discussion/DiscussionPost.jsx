@@ -22,7 +22,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  ChevronRight as ChevronRightIcon
+  ChevronRight as ChevronRightIcon,
+  XCircle,
+  CheckCircle
 } from "lucide-react";
 import { MoreVertical, Flag } from 'lucide-react';
 import { formatDistanceToNow } from "date-fns";
@@ -68,6 +70,20 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   const [commentToDelete, setCommentToDelete] = useState(null);
   const [showDeleteReplyConfirm, setShowDeleteReplyConfirm] = useState(false);
   const [replyToDelete, setReplyToDelete] = useState(null);
+  // Moderation state
+  const [showBanDiscussionConfirm, setShowBanDiscussionConfirm] = useState(false);
+  const [showUnbanDiscussionConfirm, setShowUnbanDiscussionConfirm] = useState(false);
+  const [banDiscussionReason, setBanDiscussionReason] = useState('');
+
+  const [showBanCommentConfirm, setShowBanCommentConfirm] = useState(false);
+  const [showUnbanCommentConfirm, setShowUnbanCommentConfirm] = useState(false);
+  const [moderationCommentId, setModerationCommentId] = useState(null);
+  const [banCommentReason, setBanCommentReason] = useState('');
+
+  const [showBanReplyConfirm, setShowBanReplyConfirm] = useState(false);
+  const [showUnbanReplyConfirm, setShowUnbanReplyConfirm] = useState(false);
+  const [moderationReply, setModerationReply] = useState(null); // { commentId, replyId }
+  const [banReplyReason, setBanReplyReason] = useState('');
 
   const isOwner = authUser?._id === discussion.author._id;
   const isLiked = discussion.likes?.includes(authUser?._id);
@@ -162,10 +178,13 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   const getTotalCommentCount = () => {
     if (!discussion.comments) return 0;
 
-    let total = discussion.comments.length;
+    // Exclude banned comments and banned replies from counts (visible to admins/owners only)
+    let total = 0;
     discussion.comments.forEach(comment => {
-      if (comment.replies && comment.replies.length > 0) {
-        total += comment.replies.length;
+      if (comment.banned) return; // skip banned comment and its replies
+      total += 1;
+      if (comment.replies) {
+        total += comment.replies.filter(r => !r.banned).length;
       }
     });
     return total;
@@ -538,6 +557,97 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
     },
   });
 
+  // Moderation mutations (ban/unban discussion, comment, reply)
+  const { mutate: banDiscussionMutate, isPending: isBanningDiscussion } = useMutation({
+    mutationFn: async ({ discussionId, reason }) => {
+      const res = await axiosInstance.put(`/discussions/${discussionId}/ban`, { reason });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['discussions'] });
+      queryClient.invalidateQueries({ queryKey: ['discussion', discussion._id] });
+      toast.success('Discussion banned');
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to ban discussion');
+    }
+  })
+
+  const { mutate: unbanDiscussionMutate, isPending: isUnbanningDiscussion } = useMutation({
+    mutationFn: async ({ discussionId }) => {
+      const res = await axiosInstance.put(`/discussions/${discussionId}/unban`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['discussions'] });
+      queryClient.invalidateQueries({ queryKey: ['discussion', discussion._id] });
+      toast.success('Discussion unbanned');
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to unban discussion');
+    }
+  })
+
+  const { mutate: banDiscussionCommentMutate, isPending: isBanningComment } = useMutation({
+    mutationFn: async ({ commentId, reason }) => {
+      const res = await axiosInstance.put(`/discussions/${discussion._id}/comment/${commentId}/ban`, { reason });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['discussions'] });
+      queryClient.invalidateQueries({ queryKey: ['discussion', discussion._id] });
+      toast.success('Comment banned');
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to ban comment');
+    }
+  })
+
+  const { mutate: unbanDiscussionCommentMutate, isPending: isUnbanningComment } = useMutation({
+    mutationFn: async ({ commentId }) => {
+      const res = await axiosInstance.put(`/discussions/${discussion._id}/comment/${commentId}/unban`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['discussions'] });
+      queryClient.invalidateQueries({ queryKey: ['discussion', discussion._id] });
+      toast.success('Comment unbanned');
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to unban comment');
+    }
+  })
+
+  const { mutate: banDiscussionReplyMutate, isPending: isBanningReply } = useMutation({
+    mutationFn: async ({ commentId, replyId, reason }) => {
+      const res = await axiosInstance.put(`/discussions/${discussion._id}/comment/${commentId}/reply/${replyId}/ban`, { reason });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['discussions'] });
+      queryClient.invalidateQueries({ queryKey: ['discussion', discussion._id] });
+      toast.success('Reply banned');
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to ban reply');
+    }
+  })
+
+  const { mutate: unbanDiscussionReplyMutate, isPending: isUnbanningReply } = useMutation({
+    mutationFn: async ({ commentId, replyId }) => {
+      const res = await axiosInstance.put(`/discussions/${discussion._id}/comment/${commentId}/reply/${replyId}/unban`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['discussions'] });
+      queryClient.invalidateQueries({ queryKey: ['discussion', discussion._id] });
+      toast.success('Reply unbanned');
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to unban reply');
+    }
+  })
+
   // Helper function to read file as data URL
   const readFileAsDataURL = (file) => {
     return new Promise((resolve, reject) => {
@@ -731,6 +841,11 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* If discussion is banned, show badge for admins/owner in header near actions */}
+            {discussion.banned && (authUser?.role === 'admin' || authUser?._id === discussion.author._id) && (
+              <span className="mr-1 inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
+            )}
+
             {isOwner ? (
               <div className="flex gap-2">
                 <button
@@ -751,7 +866,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
               <div className='relative'>
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowActionsDropdown(!showActionsDropdown); }}
-                  className='p-2 hover:bg-green-50 rounded-full transition-colors'
+                  className='p-2 hover:bg-gray-50 rounded-full transition-colors'
                 >
                   <MoreVertical size={18} className='text-gray-700' />
                 </button>
@@ -759,13 +874,34 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                   <>
                     <div className='fixed inset-0 z-10' onClick={() => setShowActionsDropdown(false)} />
                     <div className='absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setShowReportModal(true); setShowActionsDropdown(false); }}
-                        className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
-                      >
-                        <Flag size={14} className='text-red-500' />
-                        Report
-                      </button>
+                      {/* Admin-only Ban/Unban */}
+                      {authUser?.role === 'admin' ? (
+                        discussion.banned ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setShowUnbanDiscussionConfirm(true); setShowActionsDropdown(false); }}
+                            className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                          >
+                            <CheckCircle size={14} className='text-red-600' />
+                            Unban
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setShowBanDiscussionConfirm(true); setShowActionsDropdown(false); }}
+                            className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                          >
+                            <XCircle size={14} className='text-red-500' />
+                            Ban
+                          </button>
+                        )
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowReportModal(true); setShowActionsDropdown(false); }}
+                          className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                        >
+                          <Flag size={14} className='text-red-500' />
+                          Report
+                        </button>
+                      )}
                     </div>
                   </>
                 )}
@@ -1254,7 +1390,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                   </Link>
                   <div className="flex-1">
                     <div className="bg-gray-50 rounded-lg p-3 transition-colors duration-500">
-                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center justify-between mb-1">
                         <Link to={`/profile/${comment.user?.username}`}>
                           <h4 className="font-medium text-gray-900 hover:underline">
                             {comment.user?.name}
@@ -1262,6 +1398,9 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                           </h4>
                         </Link>
                         <div className="flex items-center gap-2">
+                          {comment.banned && (authUser?.role === 'admin' || isCommentOwner) && (
+                            <span className="inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
+                          )}
                           <span className="text-xs text-gray-500">
                             {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
                             {comment.editedAt && ' (edited)'}
@@ -1306,13 +1445,34 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                                 <>
                                   <div className='fixed inset-0 z-10' onClick={() => setOpenCommentMenu(null)} />
                                   <div className='absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); setReportSubTarget(comment._id); setShowReportModal(true); setOpenCommentMenu(null); }}
-                                      className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
-                                    >
-                                      <Flag size={12} className='text-red-500' />
-                                      Report
-                                    </button>
+                                    {/* Admin: Ban/Unban comment */}
+                                    {authUser?.role === 'admin' ? (
+                                      comment.banned ? (
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setModerationCommentId(comment._id); setShowUnbanCommentConfirm(true); setOpenCommentMenu(null); }}
+                                          className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                        >
+                                          <CheckCircle size={12} className='text-red-600' />
+                                          Unban
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setModerationCommentId(comment._id); setShowBanCommentConfirm(true); setOpenCommentMenu(null); }}
+                                          className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                        >
+                                          <XCircle size={12} className='text-red-500' />
+                                          Ban
+                                        </button>
+                                      )
+                                    ) : (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); setReportSubTarget(comment._id); setShowReportModal(true); setOpenCommentMenu(null); }}
+                                        className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                      >
+                                        <Flag size={12} className='text-red-500' />
+                                        Report
+                                      </button>
+                                    )}
                                   </div>
                                 </>
                               )}
@@ -1377,18 +1537,25 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                               Reply
                             </button>
                           </div>
-                          {comment.replies && comment.replies.length > 0 && (
-                            <button
-                              onClick={() => toggleReplies(comment._id)}
-                              className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1 mt-1"
-                            >
-                              {expandedComments.has(comment._id) ? (
-                                <ChevronDown size={14} />
-                              ) : (
-                                <ChevronRightIcon size={14} />
-                              )}
-                              {formatCount(comment.replies.length)} {comment.replies.length === 1 ? 'reply' : 'replies'}
-                            </button>
+                          { /* compute visible replies so banned replies are not counted for regular users */ }
+                          {comment.replies && (
+                            (() => {
+                              const visibleRepliesForCount = comment.replies.filter(r => !r.banned || authUser?.role === 'admin' || authUser?._id === r.user?._id)
+                              const visibleRepliesCount = visibleRepliesForCount.length
+                              return visibleRepliesCount > 0 ? (
+                                <button
+                                  onClick={() => toggleReplies(comment._id)}
+                                  className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1 mt-1"
+                                >
+                                  {expandedComments.has(comment._id) ? (
+                                    <ChevronDown size={14} />
+                                  ) : (
+                                    <ChevronRightIcon size={14} />
+                                  )}
+                                  {formatCount(visibleRepliesCount)} {visibleRepliesCount === 1 ? 'reply' : 'replies'}
+                                </button>
+                              ) : null
+                            })()
                           )}
                         </>
                       )}
@@ -1397,7 +1564,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                     {/* Replies */}
                     {comment.replies && comment.replies.length > 0 && expandedComments.has(comment._id) && (
                       <div className="mt-2 ml-4 space-y-2">
-                        {comment.replies.map((reply) => {
+                        {comment.replies.filter(r => !r.banned || authUser?.role === 'admin' || authUser?._id === r.user?._id).map((reply) => {
                           const isReplyOwner = reply.user?._id === authUser?._id;
                           const isEditingThisReply = editingReplyId === reply._id;
 
@@ -1419,10 +1586,14 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                                     </h5>
                                   </Link>
                                   <div className="flex items-center gap-2">
+                                    {reply.banned && (authUser?.role === 'admin' || isReplyOwner) && (
+                                      <span className="inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
+                                    )}
                                     <span className="text-xs text-gray-500">
                                       {formatDistanceToNow(new Date(reply.createdAt), { addSuffix: true })}
                                       {reply.editedAt && ' (edited)'}
                                     </span>
+                                    {/* Reply moderation / report */}
                                     {!isReplyOwner && (
                                       <div className='relative'>
                                         <button
@@ -1436,13 +1607,33 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                                           <>
                                             <div className='fixed inset-0 z-10' onClick={() => setOpenReplyMenu(null)} />
                                             <div className='absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
-                                              <button
-                                                onClick={(e) => { e.stopPropagation(); setReportSubTarget(reply._id); setShowReportModal(true); setOpenReplyMenu(null); }}
-                                                className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
-                                              >
-                                                <Flag size={12} className='text-red-500' />
-                                                Report
-                                              </button>
+                                              {authUser?.role === 'admin' ? (
+                                                reply.banned ? (
+                                                  <button
+                                                    onClick={(e) => { e.stopPropagation(); setModerationReply({ commentId: comment._id, replyId: reply._id }); setShowUnbanReplyConfirm(true); setOpenReplyMenu(null); }}
+                                                    className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                                  >
+                                                    <CheckCircle size={12} className='text-red-600' />
+                                                    Unban
+                                                  </button>
+                                                ) : (
+                                                  <button
+                                                    onClick={(e) => { e.stopPropagation(); setModerationReply({ commentId: comment._id, replyId: reply._id }); setShowBanReplyConfirm(true); setOpenReplyMenu(null); }}
+                                                    className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                                  >
+                                                    <XCircle size={12} className='text-red-500' />
+                                                    Ban
+                                                  </button>
+                                                )
+                                              ) : (
+                                                <button
+                                                  onClick={(e) => { e.stopPropagation(); setReportSubTarget(reply._id); setShowReportModal(true); setOpenReplyMenu(null); }}
+                                                  className='w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                                                >
+                                                  <Flag size={12} className='text-red-500' />
+                                                  Report
+                                                </button>
+                                              )}
                                             </div>
                                           </>
                                         )}
@@ -1688,6 +1879,90 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         defaultType='discussion'
         targetId={discussion._id}
         subTarget={reportSubTarget}
+      />
+
+      {/* Ban/Unban Discussion */}
+      <ConfirmModal
+        isOpen={showBanDiscussionConfirm}
+        onClose={() => { setShowBanDiscussionConfirm(false); setBanDiscussionReason(''); }}
+        onConfirm={() => { banDiscussionMutate({ discussionId: discussion._id, reason: banDiscussionReason }); setShowBanDiscussionConfirm(false); setBanDiscussionReason(''); }}
+        title="Ban Discussion"
+        message="Are you sure you want to ban this discussion? This will hide it from regular users. You can provide an optional reason."
+        confirmText="Ban"
+        cancelText="Cancel"
+        isLoading={isBanningDiscussion}
+        showTextArea={true}
+        textAreaValue={banDiscussionReason}
+        onTextAreaChange={(v) => setBanDiscussionReason(v)}
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
+
+      <ConfirmModal
+        isOpen={showUnbanDiscussionConfirm}
+        onClose={() => setShowUnbanDiscussionConfirm(false)}
+        onConfirm={() => { unbanDiscussionMutate({ discussionId: discussion._id }); setShowUnbanDiscussionConfirm(false); }}
+        title="Unban Discussion"
+        message="Are you sure you want to unban this discussion?"
+        confirmText="Unban"
+        cancelText="Cancel"
+        isLoading={isUnbanningDiscussion}
+        confirmButtonClass="bg-green-500 hover:bg-green-600"
+      />
+
+      {/* Ban/Unban Comment */}
+      <ConfirmModal
+        isOpen={showBanCommentConfirm}
+        onClose={() => { setShowBanCommentConfirm(false); setBanCommentReason(''); setModerationCommentId(null); }}
+        onConfirm={() => { if (moderationCommentId) banDiscussionCommentMutate({ commentId: moderationCommentId, reason: banCommentReason }); setShowBanCommentConfirm(false); setBanCommentReason(''); setModerationCommentId(null); }}
+        title="Ban Comment"
+        message="Are you sure you want to ban this comment? This will hide it (and its replies) from regular users. You can provide an optional reason."
+        confirmText="Ban"
+        cancelText="Cancel"
+        isLoading={isBanningComment}
+        showTextArea={true}
+        textAreaValue={banCommentReason}
+        onTextAreaChange={(v) => setBanCommentReason(v)}
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
+
+      <ConfirmModal
+        isOpen={showUnbanCommentConfirm}
+        onClose={() => { setShowUnbanCommentConfirm(false); setModerationCommentId(null); }}
+        onConfirm={() => { if (moderationCommentId) unbanDiscussionCommentMutate({ commentId: moderationCommentId }); setShowUnbanCommentConfirm(false); setModerationCommentId(null); }}
+        title="Unban Comment"
+        message="Are you sure you want to unban this comment?"
+        confirmText="Unban"
+        cancelText="Cancel"
+        isLoading={isUnbanningComment}
+        confirmButtonClass="bg-green-500 hover:bg-green-600"
+      />
+
+      {/* Ban/Unban Reply */}
+      <ConfirmModal
+        isOpen={showBanReplyConfirm}
+        onClose={() => { setShowBanReplyConfirm(false); setBanReplyReason(''); setModerationReply(null); }}
+        onConfirm={() => { if (moderationReply) banDiscussionReplyMutate({ commentId: moderationReply.commentId, replyId: moderationReply.replyId, reason: banReplyReason }); setShowBanReplyConfirm(false); setBanReplyReason(''); setModerationReply(null); }}
+        title="Ban Reply"
+        message="Are you sure you want to ban this reply? This will hide it from regular users. You can provide an optional reason."
+        confirmText="Ban"
+        cancelText="Cancel"
+        isLoading={isBanningReply}
+        showTextArea={true}
+        textAreaValue={banReplyReason}
+        onTextAreaChange={(v) => setBanReplyReason(v)}
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
+
+      <ConfirmModal
+        isOpen={showUnbanReplyConfirm}
+        onClose={() => { setShowUnbanReplyConfirm(false); setModerationReply(null); }}
+        onConfirm={() => { if (moderationReply) unbanDiscussionReplyMutate({ commentId: moderationReply.commentId, replyId: moderationReply.replyId }); setShowUnbanReplyConfirm(false); setModerationReply(null); }}
+        title="Unban Reply"
+        message="Are you sure you want to unban this reply?"
+        confirmText="Unban"
+        cancelText="Cancel"
+        isLoading={isUnbanningReply}
+        confirmButtonClass="bg-green-500 hover:bg-green-600"
       />
     </div>
   );
