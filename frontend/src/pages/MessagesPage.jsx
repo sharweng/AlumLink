@@ -26,13 +26,24 @@ const MessagesPage = () => {
     const [otherUserForCall, setOtherUserForCall] = useState(null);
     const [showReportModal, setShowReportModal] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
+    const [activeTab, setActiveTab] = useState('chats'); // 'chats' or 'links'
     const messagesEndRef = useRef(null);
     const typingTimeoutRef = useRef(null);
     const queryClient = useQueryClient();
     const authUser = queryClient.getQueryData(['authUser']);
     const { socket, isUserOnline } = useSocket();
-    
     const userIdFromParams = searchParams.get('user');
+
+    // Fetch user links for 'Links' tab
+    const { data: links, isLoading: loadingLinks } = useQuery({
+        queryKey: ['links'],
+        queryFn: async () => {
+            const res = await axiosInstance.get('/links');
+            return res.data;
+        },
+        refetchOnWindowFocus: true,
+        staleTime: 0
+    });
 
     // Fetch conversations with auto-refetch
     const { data: conversations, isLoading: loadingConversations } = useQuery({
@@ -100,9 +111,12 @@ const MessagesPage = () => {
         }
     });
 
-    // Scroll to bottom on new messages
+    // Scroll to bottom on new messages (only messages container)
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        const container = document.getElementById('messages-scroll-area');
+        if (container && messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
     }, [messages]);
 
     // Socket listeners
@@ -210,39 +224,55 @@ const MessagesPage = () => {
 
     return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Sidebar */}
-            <div className="hidden lg:block">
-                <Sidebar user={authUser} />
-            </div>
+        {/* Sidebar */}
+        <div className="hidden lg:block">
+            <Sidebar user={authUser} />
+        </div>
 
-            {/* Messages Container */}
-            <div className="lg:col-span-3">
-                <div className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col" style={{ height: '85vh' }}>
-                    <div className="grid grid-cols-1 md:grid-cols-3 h-full min-h-0">
-                        {/* Conversations List */}
-                        <div className={`md:col-span-1 border-r border-gray-200 flex flex-col h-full ${selectedConversation ? 'hidden md:flex' : 'flex'}`}>
-                            {/* Header */}
-                            <div className="p-4 border-b border-gray-200">
-                                <h2 className="text-xl font-bold flex items-center gap-2">
-                                    <MessageCircle className="text-primary" />
-                                    Messages
-                                </h2>
-                                {/* Search */}
-                                <div className="mt-3 relative">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                                    <input
-                                        type="text"
-                                        placeholder="Search conversations..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                                    />
-                                </div>
+        {/* Messages Container */}
+        <div className="lg:col-span-3">
+            <div className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col" style={{ height: '85vh' }}>
+                <div className="grid grid-cols-1 md:grid-cols-3 h-full min-h-0">
+                    {/* Conversations/Links List */}
+                    <div className={`md:col-span-1 border-r border-gray-200 flex flex-col h-full ${selectedConversation ? 'hidden md:flex' : 'flex'}`}> 
+                        {/* Header */}
+                        <div className="p-4 border-b border-gray-200">
+                            <h2 className="text-xl font-bold flex items-center gap-2">
+                                <MessageCircle className="text-primary" />
+                                Messages
+                            </h2>
+                            {/* Tabs */}
+                            <div className="mt-3 flex gap-2">
+                                <button
+                                    className={`px-3 py-1 rounded-t-lg font-semibold border-b-2 transition-colors ${activeTab === 'chats' ? 'border-primary text-primary bg-gray-50' : 'border-transparent text-gray-500 bg-transparent'}`}
+                                    onClick={() => setActiveTab('chats')}
+                                >
+                                    Chats
+                                </button>
+                                <button
+                                    className={`px-3 py-1 rounded-t-lg font-semibold border-b-2 transition-colors ${activeTab === 'links' ? 'border-primary text-primary bg-gray-50' : 'border-transparent text-gray-500 bg-transparent'}`}
+                                    onClick={() => setActiveTab('links')}
+                                >
+                                    Links
+                                </button>
                             </div>
+                            {/* Search for both tabs */}
+                            <div className="mt-3 relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder={activeTab === 'chats' ? "Search conversations..." : "Search links..."}
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                                />
+                            </div>
+                        </div>
 
-                            {/* Conversations */}
-                            <div className="flex-1 overflow-y-auto">
-                                {loadingConversations ? (
+                        {/* Chats or Links List */}
+                        <div className="flex-1 overflow-y-auto">
+                            {activeTab === 'chats' ? (
+                                loadingConversations ? (
                                     <div className="flex justify-center items-center h-full">
                                         <Loader className="animate-spin text-primary" size={32} />
                                     </div>
@@ -257,7 +287,6 @@ const MessagesPage = () => {
                                         const otherUser = getOtherUser(conversation);
                                         const unread = conversation.unreadCount?.get?.(authUser._id) || 0;
                                         const isOnline = isUserOnline(otherUser._id);
-
                                         return (
                                             <div
                                                 key={conversation._id}
@@ -278,20 +307,19 @@ const MessagesPage = () => {
                                                         )}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                                                <div className="flex items-center justify-between">
-                                                                                    <p className="font-semibold text-gray-900 truncate" title={otherUser.name}>{otherUser.name}</p>
-                                                                                    {/* time moved to the message preview on the right */}
-                                                                                </div>
-                                                                                <p className="text-sm text-gray-600 truncate">{otherUser.headline || otherUser.username}</p>
-                                                                                {conversation.lastMessage && (
-                                                                                    <div className="flex items-center justify-between mt-1">
-                                                                                        <p className="text-sm text-gray-500 truncate mr-3">
-                                                                                            {conversation.lastMessage.sender._id === authUser._id && 'You: '}
-                                                                                            {conversation.lastMessage.content}
-                                                                                        </p>
-                                                                                        <span className="text-xs text-gray-400 flex-shrink-0">{formatShortDistance(conversation.lastMessageAt || conversation.lastMessage?.createdAt)}</span>
-                                                                                    </div>
-                                                                                )}
+                                                        <div className="flex items-center justify-between">
+                                                            <p className="font-semibold text-gray-900 truncate" title={otherUser.name}>{otherUser.name}</p>
+                                                        </div>
+                                                        <p className="text-sm text-gray-600 truncate">{otherUser.headline || otherUser.username}</p>
+                                                        {conversation.lastMessage && (
+                                                            <div className="flex items-center justify-between mt-1">
+                                                                <p className="text-sm text-gray-500 truncate mr-3">
+                                                                    {conversation.lastMessage.sender._id === authUser._id && 'You: '}
+                                                                    {conversation.lastMessage.content}
+                                                                </p>
+                                                                <span className="text-xs text-gray-400 flex-shrink-0">{formatShortDistance(conversation.lastMessageAt || conversation.lastMessage?.createdAt)}</span>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     {unread > 0 && (
                                                         <div className="bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -302,16 +330,67 @@ const MessagesPage = () => {
                                             </div>
                                         );
                                     })
-                                )}
-                            </div>
+                                )
+                            ) : (
+                                loadingLinks ? (
+                                    <div className="flex justify-center items-center h-full">
+                                        <Loader className="animate-spin text-primary" size={32} />
+                                    </div>
+                                ) : links?.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-500 p-4">
+                                        <MessageCircle size={48} className="mb-2 text-gray-400" />
+                                        <p className="text-center">No links yet</p>
+                                        <p className="text-sm text-center mt-1">Link with users to start messaging</p>
+                                    </div>
+                                ) : (
+                                    links?.filter(user =>
+                                        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                        user.username.toLowerCase().includes(searchQuery.toLowerCase())
+                                    ).map((user) => (
+                                        <div
+                                            key={user._id}
+                                            onClick={async () => {
+                                                // Find or create conversation with this user
+                                                let conv = conversations?.find(c => c.participants.some(p => p._id === user._id));
+                                                if (conv) {
+                                                    setSelectedConversation(conv);
+                                                    setActiveTab('chats');
+                                                } else {
+                                                    try {
+                                                        const res = await axiosInstance.get(`/messages/conversations/${user._id}`);
+                                                        setSelectedConversation(res.data);
+                                                        setActiveTab('chats');
+                                                        queryClient.invalidateQueries(['conversations']);
+                                                    } catch (err) {
+                                                        toast.error(err.response?.data?.message || 'Cannot message this user');
+                                                    }
+                                                }
+                                            }}
+                                            className="p-3 border-b border-gray-200 cursor-pointer hover:bg-gray-50 transition flex items-center gap-3"
+                                        >
+                                            <img
+                                                src={user.profilePicture || '/avatar.png'}
+                                                alt={user.name}
+                                                className="w-10 h-10 rounded-full object-cover"
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-semibold text-gray-900 truncate" title={user.name}>{user.name}</p>
+                                                <p className="text-sm text-gray-600 truncate">{user.headline || user.username}</p>
+                                            </div>
+                                            <span className="text-xs text-gray-400">{user.links?.length || 0} links</span>
+                                        </div>
+                                    ))
+                                )
+                            )}
                         </div>
+                    </div>
 
                         {/* Chat Area */}
                         <div className={`md:col-span-2 flex flex-col h-full overflow-hidden ${selectedConversation ? 'flex' : 'hidden md:flex'}`}>
                             {selectedConversation ? (
                                 <>
-                                    {/* Chat Header - Fixed at top */}
-                                    <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-white flex-shrink-0 z-10">
+                                    {/* Chat Header - Sticky at top of chat area */}
+                                    <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-white flex-shrink-0 z-0 sticky top-0">
                                         <div className="flex items-center gap-3">
                                             <button
                                                 onClick={() => setSelectedConversation(null)}
@@ -319,18 +398,20 @@ const MessagesPage = () => {
                                             >
                                                 <ArrowLeft />
                                             </button>
-                                            <div className="relative">
+                                            <a href={`/profile/${getOtherUser(selectedConversation).username}`} className="relative group" tabIndex={-1}>
                                                 <img
                                                     src={getOtherUser(selectedConversation).profilePicture || '/avatar.png'}
                                                     alt={getOtherUser(selectedConversation).name}
-                                                    className="w-10 h-10 rounded-full object-cover"
+                                                    className="w-10 h-10 rounded-full object-cover cursor-pointer group-hover:ring-2 group-hover:ring-primary"
                                                 />
                                                 {isUserOnline(getOtherUser(selectedConversation)._id) && (
                                                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
                                                 )}
-                                            </div>
+                                            </a>
                                             <div>
-                                                <p className="font-semibold">{getOtherUser(selectedConversation).name}</p>
+                                                <a href={`/profile/${getOtherUser(selectedConversation).username}`} className="font-semibold hover:underline cursor-pointer truncate">
+                                                    {getOtherUser(selectedConversation).name}
+                                                </a>
                                                 <p className="text-xs text-gray-500">
                                                     {isUserOnline(getOtherUser(selectedConversation)._id) ? 'Online' : 'Offline'}
                                                 </p>
@@ -341,10 +422,8 @@ const MessagesPage = () => {
                                                 className="p-2 hover:bg-gray-100 rounded-full transition"
                                                 disabled={showInvitationModal}
                                                 onClick={() => {
-                                                    console.log('Video call button clicked');
                                                     const cid = `conversation-${selectedConversation._id}`;
                                                     const otherUser = getOtherUser(selectedConversation);
-                                                    console.log('Call ID:', cid, 'Other user:', otherUser);
                                                     setInvitationCallId(cid);
                                                     setIsCaller(true);
                                                     setOtherUserForCall(otherUser);
@@ -356,7 +435,6 @@ const MessagesPage = () => {
                                                         callerName: authUser.name,
                                                         callerProfilePicture: authUser.profilePicture
                                                     });
-                                                    console.log('Call invite emitted');
                                                 }}
                                             >
                                                 <Video size={20} className="text-gray-600" />
@@ -383,7 +461,7 @@ const MessagesPage = () => {
                                     </div>
 
                                     {/* Messages - Scrollable area */}
-                                    <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                                    <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 bg-gray-50" id="messages-scroll-area">
                                         {loadingMessages ? (
                                             <div className="flex justify-center items-center h-full">
                                                 <Loader className="animate-spin text-primary" size={32} />
@@ -428,53 +506,45 @@ const MessagesPage = () => {
                                         )}
                                     </div>
 
-                                                            {/* Report Modal for reporting the other user in the conversation */}
-                                                            {showReportModal && selectedConversation && (
-                                                                <ReportModal
-                                                                    isOpen={showReportModal}
-                                                                    onClose={() => setShowReportModal(false)}
-                                                                    defaultType={'other'}
-                                                                    // Use username so AdminDashboard links to /profile/:username
-                                                                    targetId={getOtherUser(selectedConversation)?.username}
-                                                                />
-                                                            )}
+                                    {/* Report Modal for reporting the other user in the conversation */}
+                                    {showReportModal && selectedConversation && (
+                                        <ReportModal
+                                            isOpen={showReportModal}
+                                            onClose={() => setShowReportModal(false)}
+                                            defaultType={'other'}
+                                            targetId={getOtherUser(selectedConversation)?.username}
+                                        />
+                                    )}
 
-                                    {/* Typing indicator removed — not functional and was wasting space */}
-
-                                    {/* Message Input - Fixed at bottom */}
-                                    <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                type="button"
-                                                className="p-2 hover:bg-gray-100 rounded-full transition"
-                                            >
-                                                <Paperclip size={20} className="text-gray-600" />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="p-2 hover:bg-gray-100 rounded-full transition"
-                                            >
-                                                <Smile size={20} className="text-gray-600" />
-                                            </button>
-                                            <input
-                                                type="text"
-                                                value={messageInput}
-                                                onChange={(e) => {
-                                                    setMessageInput(e.target.value);
-                                                    handleTyping();
-                                                }}
-                                                placeholder="Type a message..."
-                                                className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary"
-                                            />
-                                            <button
-                                                type="submit"
-                                                disabled={!messageInput.trim()}
-                                                className="p-2 bg-primary text-white rounded-full hover:bg-primary-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                                <Send size={20} />
-                                            </button>
+                                    {/* Message Input or Banned Notice */}
+                                    {getOtherUser(selectedConversation)?.banned ? (
+                                        <div className="p-4 border-t border-gray-200 bg-red-50 text-center text-red-600 font-semibold">
+                                            You cannot message this user because they are banned.
                                         </div>
-                                    </form>
+                                    ) : (
+                                        <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
+                                            <div className="flex items-center gap-2">
+                                            
+                                                <input
+                                                    type="text"
+                                                    value={messageInput}
+                                                    onChange={(e) => {
+                                                        setMessageInput(e.target.value);
+                                                        handleTyping();
+                                                    }}
+                                                    placeholder="Type a message..."
+                                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary"
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    disabled={!messageInput.trim()}
+                                                    className="p-2 bg-primary text-white rounded-full hover:bg-primary-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <Send size={20} />
+                                                </button>
+                                            </div>
+                                        </form>
+                                    )}
                                 </>
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full text-gray-500">

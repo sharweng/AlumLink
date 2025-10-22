@@ -49,7 +49,7 @@ export const getOrCreateConversation = async (req, res) => {
         let conversation = await Conversation.findOne({
             participants: { $all: [currentUserId, userId] }
         })
-        .populate("participants", "name username profilePicture headline")
+        .populate("participants", "name username profilePicture headline banned")
         .populate({
             path: "lastMessage",
             populate: {
@@ -81,7 +81,7 @@ export const getConversations = async (req, res) => {
         const conversations = await Conversation.find({
             participants: req.user._id
         })
-        .populate("participants", "name username profilePicture headline")
+        .populate("participants", "name username profilePicture headline banned")
         .populate({
             path: "lastMessage",
             populate: {
