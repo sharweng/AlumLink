@@ -3,6 +3,8 @@ import dotenv from "dotenv"
 import cookieParser from "cookie-parser";
 import cors from "cors"
 import { createServer } from "http"
+import path from "path"
+import { fileURLToPath } from 'url';
 
 import authRoutes from "./routes/authRoute.js"
 import userRoutes from "./routes/userRoute.js"
@@ -29,14 +31,18 @@ dotenv.config()
 const app = express();
 const server = createServer(app);
 const PORT = process.env.PORT || 5000
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Initialize Socket.IO
 initializeSocket(server);
 
-app.use(cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-}))
+if(process.env.NODE_ENV !== 'production') {
+    app.use(cors({
+        origin: "http://localhost:5173",
+        credentials: true,
+    }))
+}
 
 app.use(express.json({ limit: "25mb" })) 
 app.use(express.urlencoded({ limit: "25mb", extended: true })) // for form data
@@ -58,6 +64,18 @@ app.use("/api/v1/messages", messageRoutes)
 app.use("/api/v1/achievements", achievementsRoutes)
 app.use("/api/v1/feedbacks", feedbackRoutes)
 app.use("/api/v1/reports", reportRoutes)
+
+if(process.env.NODE_ENV === "production"){
+    const clientDistPath = path.join(__dirname, '..', 'frontend', 'dist');
+
+    app.use(express.static(clientDistPath));
+
+    // catch-all middleware (no path pattern) to serve index.html
+    app.use((req, res) => {
+        res.sendFile(path.join(clientDistPath, 'index.html'));
+    });
+}
+
 
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
