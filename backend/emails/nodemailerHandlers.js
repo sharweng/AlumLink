@@ -1,5 +1,28 @@
 import { transporter } from "../lib/nodemailer.js";
-import { createCommentNotificationEmailTemplate, createLinkAcceptedEmailTemplate, createWelcomeEmailTemplate } from "./emailTemplates.js";
+import { createVerificationEmailTemplate, createCommentNotificationEmailTemplate, createLinkAcceptedEmailTemplate, createWelcomeEmailTemplate } from "./emailTemplates.js";
+
+export const sendVerificationEmail = async (email, code) => {
+    try {
+        const mailOptions = {
+            from: process.env.NODEMAILER_EMAIL_FROM,
+            name: process.env.EMAIL_FROM_NAME,
+            to: email,
+            subject: "Verify Your Email for AlumniLink",
+            html: createVerificationEmailTemplate(code),
+            category: "verification"
+        };
+        await transporter.sendMail(mailOptions, function(error, info){
+            if (error) {
+                console.log('Error:', error);
+            } else {
+                console.log('Verification email sent:', info.response);
+            }
+        });
+        console.log("Verification email sent successfully")
+    } catch (error) {
+        throw new Error(`Failed to send verification email: ${error.message}`)
+    }
+}
 
 export const sendWelcomeEmail = async (email, userName, profileUrl) => {
 

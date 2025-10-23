@@ -1,91 +1,126 @@
 import User from "../models/User.js";
+import PendingUser from "../models/PendingUser.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 // import { sendWelcomeEmail } from "../emails/emailHandlers.js"; // for production
 import { sendWelcomeEmail } from "../emails/nodemailerHandlers.js"; // for sandbox
+import { transporter } from "../lib/nodemailer.js";
 
 export const signup = async (req, res) => {
     try {
-    const { name, username, email, password, confirmPassword, batch, course, tuptId } = req.body;
-
+        const { name, username, email, password, confirmPassword, batch, course, tuptId } = req.body;
         if(!name || !username || !email || !password || !confirmPassword || !batch || !course || !tuptId) {
             return res.status(400).json({ message: "All fields are required" });
         }
-
         if(password.length < 6) {
             return res.status(400).json({ message: "Password must be at least 6 characters" });
         }
-
         if(password !== confirmPassword) {
             return res.status(400).json({ message: "Passwords do not match" });
         }
-
         const existingEmail = await User.findOne({ email });
         if (existingEmail) {
             return res.status(400).json({ message: "Email already in use" });
         }
-
         const existingUsername = await User.findOne({ username });
         if (existingUsername) {
             return res.status(400).json({ message: "Username already in use" });
         }
-
         const existingTuptId = await User.findOne({ tuptId });
         if (existingTuptId) {
             return res.status(400).json({ message: "TUPT-ID already in use" });
         }
+        // Check for pending user with same email/username/tuptId
+        let pendingUser = await PendingUser.findOne({ email });
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
-
-        // Generate headline from batch and course
         let headline = "AlumniLink User";
         if (batch && course && tuptId) {
             headline = `${batch} Graduate, ${course} (${tuptId})`;
         }
-
-        const newUser = new User({
-            name,
-            username,
-            email,
-            password: hashedPassword,
-            batch,
-            course,
-            tuptId,
-            headline,
-        });
-
-        await newUser.save();
-
-        const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: "3d" });
-
-        res.cookie("jwt-alumnilink", token, {
-            httpOnly: true, // prevents XSS attacks
-            secure: process.env.NODE_ENV === "production", // prevents man-in-the-middle attacks
-            sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax", // lax for development
-            maxAge: 3 * 24 * 60 * 60 * 1000, // 3 days
-        });
-
-        res.status(201).json({ message: "User registered successfully" ,  newUser: {
-            _id: newUser._id,
-            name: newUser.name,
-            email: newUser.email
-        }});
-
-        // todo: send welcome email
-        const profileUrl = process.env.CLIENT_URL + "/profile/" + newUser.username;
-
-        try {
-            await sendWelcomeEmail(newUser.email, newUser.name, profileUrl);
-        } catch (emailError) {
-            console.error("Error sending welcome email:", emailError);
+        // Generate verification code
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const codeExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+        if (pendingUser) {
+            // Update code and expiry, and other info
+            pendingUser.name = name;
+            pendingUser.username = username;
+            pendingUser.password = hashedPassword;
+            pendingUser.batch = batch;
+            pendingUser.course = course;
+            pendingUser.tuptId = tuptId;
+            pendingUser.headline = headline;
+            pendingUser.verificationCode = verificationCode;
+            pendingUser.codeExpires = codeExpires;
+            await pendingUser.save();
+        } else {
+            pendingUser = new PendingUser({
+                name,
+                username,
+                email,
+                password: hashedPassword,
+                batch,
+                course,
+                tuptId,
+                headline,
+                verificationCode,
+                codeExpires,
+            });
+            await pendingUser.save();
         }
-
+        // Send verification email (use handler for template)
+        try {
+            const { sendVerificationEmail } = await import("../emails/nodemailerHandlers.js");
+            await sendVerificationEmail(email, verificationCode);
+        } catch (emailError) {
+            console.error("Error sending verification email:", emailError);
+        }
+        res.status(201).json({ message: "Verification code sent to email. Please enter the code to complete registration." });
     } catch (error) {
         console.log("Error in signup authController:", error.message)
         res.status(500).json({ message: "Internal server error" })
     }
 }
 
+export const verifySignupCode = async (req, res) => {
+    try {
+        const { email, code } = req.body;
+        const pendingUser = await PendingUser.findOne({ email });
+        if (!pendingUser) {
+            return res.status(400).json({ message: "No pending registration for this email." });
+        }
+        if (pendingUser.verificationCode !== code) {
+            return res.status(400).json({ message: "Invalid verification code." });
+        }
+        if (pendingUser.codeExpires < new Date()) {
+            await PendingUser.deleteOne({ email });
+            return res.status(400).json({ message: "Verification code expired. Please sign up again." });
+        }
+        // Create user
+        const { name, username, email: userEmail, password, batch, course, tuptId, headline } = pendingUser;
+        const newUser = new User({ name, username, email: userEmail, password, batch, course, tuptId, headline });
+        await newUser.save();
+        await PendingUser.deleteOne({ email });
+        // Send welcome email
+        const profileUrl = process.env.CLIENT_URL + "/profile/" + newUser.username;
+        try {
+            await sendWelcomeEmail(newUser.email, newUser.name, profileUrl);
+        } catch (emailError) {
+            console.error("Error sending welcome email:", emailError);
+        }
+        const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: "3d" });
+        res.cookie("jwt-alumnilink", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+            maxAge: 3 * 24 * 60 * 60 * 1000,
+        });
+        res.status(201).json({ message: "User registered and verified successfully", newUser: { _id: newUser._id, name: newUser.name, email: newUser.email } });
+    } catch (error) {
+        console.log("Error in verifySignupCode:", error.message)
+        res.status(500).json({ message: "Internal server error" })
+    }
+}
 export const login = async (req, res) => {
     try {
         const { username, password } = req.body;
