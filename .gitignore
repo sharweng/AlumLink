@@ -4,3 +4,4 @@ node_modules
 testNodeMailer.js
 *.md
 *.bak
+scripts
