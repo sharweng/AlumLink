@@ -8,7 +8,7 @@ const Sidebar = ({ user }) => {
     if (!user) return null; // Handle loading state
   
     return (
-        <div className="sticky top-[89px] max-h-[calc(100vh-89px)] overflow-y-auto z-20 flex flex-col gap-4 pr-1">
+        <div className="sticky top-[89px] max-h-[calc(100vh-113px)] overflow-y-auto z-20 flex flex-col gap-4 pr-1">
             <div className='bg-secondary rounded-lg shadow'>
                 <div className='p-4 text-center'>
                     <div

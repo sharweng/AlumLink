@@ -307,13 +307,23 @@ const AdminDashboard = () => {
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-6 py-4 border-b flex items-center justify-between">
               <h2 className="text-xl font-semibold">All Users</h2>
-              <input
-                type="search"
-                placeholder="Search users"
-                value={userSearch}
-                onChange={e => setUserSearch(e.target.value)}
-                className="border rounded px-3 py-1 min-w-0 w-48"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="search"
+                  placeholder="Search users"
+                  value={userSearch}
+                  onChange={e => setUserSearch(e.target.value)}
+                  className="border rounded px-3 py-1 min-w-0 w-48"
+                />
+                <button
+                  type="button"
+                  className="ml-2 px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 border text-gray-700 flex items-center"
+                  onClick={() => queryClient.invalidateQueries(["adminUsers"])}
+                  title="Refresh users"
+                >
+                  Refresh
+                </button>
+              </div>
             </div>
 
             <div className="overflow-x-auto">

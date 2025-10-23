@@ -10,6 +10,30 @@ export const updateUserById = async (req, res) => {
                 updatedData[field] = req.body[field];
             }
         }
+
+        // Password change logic
+        if (req.body.currentPassword || req.body.newPassword || req.body.confirmNewPassword) {
+            if (!req.body.currentPassword || !req.body.newPassword || !req.body.confirmNewPassword) {
+                return res.status(400).json({ message: "All password fields are required" });
+            }
+            if (req.body.newPassword.length < 6) {
+                return res.status(400).json({ message: "New password must be at least 6 characters" });
+            }
+            if (req.body.newPassword !== req.body.confirmNewPassword) {
+                return res.status(400).json({ message: "New passwords do not match" });
+            }
+            const user = await User.findById(id);
+            if (!user) return res.status(404).json({ message: "User not found" });
+            const bcrypt = await import('bcryptjs');
+            const isMatch = await bcrypt.compare(req.body.currentPassword, user.password);
+            if (!isMatch) {
+                return res.status(400).json({ message: "Current password is incorrect" });
+            }
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(req.body.newPassword, salt);
+            updatedData.password = hashedPassword;
+        }
+
         const user = await User.findByIdAndUpdate(id, { $set: updatedData }, { new: true }).select("-password");
         if (!user) return res.status(404).json({ message: "User not found" });
         res.json(user);

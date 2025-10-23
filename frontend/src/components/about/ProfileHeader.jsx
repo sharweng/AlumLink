@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import ChangeAccountSettings from "./ChangeAccountSettings";
 import { useMemo, useState } from "react";
 import { axiosInstance } from "../../lib/axios";
 import toast from "react-hot-toast";
@@ -338,6 +339,19 @@ const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving, tabs, activeT
                 {tab.label}
               </button>
             ))}
+            {isOwnProfile && (
+              <button
+                key="settings"
+                onClick={() => setActiveTab("settings")}
+                className={`px-6 py-3 font-semibold text-base transition-colors duration-150 focus:outline-none ${
+                  activeTab === "settings"
+                    ? 'border-b-4 border-primary text-primary bg-gray-50'
+                    : 'text-gray-500 hover:text-primary hover:bg-gray-100'
+                }`}
+              >
+                Settings
+              </button>
+            )}
           </div>
           {/* BANNED badge and More options icon/menu */}
           {!isOwnProfile && (
@@ -391,40 +405,12 @@ const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving, tabs, activeT
                   )}
                 </div>
               )}
-      {/* Unban Modal for admin */}
-      {showUnbanModal && isAdmin && !isOwnProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
-            <button
-              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
-              onClick={() => setShowUnbanModal(false)}
-              aria-label="Close"
-            >
-              <X size={22} />
-            </button>
-            <h2 className="text-xl font-bold mb-2">Unban User</h2>
-            <p className="mb-4 text-gray-700">Are you sure you want to unban this user? They will regain access to login, messaging, and visibility.</p>
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
-                onClick={() => setShowUnbanModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 font-semibold"
-                onClick={() => handleUnbanUser(userData._id)}
-              >
-                Yes, Unban
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
             </div>
           )}
         </div>
       )}
+
+      {/* Settings tab content is now rendered in ProfilePage for consistent layout */}
       {/* Report Modal for reporting the user from profile header */}
       {showReportModal && !isOwnProfile && !isAdmin && (
         <ReportModal
