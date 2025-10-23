@@ -8,7 +8,7 @@ const Sidebar = ({ user }) => {
     if (!user) return null; // Handle loading state
   
     return (
-        <div className="sticky top-[89px] max-h-[calc(100vh-113px)] overflow-y-auto z-20 flex flex-col gap-4 pr-1">
+        <div className="sticky top-[80px] max-h-[calc(100vh-113px)] overflow-y-auto z-20 flex flex-col gap-4 pr-1 lg:flex lg:flex-col lg:gap-4 lg:pr-1 hidden">
             <div className='bg-secondary rounded-lg shadow'>
                 <div className='p-4 text-center'>
                     <div
@@ -41,14 +41,6 @@ const Sidebar = ({ user }) => {
                             </li>
                             <li>
                                 <Link
-                                    to='/jobs'
-                                    className='flex items-center py-2 px-4 rounded-md hover:bg-primary hover:text-white transition-colors'
-                                >
-                                    <Briefcase className='mr-2' size={20} /> Job Board
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
                                     to='/network'
                                     className='flex items-center py-2 px-4 rounded-md hover:bg-primary hover:text-white transition-colors'
                                 >
@@ -65,10 +57,10 @@ const Sidebar = ({ user }) => {
                             </li>
                             <li>
                                 <Link
-                                    to='/notifications'
+                                    to='/messages'
                                     className='flex items-center py-2 px-4 rounded-md hover:bg-primary hover:text-white transition-colors'
                                 >
-                                    <Bell className='mr-2' size={20} /> Notifications
+                                    <MessageSquare className='mr-2' size={20} /> Messages
                                 </Link>
                             </li>
                             <li>

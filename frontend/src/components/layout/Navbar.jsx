@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { axiosInstance } from "../../lib/axios"
-import { Home, User, Users, Bell, LogOut, Search, Briefcase, MessageSquare, Calendar, Shield, Award, MessageCircle } from "lucide-react"
+import { Bell, LogOut, Search, Briefcase, MessageSquare, Calendar, Shield, Award, Home } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { useState, useRef, useEffect } from "react"
 import SearchResults from "../SearchResults"
@@ -144,10 +144,10 @@ const Navbar = () => {
 	return (
 		<nav className='bg-secondary shadow-md sticky top-0 z-[30]'>
 			<div className='max-w-7xl mx-auto px-4'>
-				<div className='flex justify-between items-center py-3'>
+				<div className='flex justify-between items-center py-1'>
 					<div className='flex items-center space-x-4'>
 						<Link to='/'>
-							<img className='h-8 rounded' src='/alumniLink.png' alt='AlumniLink' />
+							<img className='h-12 rounded' src='/alumniLink.png' alt='AlumniLink' />
 						</Link>
 					</div>
 					
@@ -187,17 +187,10 @@ const Navbar = () => {
 					<div className='flex items-center gap-2 md:gap-6'>
 						{authUser ? (
 							<>
-								{authUser.role === 'admin' ? (
-									<Link to={"/admin/dashboard"} className='text-neutral flex flex-col items-center'>
-										<Shield size={20} />
-										<span className='text-xs hidden md:block'>Admin</span>
-									</Link>
-								) : (
-									<Link to={"/"} className='text-neutral flex flex-col items-center'>
-										<Home size={20} />
-										<span className='text-xs hidden md:block'>Home</span>
-									</Link>
-								)}
+								<Link to='/' className='text-neutral flex flex-col items-center'>
+									<Home size={20} />
+									<span className='text-xs hidden md:block'>Home</span>
+								</Link>
 								<Link to='/jobs' className='text-neutral flex flex-col items-center'>
 									<Briefcase size={20} />
 									<span className='text-xs hidden md:block'>Jobs</span>
@@ -206,41 +199,17 @@ const Navbar = () => {
 									<MessageSquare size={20} />
 									<span className='text-xs hidden md:block'>Forums</span>
 								</Link>
-							<Link to='/events' className='text-neutral flex flex-col items-center'>
-								<Calendar size={20} />
-								<span className='text-xs hidden md:block'>Events</span>
-							</Link>
-							<Link to='/mentorship' className='text-neutral flex flex-col items-center'>
-								<Award size={20} />
-								<span className='text-xs hidden md:block'>Mentorship</span>
-							</Link>
-							<Link to='/messages' className='text-neutral flex flex-col items-center relative'>
-								<MessageCircle size={20} />
-								<span className='text-xs hidden md:block'>Messages</span>
-								{unreadMessagesCount > 0 && (
-									<span
-										className='absolute -top-1 -right-1 md:right-4 bg-red-500 text-white text-xs 
-									rounded-full size-3 md:size-4 flex items-center justify-center'
-									>
-										{unreadMessagesCount}
-									</span>
-								)}
-							</Link>
-							<Link to='/network' className='text-neutral flex flex-col items-center relative'>
-									<Users size={20} />
-									<span className='text-xs hidden md:block'>My Network</span>
-									{unreadLinkRequestsCount > 0 && (
-										<span
-											className='absolute -top-1 -right-1 md:right-4 bg-red-500 text-white text-xs 
-										rounded-full size-3 md:size-4 flex items-center justify-center'
-										>
-											{unreadLinkRequestsCount}
-										</span>
-									)}
+								<Link to='/events' className='text-neutral flex flex-col items-center'>
+									<Calendar size={20} />
+									<span className='text-xs hidden md:block'>Events</span>
+								</Link>
+								<Link to='/mentorship' className='text-neutral flex flex-col items-center'>
+									<Award size={20} />
+									<span className='text-xs hidden md:block'>Mentor</span>
 								</Link>
 								<Link to='/notifications' className='text-neutral flex flex-col items-center relative'>
 									<Bell size={20} />
-									<span className='text-xs hidden md:block'>Notifications</span>
+									<span className='text-xs hidden md:block'>Notifs</span>
 									{unreadNotificationCount > 0 && (
 										<span
 											className='absolute -top-1 -right-1 md:right-4 bg-red-500 text-white text-xs 
@@ -249,13 +218,6 @@ const Navbar = () => {
 											{unreadNotificationCount}
 										</span>
 									)}
-								</Link>
-								<Link
-									to={`/profile/${authUser.username}`}
-									className='text-neutral flex flex-col items-center'
-								>
-									<User size={20} />
-									<span className='text-xs hidden md:block'>Me</span>
 								</Link>
 								<button
 									className='flex items-center space-x-1 text-sm text-gray-600 hover:text-gray-800'
