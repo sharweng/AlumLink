@@ -6,9 +6,9 @@ import { sendWelcomeEmail } from "../emails/nodemailerHandlers.js"; // for sandb
 
 export const signup = async (req, res) => {
     try {
-        const { name, username, email, password, confirmPassword, batch, course } = req.body;
+    const { name, username, email, password, confirmPassword, batch, course, tuptId } = req.body;
 
-        if(!name || !username || !email || !password || !confirmPassword || !batch || !course) {
+        if(!name || !username || !email || !password || !confirmPassword || !batch || !course || !tuptId) {
             return res.status(400).json({ message: "All fields are required" });
         }
 
@@ -29,13 +29,18 @@ export const signup = async (req, res) => {
         if (existingUsername) {
             return res.status(400).json({ message: "Username already in use" });
         }
+
+        const existingTuptId = await User.findOne({ tuptId });
+        if (existingTuptId) {
+            return res.status(400).json({ message: "TUPT-ID already in use" });
+        }
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
         // Generate headline from batch and course
         let headline = "AlumniLink User";
-        if (batch && course) {
-            headline = `${batch} Graduate, ${course}`;
+        if (batch && course && tuptId) {
+            headline = `${batch} Graduate, ${course} (${tuptId})`;
         }
 
         const newUser = new User({
@@ -45,6 +50,7 @@ export const signup = async (req, res) => {
             password: hashedPassword,
             batch,
             course,
+            tuptId,
             headline,
         });
 

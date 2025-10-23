@@ -6,6 +6,7 @@ import { toast } from "react-hot-toast"
 const LoginForm = () => {
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
+    const [errors, setErrors] = useState({});
     const queryClient = useQueryClient()
 
     const { mutate: loginMutation, isLoading } = useMutation({
@@ -19,8 +20,13 @@ const LoginForm = () => {
     })
 
     const handleSubmit = (e) => {
-        e.preventDefault()
-        loginMutation({ username, password })
+        e.preventDefault();
+        const newErrors = {};
+        if (!username) newErrors.username = "Username is required";
+        if (!password) newErrors.password = "Password is required";
+        setErrors(newErrors);
+        if (Object.keys(newErrors).length > 0) return;
+        loginMutation({ username, password });
     }
 
   return (
@@ -31,16 +37,16 @@ const LoginForm = () => {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className='input input-bordered w-full'
-            required
         />
+        {errors.username && <span className='text-red-500 text-xs'>{errors.username}</span>}
         <input
             type='password'
             placeholder='Password'
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className='input input-bordered w-full'
-            required
         />
+        {errors.password && <span className='text-red-500 text-xs'>{errors.password}</span>}
 
         <button type='submit' className='btn btn-primary w-full'>
             {isLoading ? <Loader className='size-5 animate-spin' /> : "Login"}

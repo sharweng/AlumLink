@@ -56,6 +56,11 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    tuptId: {
+        type: String,
+        required: true,
+        unique: true,
+    },
     links: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",

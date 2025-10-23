@@ -1,3 +1,23 @@
+export const updateUserById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const allowedFields = [
+            "name", "username", "email", "headline", "about", "location", "profilePicture", "bannerImg", "skills", "experience", "linksVisibility", "role", "isActive", "banned", "bannedReason", "batch", "course", "tuptId"
+        ];
+        const updatedData = {};
+        for (const field of allowedFields) {
+            if (req.body[field] !== undefined) {
+                updatedData[field] = req.body[field];
+            }
+        }
+        const user = await User.findByIdAndUpdate(id, { $set: updatedData }, { new: true }).select("-password");
+        if (!user) return res.status(404).json({ message: "User not found" });
+        res.json(user);
+    } catch (error) {
+        console.log("Error in updateUserById userController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
 import cloudinary from "../lib/cloudinary.js"
 import User from "../models/User.js"
 

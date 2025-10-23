@@ -47,12 +47,27 @@ export const markFeedbackSeen = async (req, res) => {
   }
 }
 
+
 export const markAllFeedbacksSeen = async (req, res) => {
   try {
     await Feedback.updateMany({ seen: false }, { seen: true })
     res.status(200).json({ message: 'All feedbacks marked as seen' })
   } catch (err) {
     console.error('Error marking all feedbacks seen:', err.message)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+export const deleteFeedback = async (req, res) => {
+  try {
+    const { id } = req.params
+    const feedback = await Feedback.findByIdAndDelete(id)
+    if (!feedback) {
+      return res.status(404).json({ message: 'Feedback not found' })
+    }
+    res.status(200).json({ message: 'Feedback deleted' })
+  } catch (err) {
+    console.error('Error deleting feedback:', err.message)
     res.status(500).json({ message: 'Internal server error' })
   }
 }

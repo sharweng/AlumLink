@@ -45,6 +45,12 @@ const AdminDashboard = () => {
   const [showDeleteLogConfirm, setShowDeleteLogConfirm] = useState(false);
   const [deleteTargetLogId, setDeleteTargetLogId] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [editingUserId, setEditingUserId] = useState(null);
+  const [editUserData, setEditUserData] = useState({});
+
+  const handleEditUserChange = (field, value) => {
+    setEditUserData(prev => ({ ...prev, [field]: value }));
+  };
 
   // Check if current user is deactivated on mount and periodically
   useEffect(() => {
@@ -238,6 +244,8 @@ const AdminDashboard = () => {
       })
     : [];
 
+  const [userSearch, setUserSearch] = useState("");
+
   if (statsLoading || usersLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -297,8 +305,15 @@ const AdminDashboard = () => {
 
           {/* Users Table */}
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="px-6 py-4 border-b">
+            <div className="px-6 py-4 border-b flex items-center justify-between">
               <h2 className="text-xl font-semibold">All Users</h2>
+              <input
+                type="search"
+                placeholder="Search users"
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+                className="border rounded px-3 py-1 min-w-0 w-48"
+              />
             </div>
 
             <div className="overflow-x-auto">
@@ -311,6 +326,9 @@ const AdminDashboard = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
                       Email
                     </th>
+                    <th className="px-8 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                      TUPT-ID
+                    </th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                       Role
                     </th>
@@ -318,109 +336,256 @@ const AdminDashboard = () => {
                       Status
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">
-                      Joined
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">
                       Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {sortedUsers.map((user) => (
+                  {sortedUsers.filter(user => {
+                    const q = userSearch?.toLowerCase() || "";
+                    return (
+                      user.name.toLowerCase().includes(q) ||
+                      user.username.toLowerCase().includes(q) ||
+                      user.email.toLowerCase().includes(q) ||
+                      user.tuptId?.toLowerCase().includes(q)
+                    );
+                  }).map((user) => (
                     <tr key={user._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 w-1/4">
-                        <div className="flex items-center">
-                          <a href={`/profile/${user.username}`} className="block">
-                            <img
-                              className="h-10 w-10 rounded-full flex-shrink-0 hover:ring-2 hover:ring-primary transition"
-                              src={user.profilePicture || "/avatar.png"}
-                              alt={user.name}
-                            />
-                          </a>
-                          <div className="ml-4 min-w-0 flex-1">
-                            <a href={`/profile/${user.username}`} className="text-sm font-medium text-gray-900 truncate hover:underline" title={user.name}>
-                              {user.name}
-                            </a>
-                            <div 
-                              className="text-sm text-gray-500 truncate"
-                              title={`@${user.username}`}
-                            >
-                              @{user.username}
+                      {editingUserId === user._id ? (
+                        <>
+                          <td className="px-6 py-4 w-1/4">
+                            <div className="flex items-center">
+                              <a href={`/profile/${user.username}`} className="block">
+                                <img
+                                  className="h-10 w-10 rounded-full flex-shrink-0 hover:ring-2 hover:ring-primary transition"
+                                  src={user.profilePicture || "/avatar.png"}
+                                  alt={user.name}
+                                />
+                              </a>
+                              <div className="ml-4 min-w-0 flex-1">
+                                <a href={`/profile/${user.username}`} className="text-sm font-medium text-gray-900 truncate hover:underline" title={user.name}>
+                                  {user.name}
+                                </a>
+                                <div 
+                                  className="text-sm text-gray-500 truncate"
+                                  title={`@${user.username}`}
+                                >
+                                  @{user.username}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 w-1/4">
-                        <div 
-                          className="text-sm text-gray-900 truncate"
-                          title={user.email}
-                        >
-                          {user.email}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 w-1/6 text-center">
-                        {user._id === authUser._id || (user.isSuperAdmin && !authUser.isSuperAdmin) ? (
-                          <span className={`w-20 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
-                            user.isSuperAdmin 
-                              ? 'bg-purple-100 text-purple-800' 
-                              : user.role === 'admin' 
-                                ? 'bg-purple-100 text-purple-800' 
-                                : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {user.isSuperAdmin ? 'Admin+' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                          </span>
-                        ) : (
-                          <select
-                            value={user.role}
-                            onChange={(e) => updateRoleMutation.mutate({ userId: user._id, role: e.target.value })}
-                            disabled={updateRoleMutation.isPending}
-                            className={`w-20 px-2 py-1 text-xs leading-5 font-semibold rounded-full border text-center ${
-                              user.role === 'admin' 
-                                ? 'bg-purple-100 text-purple-800 border-purple-300' 
-                                : 'bg-gray-100 text-gray-800 border-gray-300'
-                            } cursor-pointer hover:opacity-80`}
-                          >
-                            <option value="user">User</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 w-1/6 text-center">
-                        <span className={`w-24 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
-                          !user.isActive
-                            ? 'bg-red-100 text-red-800'
-                            : user.banned
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-green-100 text-green-800'
-                        }`}>
-                          {!user.isActive
-                            ? 'Inactive'
-                            : user.banned
-                              ? 'Banned'
-                              : 'Active'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 w-1/12 text-center">
-                        {new Date(user.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-medium w-1/12 text-center">
-                        {user._id !== authUser._id && !(user.isSuperAdmin && !authUser.isSuperAdmin) && (
-                          <div className="flex flex-col gap-1 items-center">
-                            <button
-                              onClick={() => toggleStatusMutation.mutate(user._id)}
-                              disabled={toggleStatusMutation.isPending}
-                              className={`w-24 px-3 py-1 rounded text-xs ${
-                                user.isActive 
-                                  ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
-                              } transition-colors disabled:opacity-50`}
+                          </td>
+                          <td className="px-6 py-4 w-1/4">
+                            <div 
+                              className="text-sm text-gray-900 truncate"
+                              title={user.email}
                             >
-                              {user.isActive ? 'Deactivate' : 'Activate'}
-                            </button>
-                            <BanUnbanButton user={user} />
-                          </div>
-                        )}
-                      </td>
+                              {user.email}
+                            </div>
+                          </td>
+                          <td className="px-8 py-4 w-1/4 text-center">
+                            {authUser?.isSuperAdmin ? (
+                              <input
+                                type="text"
+                                className="px-2 py-1 w-full text-center bg-transparent outline-none"
+                                style={{ minWidth: '160px' }}
+                                defaultValue={user.tuptId}
+                                onBlur={e => {
+                                  if (e.target.value !== user.tuptId) {
+                                    axiosInstance.put(`/users/${user._id}`, { tuptId: e.target.value })
+                                      .then(() => { toast.success('TUPT-ID updated'); queryClient.invalidateQueries(["adminUsers"]); })
+                                      .catch(() => toast.error('Failed to update TUPT-ID'));
+                                  }
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    e.target.blur();
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <span className="text-sm text-gray-900 truncate" style={{ minWidth: '160px', display: 'inline-block' }} title={user.tuptId}>{user.tuptId}</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 w-1/6 text-center">
+                            {user._id === authUser._id || (user.isSuperAdmin && !authUser.isSuperAdmin) ? (
+                              <span className={`w-20 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
+                                user.isSuperAdmin 
+                                  ? 'bg-purple-100 text-purple-800' 
+                                  : user.role === 'admin' 
+                                    ? 'bg-purple-100 text-purple-800' 
+                                    : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {user.isSuperAdmin ? 'Admin+' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                              </span>
+                            ) : (
+                              <select
+                                value={user.role}
+                                onChange={(e) => updateRoleMutation.mutate({ userId: user._id, role: e.target.value })}
+                                disabled={updateRoleMutation.isPending}
+                                className={`w-20 px-2 py-1 text-xs leading-5 font-semibold rounded-full border text-center ${
+                                  user.role === 'admin' 
+                                    ? 'bg-purple-100 text-purple-800 border-purple-300' 
+                                    : 'bg-gray-100 text-gray-800 border-gray-300'
+                                } cursor-pointer hover:opacity-80`}
+                              >
+                                <option value="user">User</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 w-1/6 text-center">
+                            <span className={`w-24 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
+                              !user.isActive
+                                ? 'bg-red-100 text-red-800'
+                                : user.banned
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-green-100 text-green-800'
+                            }`}>
+                              {!user.isActive
+                                ? 'Inactive'
+                                : user.banned
+                                  ? 'Banned'
+                                  : 'Active'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm font-medium w-1/12 text-center">
+                            {user._id !== authUser._id && !(user.isSuperAdmin && !authUser.isSuperAdmin) && (
+                              <div className="flex flex-col gap-1 items-center">
+                                <button
+                                  onClick={() => toggleStatusMutation.mutate(user._id)}
+                                  disabled={toggleStatusMutation.isPending}
+                                  className={`w-24 px-3 py-1 rounded text-xs ${
+                                    user.isActive 
+                                      ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                                      : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  } transition-colors disabled:opacity-50`}
+                                >
+                                  {user.isActive ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <BanUnbanButton user={user} />
+                              </div>
+                            )}
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-6 py-4 w-1/4">
+                            <div className="flex items-center">
+                              <a href={`/profile/${user.username}`} className="block">
+                                <img
+                                  className="h-10 w-10 rounded-full flex-shrink-0 hover:ring-2 hover:ring-primary transition"
+                                  src={user.profilePicture || "/avatar.png"}
+                                  alt={user.name}
+                                />
+                              </a>
+                              <div className="ml-4 min-w-0 flex-1">
+                                <a href={`/profile/${user.username}`} className="text-sm font-medium text-gray-900 truncate hover:underline" title={user.name}>
+                                  {user.name}
+                                </a>
+                                <div 
+                                  className="text-sm text-gray-500 truncate"
+                                  title={`@${user.username}`}
+                                >
+                                  @{user.username}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 w-1/4">
+                            <div 
+                              className="text-sm text-gray-900 truncate"
+                              title={user.email}
+                            >
+                              {user.email}
+                            </div>
+                          </td>
+                          <td className="px-8 py-4 w-1/4 text-center">
+                            {authUser?.isSuperAdmin ? (
+                              <input
+                                type="text"
+                                className="px-2 py-1 w-full text-center bg-transparent outline-none"
+                                style={{ minWidth: '160px' }}
+                                defaultValue={user.tuptId}
+                                onBlur={e => {
+                                  if (e.target.value !== user.tuptId) {
+                                    axiosInstance.put(`/users/${user._id}`, { tuptId: e.target.value })
+                                      .then(() => { toast.success('TUPT-ID updated'); queryClient.invalidateQueries(["adminUsers"]); })
+                                      .catch(() => toast.error('Failed to update TUPT-ID'));
+                                  }
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    e.target.blur();
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <span className="text-sm text-gray-900 truncate" style={{ minWidth: '160px', display: 'inline-block' }} title={user.tuptId}>{user.tuptId}</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 w-1/6 text-center">
+                            {user._id === authUser._id || (user.isSuperAdmin && !authUser.isSuperAdmin) ? (
+                              <span className={`w-20 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
+                                user.isSuperAdmin 
+                                  ? 'bg-purple-100 text-purple-800' 
+                                  : user.role === 'admin' 
+                                    ? 'bg-purple-100 text-purple-800' 
+                                    : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {user.isSuperAdmin ? 'Admin+' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                              </span>
+                            ) : (
+                              <select
+                                value={user.role}
+                                onChange={(e) => updateRoleMutation.mutate({ userId: user._id, role: e.target.value })}
+                                disabled={updateRoleMutation.isPending}
+                                className={`w-20 px-2 py-1 text-xs leading-5 font-semibold rounded-full border text-center ${
+                                  user.role === 'admin' 
+                                    ? 'bg-purple-100 text-purple-800 border-purple-300' 
+                                    : 'bg-gray-100 text-gray-800 border-gray-300'
+                                } cursor-pointer hover:opacity-80`}
+                              >
+                                <option value="user">User</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 w-1/6 text-center">
+                            <span className={`w-24 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
+                              !user.isActive
+                                ? 'bg-red-100 text-red-800'
+                                : user.banned
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-green-100 text-green-800'
+                            }`}>
+                              {!user.isActive
+                                ? 'Inactive'
+                                : user.banned
+                                  ? 'Banned'
+                                  : 'Active'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm font-medium w-1/12 text-center">
+                            {user._id !== authUser._id && !(user.isSuperAdmin && !authUser.isSuperAdmin) && (
+                              <div className="flex flex-col gap-1 items-center">
+                                <button
+                                  onClick={() => toggleStatusMutation.mutate(user._id)}
+                                  disabled={toggleStatusMutation.isPending}
+                                  className={`w-24 px-3 py-1 rounded text-xs ${
+                                    user.isActive 
+                                      ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                                      : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  } transition-colors disabled:opacity-50`}
+                                >
+                                  {user.isActive ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <BanUnbanButton user={user} />
+                              </div>
+                            )}
+                          </td>
+                        </>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -705,7 +870,7 @@ const AdminDashboard = () => {
                               }}
                               className="w-28 px-3 py-1 rounded text-xs bg-red-100 text-red-700 hover:bg-red-200"
                             >
-                              View {log.targetType}
+                              View
                             </button>
 
                             <button

@@ -1,6 +1,6 @@
 import express from 'express'
 import { protectRoute } from '../middleware/authMiddleware.js'
-import { createFeedback, listFeedbacks, markFeedbackSeen, markAllFeedbacksSeen } from '../controllers/feedbackController.js'
+import { createFeedback, listFeedbacks, markFeedbackSeen, markAllFeedbacksSeen, deleteFeedback } from '../controllers/feedbackController.js'
 
 const router = express.Router()
 
@@ -9,7 +9,9 @@ router.post('/', protectRoute, createFeedback)
 
 // Admin or protected route to list feedbacks
 router.get('/', protectRoute, listFeedbacks)
+
 router.put('/:id/seen', protectRoute, markFeedbackSeen)
 router.put('/mark-all-seen', protectRoute, markAllFeedbacksSeen)
+router.delete('/:id', protectRoute, deleteFeedback)
 
 export default router
