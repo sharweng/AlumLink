@@ -5,11 +5,41 @@ import { Link, useNavigate } from "react-router-dom"
 import { useState, useRef, useEffect } from "react"
 import SearchResults from "../SearchResults"
 import toast from "react-hot-toast"
+import { X } from "lucide-react"
 
 const Navbar = () => {
+  // Universal modal state
+  const [showUniversalModal, setShowUniversalModal] = useState(false);
+  const modalTimerRef = useRef(null);
+
+  // Show modal every 1 minute
+  useEffect(() => {
+    // Function to show modal
+    const showModal = () => setShowUniversalModal(true);
+    // Initial timer
+    modalTimerRef.current = setTimeout(showModal, 180000);
+    return () => {
+      if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+    };
+  }, []);
+
+  // When modal is closed, set timer to reopen after 1 minute
+  useEffect(() => {
+    if (!showUniversalModal) {
+      if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+      modalTimerRef.current = setTimeout(() => setShowUniversalModal(true), 180000);
+    }
+    // Clean up on unmount
+    return () => {
+      if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+    };
+  }, [showUniversalModal]);
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const authUser = queryClient.getQueryData(["authUser"])
+
+  // Helper: is admin or super admin
+  const isAdmin = authUser?.role === "admin" || authUser?.isSuperAdmin
   
   // Search state
   const [searchQuery, setSearchQuery] = useState("")
@@ -37,7 +67,7 @@ const Navbar = () => {
     queryKey: ["eventReminders"],
     queryFn: async () => axiosInstance.get("/events/check-reminders"),
     enabled: !!authUser,
-    refetchInterval: 60000, // Check every 60 seconds (1 minute)
+    refetchInterval: 180000, // Check every 60 seconds (1 minute)
     refetchOnWindowFocus: true, // Also check when user returns to tab
     refetchOnMount: true, // Check when component mounts
   })
@@ -155,9 +185,37 @@ const Navbar = () => {
   const unreadLinkRequestsCount = linkRequests?.data?.length
   const unreadMessagesCount = unreadMessagesData?.data?.unreadCount || 0
 
-	return (
-		<>
-			{showWidthWarning && (
+  return (
+    <>
+      {/* Universal Modal: Experience Feedback */}
+      {showUniversalModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-60">
+          <div className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full border-2 border-primary flex flex-col items-center animate-fade-in">
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
+              onClick={() => setShowUniversalModal(false)}
+              aria-label="Close"
+            >
+              <X size={24} />
+            </button>
+            <img src="/alumniLink.png" alt="AlumniLink Logo" className="w-16 h-16 mb-4 rounded-full border-2 border-primary shadow" />
+            <h2 className="text-xl font-bold text-primary mb-2">Are you enjoying your experience?</h2>
+            <p className="text-gray-700 mb-4 text-center">We'd love to hear your feedback! Please let us know how we're doing.</p>
+            <a
+              href="https://docs.google.com/forms/d/e/1FAIpQLSfW8h-cOjpV2f7Bej3E2EHdx3YCg5VgOMeZU7ZtQpX4M6emLA/viewform?usp=header"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mb-2 px-4 py-2 bg-primary text-white rounded-lg font-semibold shadow hover:bg-primary-dark transition"
+            >
+              Go to Google Forms
+            </a>
+            <div className="mt-2 text-sm text-gray-500 text-center">
+              Experienced some bugs? <br />Write a feedback under the left sidebar.
+            </div>
+          </div>
+        </div>
+      )}
+      {showWidthWarning && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-60">
           <div className="text-center bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full border-2 border-red-400 flex flex-col items-center animate-fade-in">
             <img src="/alumniLink.png" alt="AlumniLink Logo" className="w-20 h-20 mb-4 rounded-full border-2 border-red-300 shadow" />
@@ -175,9 +233,10 @@ const Navbar = () => {
 				<div className='max-w-7xl mx-auto px-4'>
 					<div className='flex justify-between items-center py-1'>
 						<div className='flex items-center space-x-4'>
-							<Link to='/'>
-								<img className='h-12 rounded' src='/alumniLink.png' alt='AlumniLink' />
-							</Link>
+              {/* Logo: for admin, link to dashboard; for others, link to home */}
+              <Link to={isAdmin ? "/admin/dashboard" : "/"}>
+                <img className='h-12 rounded' src='/alumniLink.png' alt='AlumniLink' />
+              </Link>
 						</div>
 						
 						{/* Search Bar - Only show when authenticated */}
@@ -214,58 +273,66 @@ const Navbar = () => {
 						)}
 						
 						<div className='flex items-center gap-2 md:gap-6'>
-							{authUser ? (
-								<>
-									<Link to='/' className='text-neutral flex flex-col items-center'>
-										<Home size={20} />
-										<span className='text-xs hidden md:block'>Home</span>
-									</Link>
-									<Link to='/jobs' className='text-neutral flex flex-col items-center'>
-										<Briefcase size={20} />
-										<span className='text-xs hidden md:block'>Jobs</span>
-									</Link>
-									<Link to='/forums' className='text-neutral flex flex-col items-center'>
-										<MessageSquare size={20} />
-										<span className='text-xs hidden md:block'>Forums</span>
-									</Link>
-									<Link to='/events' className='text-neutral flex flex-col items-center'>
-										<Calendar size={20} />
-										<span className='text-xs hidden md:block'>Events</span>
-									</Link>
-									<Link to='/mentorship' className='text-neutral flex flex-col items-center'>
-										<Award size={20} />
-										<span className='text-xs hidden md:block'>Mentor</span>
-									</Link>
-									<Link to='/notifications' className='text-neutral flex flex-col items-center relative'>
-										<Bell size={20} />
-										<span className='text-xs hidden md:block'>Notifs</span>
-										{unreadNotificationCount > 0 && (
-											<span
-												className='absolute -top-1 -right-1 md:right-4 bg-red-500 text-white text-xs 
-											rounded-full size-3 md:size-4 flex items-center justify-center'
-											>
-												{unreadNotificationCount}
-											</span>
-										)}
-									</Link>
-									<button
-										className='flex items-center space-x-1 text-sm text-gray-600 hover:text-gray-800'
-										onClick={() => logout()}
-									>
-										<LogOut size={20} />
-										<span className='hidden md:inline'>Logout</span>
-									</button>
-								</>
-							) : (
-								<>
-									<Link to='/login' className='btn btn-ghost'>
-										Sign In
-									</Link>
-									<Link to='/signup' className='btn btn-primary'>
-										Join now
-									</Link>
-								</>
-							)}
+              {authUser ? (
+                <>
+                  {/* Home always goes to homepage */}
+                  <Link to='/' className='text-neutral flex flex-col items-center'>
+                    <Home size={20} />
+                    <span className='text-xs hidden md:block'>Home</span>
+                  </Link>
+                  {/* Admin Dashboard icon for admins */}
+                  {isAdmin && (
+                    <Link to='/admin/dashboard' className='text-neutral flex flex-col items-center'>
+                      <Shield size={20} />
+                      <span className='text-xs hidden md:block'>DBoard</span>
+                    </Link>
+                  )}
+                  <Link to='/jobs' className='text-neutral flex flex-col items-center'>
+                    <Briefcase size={20} />
+                    <span className='text-xs hidden md:block'>Jobs</span>
+                  </Link>
+                  <Link to='/forums' className='text-neutral flex flex-col items-center'>
+                    <MessageSquare size={20} />
+                    <span className='text-xs hidden md:block'>Forums</span>
+                  </Link>
+                  <Link to='/events' className='text-neutral flex flex-col items-center'>
+                    <Calendar size={20} />
+                    <span className='text-xs hidden md:block'>Events</span>
+                  </Link>
+                  <Link to='/mentorship' className='text-neutral flex flex-col items-center'>
+                    <Award size={20} />
+                    <span className='text-xs hidden md:block'>Mentor</span>
+                  </Link>
+                  <Link to='/notifications' className='text-neutral flex flex-col items-center relative'>
+                    <Bell size={20} />
+                    <span className='text-xs hidden md:block'>Notifs</span>
+                    {unreadNotificationCount > 0 && (
+                      <span
+                        className='absolute -top-1 -right-1 md:right-4 bg-red-500 text-white text-xs 
+                      rounded-full size-3 md:size-4 flex items-center justify-center'
+                      >
+                        {unreadNotificationCount}
+                      </span>
+                    )}
+                  </Link>
+                  <button
+                    className='flex items-center space-x-1 text-sm text-gray-600 hover:text-gray-800'
+                    onClick={() => logout()}
+                  >
+                    <LogOut size={20} />
+                    <span className='hidden md:inline'>Logout</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link to='/login' className='btn btn-ghost'>
+                    Sign In
+                  </Link>
+                  <Link to='/signup' className='btn btn-primary'>
+                    Join now
+                  </Link>
+                </>
+              )}
 						</div>
 					</div>
 				</div>
