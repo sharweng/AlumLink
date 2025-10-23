@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import { useQueryClient } from "@tanstack/react-query";
-import axios from "../lib/axios";
+import { axiosInstance } from "../lib/axios";
 
 const SocketContext = createContext();
 
@@ -32,9 +32,7 @@ export const SocketProvider = ({ children }) => {
             const connectSocket = async () => {
                 try {
                     const apiUrl = import.meta.env.CLIENT_URL || "http://localhost:5000";
-                    const response = await axios.get(`${apiUrl}/api/v1/auth/socket-token`, {
-                        withCredentials: true
-                    });
+                    const response = await axiosInstance.get(`/auth/socket-token`);
                     const { token } = response.data;
                     console.log('🔑 Socket token received (length:', token.length, ')');
 
