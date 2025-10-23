@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { Dialog } from '@headlessui/react';
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { axiosInstance } from "../../lib/axios"
 import { toast } from "react-hot-toast"
@@ -7,6 +8,10 @@ import { Loader } from "lucide-react"
 const SignUpForm = () => {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
+  const [showTuptIdError, setShowTuptIdError] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [reportMessage, setReportMessage] = useState("");
+  const [reportLoading, setReportLoading] = useState(false);
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -77,8 +82,8 @@ const SignUpForm = () => {
       const newErrors = {};
       if (!name) newErrors.name = "Full name is required";
       if (!username) newErrors.username = "Username is required";
-      if (!email) newErrors.email = "Email is required";
-      else if (!/^\S+@\S+\.\S+$/.test(email)) newErrors.email = "Enter a valid email address";
+      if (!email) newErrors.email = "TUP Email is required";
+      else if (!/^\S+@tup\.edu\.ph$/.test(email)) newErrors.email = "Enter a valid TUP Email (@tup.edu.ph)";
       if (!password) newErrors.password = "Password is required";
       if (!confirmPassword) newErrors.confirmPassword = "Confirm password is required";
       if (!tuptId) newErrors.tuptId = "TUPT-ID is required";
@@ -98,6 +103,9 @@ const SignUpForm = () => {
       try {
         await signUpMutation({ name, username, email, password, confirmPassword, tuptId, batch, course: "BSIT" });
       } catch (err) {
+        if (err?.response?.data?.message?.includes("TUPT-ID already in use")) {
+          setShowTuptIdError(true);
+        }
         if (err?.response?.data?.message?.includes("Email already in use")) {
           setErrors(prev => ({ ...prev, email: "Email already exists" }));
         }
@@ -105,7 +113,15 @@ const SignUpForm = () => {
     }
     if (step === "signup") {
       return (
-        <form onSubmit={handleSignUp} className="flex flex-col gap-4">
+        <>
+          {showTuptIdError && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 flex flex-col items-start">
+              <span className="font-bold">TUPT-ID already exists</span>
+              <span>If you think this is wrong, contact the admin.</span>
+              <button className="mt-2 btn btn-sm btn-outline btn-error" onClick={() => setModalOpen(true)}>Contact Admin</button>
+            </div>
+          )}
+          <form onSubmit={handleSignUp} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
               <input 
                 type="text"
@@ -129,7 +145,8 @@ const SignUpForm = () => {
             <div className="flex flex-col gap-1">
               <input 
                 type="email"
-                placeholder="Email"
+                id="email"
+                placeholder="TUP Email (@tup.edu.ph)"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="input input-bordered w-full"
@@ -171,7 +188,48 @@ const SignUpForm = () => {
             <button type="submit" disabled={isLoading} className="btn btn-primary w-full text-white">
               { isLoading ? <Loader className="size-5 animate-spin" /> : "Agree & Join" }
             </button>
-        </form>
+          </form>
+          <Dialog open={modalOpen} onClose={() => setModalOpen(false)} className="fixed z-10 inset-0 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen px-4">
+              <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
+              <div className="bg-white rounded-lg max-w-md mx-auto p-6 z-20 relative">
+                <Dialog.Title className="text-lg font-bold mb-2">Report TUPT-ID Issue</Dialog.Title>
+                <Dialog.Description className="mb-4">Describe your issue and the admin will review it.</Dialog.Description>
+                <textarea
+                  className="textarea textarea-bordered w-full mb-4"
+                  rows={4}
+                  placeholder="Describe the problem..."
+                  value={reportMessage}
+                  onChange={e => setReportMessage(e.target.value)}
+                />
+                <div className="flex justify-end gap-2">
+                  <button className="btn btn-outline" onClick={() => setModalOpen(false)}>Cancel</button>
+                  <button
+                    className="btn btn-primary"
+                    disabled={reportLoading || !reportMessage.trim()}
+                    onClick={async () => {
+                      setReportLoading(true);
+                      try {
+                        await axiosInstance.post("/reports", {
+                          type: "TUPT-ID",
+                          tuptId,
+                          email,
+                          message: reportMessage
+                        });
+                        toast.success("Report sent to admin");
+                        setModalOpen(false);
+                        setReportMessage("");
+                      } catch (err) {
+                        toast.error("Failed to send report");
+                      }
+                      setReportLoading(false);
+                    }}
+                  >Send Report</button>
+                </div>
+              </div>
+            </div>
+          </Dialog>
+        </>
       )
     }
     if (step === "verify") {
