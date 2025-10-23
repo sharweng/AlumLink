@@ -200,11 +200,8 @@ const EventDetailPage = () => {
     );
   }
 
-  // If event or organizer has been banned, show a banned notice for non-admin/non-organizer
-  if (
-    (event.banned || event.organizer?.banned) &&
-    !(authUser?.role === 'admin' || authUser?._id === event.organizer._id)
-  ) {
+  // If event has been banned, show a banned notice for non-admin/non-organizer (like PostPage behavior)
+  if (event.banned && !(authUser?.role === 'admin' || authUser?._id === event.organizer._id)) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-1">
@@ -217,16 +214,8 @@ const EventDetailPage = () => {
           </Link>
           <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow p-6">
             <XCircle className="h-12 w-12 text-red-400 mb-3" />
-            <h2 className="text-2xl font-semibold mb-2">
-              {event.banned
-                ? 'This event has been banned'
-                : 'The user who created this event is banned'}
-            </h2>
-            <p className="text-gray-600">
-              {event.banned
-                ? "The content you're trying to view has been removed by the admins."
-                : "The user who created this event has been banned by the admins."}
-            </p>
+            <h2 className="text-2xl font-semibold mb-2">This event has been banned</h2>
+            <p className="text-gray-600">The content you're trying to view has been removed by the admins.</p>
           </div>
         </div>
       </div>
