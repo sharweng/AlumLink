@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
+import BanUnbanButton from "./BanUnbanButton";
 import { 
   Users, 
   UserCheck, 
@@ -329,18 +330,17 @@ const AdminDashboard = () => {
                     <tr key={user._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 w-1/4">
                         <div className="flex items-center">
-                          <img
-                            className="h-10 w-10 rounded-full flex-shrink-0"
-                            src={user.profilePicture || "/avatar.png"}
-                            alt={user.name}
-                          />
+                          <a href={`/profile/${user.username}`} className="block">
+                            <img
+                              className="h-10 w-10 rounded-full flex-shrink-0 hover:ring-2 hover:ring-primary transition"
+                              src={user.profilePicture || "/avatar.png"}
+                              alt={user.name}
+                            />
+                          </a>
                           <div className="ml-4 min-w-0 flex-1">
-                            <div 
-                              className="text-sm font-medium text-gray-900 truncate"
-                              title={user.name}
-                            >
+                            <a href={`/profile/${user.username}`} className="text-sm font-medium text-gray-900 truncate hover:underline" title={user.name}>
                               {user.name}
-                            </div>
+                            </a>
                             <div 
                               className="text-sm text-gray-500 truncate"
                               title={`@${user.username}`}
@@ -386,10 +386,18 @@ const AdminDashboard = () => {
                         )}
                       </td>
                       <td className="px-6 py-4 w-1/6 text-center">
-                        <span className={`w-20 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
-                          user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        <span className={`w-24 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
+                          !user.isActive
+                            ? 'bg-red-100 text-red-800'
+                            : user.banned
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-green-100 text-green-800'
                         }`}>
-                          {user.isActive ? 'Active' : 'Inactive'}
+                          {!user.isActive
+                            ? 'Inactive'
+                            : user.banned
+                              ? 'Banned'
+                              : 'Active'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 w-1/12 text-center">
@@ -397,17 +405,20 @@ const AdminDashboard = () => {
                       </td>
                       <td className="px-6 py-4 text-sm font-medium w-1/12 text-center">
                         {user._id !== authUser._id && !(user.isSuperAdmin && !authUser.isSuperAdmin) && (
-                          <button
-                            onClick={() => toggleStatusMutation.mutate(user._id)}
-                            disabled={toggleStatusMutation.isPending}
-                            className={`w-24 px-3 py-1 rounded text-xs ${
-                              user.isActive 
-                                ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                                : 'bg-green-100 text-green-700 hover:bg-green-200'
-                            } transition-colors disabled:opacity-50`}
-                          >
-                            {user.isActive ? 'Deactivate' : 'Activate'}
-                          </button>
+                          <div className="flex flex-col gap-1 items-center">
+                            <button
+                              onClick={() => toggleStatusMutation.mutate(user._id)}
+                              disabled={toggleStatusMutation.isPending}
+                              className={`w-24 px-3 py-1 rounded text-xs ${
+                                user.isActive 
+                                  ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+                              } transition-colors disabled:opacity-50`}
+                            >
+                              {user.isActive ? 'Deactivate' : 'Activate'}
+                            </button>
+                            <BanUnbanButton user={user} />
+                          </div>
                         )}
                       </td>
                     </tr>
