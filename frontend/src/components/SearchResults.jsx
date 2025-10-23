@@ -29,9 +29,9 @@ const SearchResults = ({ results, isLoading, query, onClose }) => {
         <div className="p-2">
           <h3 className="text-sm font-semibold text-gray-700 px-2 py-1 border-b border-gray-100">
             <User size={16} className="inline mr-2" />
-            People ({results.users.length})
+            People ({results.users.filter(u => !u.isSuperAdmin).length})
           </h3>
-          {results.users.map((user) => (
+          {results.users.filter(user => !user.isSuperAdmin).map((user) => (
             <Link
               key={user._id}
               to={`/profile/${user.username}`}

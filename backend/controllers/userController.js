@@ -52,7 +52,8 @@ export const getSuggestedLinks = async (req, res) => {
         // find users who are not already linked, not banned, and also not suggest the current user
         const suggestedUsers = await User.find({
             _id: { $ne: req.user._id, $nin: currentUser.links },
-            banned: { $ne: true }
+            banned: { $ne: true },
+            isSuperAdmin: { $ne: true }
         }).select("name username profilePicture headline batch course banned").limit(5) // 5 is the current limit for suggestion (can be changed later)
 
         res.json(suggestedUsers)

@@ -72,9 +72,9 @@ const SearchPage = () => {
           {/* Users Section */}
           {results.users?.length > 0 && (
             <div className="mb-8">
-              <h3 className="text-sm font-semibold text-gray-700 px-2 py-1 border-b border-gray-100 flex items-center"><User size={16} className="inline mr-2" />People ({results.users.length})</h3>
+              <h3 className="text-sm font-semibold text-gray-700 px-2 py-1 border-b border-gray-100 flex items-center"><User size={16} className="inline mr-2" />People ({results.users.filter(u => !u.isSuperAdmin).length})</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {results.users.map(user => (
+                {results.users.filter(user => !user.isSuperAdmin).map(user => (
                   <div key={user._id} className="flex items-center p-4 bg-white hover:bg-gray-50 rounded-lg shadow transition cursor-pointer" onClick={() => goToProfile(user.username)}>
                     <img src={user.profilePicture || "/avatar.png"} alt={user.name} className="w-10 h-10 rounded-full object-cover mr-3" />
                     <div className="flex-1 min-w-0">
