@@ -431,7 +431,7 @@ const AdminDashboard = () => {
       )}
 
       {activeTab === 'reports' && (
-        <div>
+  <div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
@@ -468,15 +468,22 @@ const AdminDashboard = () => {
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold">{reportsView === 'recent' ? 'Recent Reports' : 'All Reports'}</h3>
-                {reportsView === 'recent' ? (
-                  <button className="text-sm text-primary underline" onClick={() => setReportsView('all')}>View All</button>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <button className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm" onClick={() => markAllReportsSeenMutation.mutate()}>Mark All as Seen</button>
-                    <button className="text-sm text-primary underline" onClick={() => setReportsView('recent')}>Back to Recent</button>
+                <div className="flex items-center gap-2">
+                  
+                  {reportsView === 'recent' ? (
+                    <div className="flex items-center gap-3">
+                      <button className="px-3 py-1 bg-gray-100 rounded text-sm" onClick={() => queryClient.invalidateQueries(["adminReports"])}>Refresh</button>
+                      <button className="text-sm text-primary underline" onClick={() => setReportsView('all')}>View All</button>
+                    </div>
                     
-                  </div>
-                )}
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <button className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm" onClick={() => markAllReportsSeenMutation.mutate()}>Mark All as Seen</button>
+                      <button className="px-3 py-1 bg-gray-100 rounded text-sm" onClick={() => queryClient.invalidateQueries(["adminReports"])}>Refresh</button>
+                      <button className="text-sm text-primary underline" onClick={() => setReportsView('recent')}>Back to Recent</button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {reportsView === 'recent' ? (
@@ -571,14 +578,22 @@ const AdminDashboard = () => {
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold">{feedbackView === 'recent' ? 'Recent Feedback' : 'All Feedback'}</h3>
-                {feedbackView === 'recent' ? (
-                  <button className="text-sm text-primary underline" onClick={() => setFeedbackView('all')}>View All</button>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <button className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm" onClick={() => markAllFeedbacksSeenMutation.mutate()}>Mark All as Seen</button>
-                    <button className="text-sm text-primary underline" onClick={() => setFeedbackView('recent')}>Back to Recent</button>
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  
+                  {feedbackView === 'recent' ? (
+                    <div className="flex items-center gap-3">
+                      <button className="px-3 py-1 bg-gray-100 rounded text-sm" onClick={() => queryClient.invalidateQueries(["adminFeedbacks"])}>Refresh</button>
+                      <button className="text-sm text-primary underline" onClick={() => setFeedbackView('all')}>View All</button>
+                    </div>
+                  
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <button className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm" onClick={() => markAllFeedbacksSeenMutation.mutate()}>Mark All as Seen</button>
+                      <button className="px-3 py-1 bg-gray-100 rounded text-sm" onClick={() => queryClient.invalidateQueries(["adminFeedbacks"])}>Refresh</button>
+                      <button className="text-sm text-primary underline" onClick={() => setFeedbackView('recent')}>Back to Recent</button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {feedbackView === 'recent' ? (
