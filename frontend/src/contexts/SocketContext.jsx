@@ -31,12 +31,15 @@ export const SocketProvider = ({ children }) => {
             // Fetch token from backend (can't read httpOnly cookies in JS)
             const connectSocket = async () => {
                 try {
-                    const apiUrl = import.meta.env.CLIENT_URL || "http://localhost:5000";
-                    const response = await axiosInstance.get(`/auth/socket-token`);
+                    let socketUrl = axiosInstance.defaults.baseURL;
+                    if (socketUrl.endsWith('/api/v1')) {
+                        socketUrl = socketUrl.replace('/api/v1', '');
+                    }
+                    const response = await axiosInstance.get('/auth/socket-token');
                     const { token } = response.data;
                     console.log('🔑 Socket token received (length:', token.length, ')');
 
-                    const newSocket = io(apiUrl, {
+                    const newSocket = io(socketUrl, {
                         auth: { token }
                     });
 

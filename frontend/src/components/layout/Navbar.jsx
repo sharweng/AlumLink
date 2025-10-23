@@ -221,7 +221,7 @@ const Navbar = () => {
             <img src="/alumniLink.png" alt="AlumniLink Logo" className="w-20 h-20 mb-4 rounded-full border-2 border-red-300 shadow" />
             <h2 className="text-2xl font-extrabold text-red-600 mb-2 tracking-tight">Mobile Responsive Design Coming Soon</h2>
             <p className="text-gray-700 mb-2 text-lg">AlumniLink is best viewed at widths above <span className="font-bold text-red-500">1024px</span>.</p>
-            <p className="text-gray-500 mb-4">If you're on mobile, please use desktop mode for now.</p>
+            <p className="text-gray-500 mb-4">If you're on mobile, please use desktop for now.</p>
             <div className="flex items-center gap-2 mt-2">
               <span className="inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
               <span className="text-xs text-red-500 font-semibold">Thank you for your patience!</span>
