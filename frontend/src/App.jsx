@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom"
 import Layout from "./components/layout/Layout"
 
 import HomePage from "./pages/HomePage"
+import SearchPage from "./pages/SearchPage"
 import SignUpPage from "./pages/auth/SignUpPage"
 import LoginPage from "./pages/auth/LoginPage"
 import toast, { Toaster } from "react-hot-toast"
@@ -48,7 +49,7 @@ function App() {
     <SocketProvider>
       <CallManager />
       <Layout>
-        <Routes>
+    <Routes>
           <Route path="/" element={ 
             authUser ? (
               authUser.role === 'admin' ? <Navigate to="/admin/dashboard" /> : <HomePage />
@@ -74,6 +75,7 @@ function App() {
         <Route path="/achievements" element={ authUser ? <AchievementsPage /> : <Navigate to={"/login"} /> } />
         <Route path="/post/:postId" element={ authUser ? <PostPage /> : <Navigate to={"/login"} /> } />
         <Route path="/profile/:username" element={ authUser ? <ProfilePage /> : <Navigate to={"/login"} /> } />
+        <Route path="/search" element={<SearchPage />} />
       </Routes>
       <Toaster />
     </Layout>
