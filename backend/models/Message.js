@@ -18,7 +18,7 @@ const messageSchema = new mongoose.Schema({
     },
     messageType: {
         type: String,
-        enum: ["text", "call-notification"],
+        enum: ["text", "call-notification", "share"],
         default: "text"
     },
     // For call notifications
@@ -33,6 +33,14 @@ const messageSchema = new mongoose.Schema({
             type: String,
             enum: ["initiated", "answered", "missed", "ended"]
         }
+    },
+    // For share messages
+    shareTarget: {
+        type: {
+            type: String,
+            enum: ["post", "job", "discussion", "event"]
+        },
+        targetId: String
     },
     readBy: [{
         type: mongoose.Schema.Types.ObjectId,

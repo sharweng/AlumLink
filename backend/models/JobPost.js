@@ -88,6 +88,7 @@ const jobPostSchema = new mongoose.Schema({
             default: "pending",
         },
     }],
+        shareCount: { type: Number, default: 0 },
 
     likes: [{
         type: mongoose.Schema.Types.ObjectId,

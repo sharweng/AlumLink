@@ -25,6 +25,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import ConfirmModal from "../common/ConfirmModal";
 import ReportModal from '../common/ReportModal'
 import { MoreVertical } from 'lucide-react';
+import ShareModal from '../common/ShareModal';
 
 const EventPost = ({ event }) => {
   const queryClient = useQueryClient();
@@ -35,6 +36,7 @@ const EventPost = ({ event }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   
   const userRsvp = event.attendees?.find(a => a.user._id === authUser?._id);
   const userStatus = userRsvp?.rsvpStatus;
@@ -212,25 +214,7 @@ const EventPost = ({ event }) => {
                   <div className='absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
                     {/* Share - available to everyone */}
                     <button
-                      onClick={(e) => { e.stopPropagation(); setShowActions(false);
-                        const url = `${window.location.origin}/event/${event._id}`;
-                        if (navigator.share) {
-                          navigator.share({ title: event.title, url }).catch(() => {});
-                        } else if (navigator.clipboard) {
-                          navigator.clipboard.writeText(url).then(() => {
-                            toast.success('Event link copied to clipboard');
-                          });
-                        } else {
-                          // fallback
-                          const tmp = document.createElement('input');
-                          document.body.appendChild(tmp);
-                          tmp.value = url;
-                          tmp.select();
-                          document.execCommand('copy');
-                          document.body.removeChild(tmp);
-                          toast.success('Event link copied to clipboard');
-                        }
-                      }}
+                      onClick={(e) => { e.stopPropagation(); setShowActions(false); setShowShareModal(true); }}
                       className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
                     >
                       <Share2 size={14} />
@@ -470,6 +454,16 @@ const EventPost = ({ event }) => {
         defaultType='event'
         targetId={event._id}
       />
+      {/* ShareModal for event */}
+      {showShareModal && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          itemType="event"
+          itemId={event._id}
+          itemTitle={event.title}
+        />
+      )}
     </div>
   );
 };

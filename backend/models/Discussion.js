@@ -68,6 +68,7 @@ const discussionSchema = new mongoose.Schema({
     editedAt: { 
         type: Date 
     },
+    shareCount: { type: Number, default: 0 },
 }, { timestamps: true });
 
 const Discussion = mongoose.model("Discussion", discussionSchema);

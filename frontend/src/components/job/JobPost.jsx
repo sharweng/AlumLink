@@ -22,6 +22,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import ConfirmModal from '../common/ConfirmModal';
 import FeedbackModal from '../common/FeedbackModal';
 import ReportModal from '../common/ReportModal';
+import ShareModal from '../common/ShareModal';
 
 const JobPost = ({ jobPost, isDetailPage = false }) => {
   const queryClient = useQueryClient();
@@ -31,6 +32,7 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   
   const isOwner = authUser._id === jobPost.author._id;
   const hasApplied = jobPost.applicants?.some(applicant => {
@@ -91,8 +93,7 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
   }
 
   const handleShare = () => {
-    // Share functionality to be implemented later
-    toast.success('Share functionality coming soon!');
+    setShowShareModal(true);
     setShowDropdown(false);
   };
 
@@ -114,6 +115,9 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
 
   // We'll use ReportModal to submit reports
   const [showReportModal, setShowReportModal] = useState(false);
+  
+  // Share modal
+  { /* placed near render below */ }
 
   const getJobTypeStyle = (type) => {
     const styles = {
@@ -372,6 +376,16 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
         defaultType='job'
         targetId={jobPost._id}
       />
+
+      {showShareModal && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          itemType="job"
+          itemId={jobPost._id}
+          itemTitle={jobPost.title}
+        />
+      )}
 
       {/* Ban Confirmation Modal (card-level) */}
       <ConfirmModal

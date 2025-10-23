@@ -2,6 +2,10 @@ import Conversation from "../models/Conversation.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
 import Mentorship from "../models/Mentorship.js";
+import Post from "../models/Post.js";
+import JobPost from "../models/JobPost.js";
+import Discussion from "../models/Discussion.js";
+import Event from "../models/Event.js";
 import { emitToUser } from "../lib/socket.js";
 
 // Check if two users can message each other
@@ -170,6 +174,24 @@ export const sendMessage = async (req, res) => {
             return res.status(403).json({ message: "Not authorized" });
         }
         
+        // Increment shareCount if content matches a shared link
+        if (typeof content === 'string') {
+            // Match /post/:id, /job/:id, /discussion/:id, /event/:id in the message
+            const regex = /\/(post|job|discussion|event)\/(\w+)/;
+            const match = content.match(regex);
+            if (match) {
+                const itemType = match[1];
+                const itemId = match[2];
+                let Model;
+                if (itemType === 'post') Model = Post;
+                else if (itemType === 'job') Model = JobPost;
+                else if (itemType === 'discussion') Model = Discussion;
+                else if (itemType === 'event') Model = Event;
+                if (Model) {
+                    await Model.findByIdAndUpdate(itemId, { $inc: { shareCount: 1 } });
+                }
+            }
+        }
         // Create message
         const message = await Message.create({
             conversation: conversationId,
@@ -189,12 +211,7 @@ export const sendMessage = async (req, res) => {
             p => p.toString() !== req.user._id.toString()
         );
         
-        console.log('Current user ID:', req.user._id.toString());
-        console.log('All participants:', conversation.participants.map(p => p.toString()));
-        console.log('Other participant ID:', otherParticipant ? otherParticipant.toString() : 'NOT FOUND');
-        
         if (!otherParticipant) {
-            console.error('ERROR: Could not find other participant in conversation');
             return res.status(500).json({ message: "Could not find recipient" });
         }
         
@@ -208,12 +225,10 @@ export const sendMessage = async (req, res) => {
             .populate("sender", "name username profilePicture");
         
         // Emit via Socket.IO to recipient
-        const emitted = emitToUser(otherParticipant.toString(), "new-message", {
+        emitToUser(otherParticipant.toString(), "new-message", {
             message: populatedMessage,
             conversationId: conversationId
         });
-        
-        console.log(`Message sent to ${otherParticipant.toString()}, socket emitted: ${emitted}`);
         
         res.status(201).json(populatedMessage);
     } catch (error) {

@@ -483,7 +483,45 @@ const MessagesPage = () => {
                                                                             : 'bg-gray-100 text-gray-900'
                                                                     }`}
                                                                 >
-                                                                    <p className="break-words">{message.content}</p>
+                                                                                                                                        <p className="break-words">
+                                                                                                                                            {(() => {
+                                                                                                                                                // Regex to match internal links
+                                                                                                                                                const regex = /(https?:\/\/[^\s]+\/(post|job|discussion|event)\/\w+)/g;
+                                                                                                                                                const parts = [];
+                                                                                                                                                let lastIndex = 0;
+                                                                                                                                                let match;
+                                                                                                                                                while ((match = regex.exec(message.content)) !== null) {
+                                                                                                                                                    // Add text before the match
+                                                                                                                                                    if (match.index > lastIndex) {
+                                                                                                                                                        parts.push(message.content.slice(lastIndex, match.index));
+                                                                                                                                                    }
+                                                                                                                                                    // Add clickable link
+                                                                                                                                                    const url = match[1];
+                                                                                                                                                    const pathMatch = url.match(/\/(post|job|discussion|event)\/(\w+)/);
+                                                                                                                                                    let route = url;
+                                                                                                                                                    if (pathMatch) {
+                                                                                                                                                        route = `/${pathMatch[1]}/${pathMatch[2]}`;
+                                                                                                                                                    }
+                                                                                                                                                    parts.push(
+                                                                                                                                                        <a
+                                                                                                                                                            key={url + match.index}
+                                                                                                                                                            href={route}
+                                                                                                                                                              className="underline break-all text-inherit"
+                                                                                                                                                            target="_blank"
+                                                                                                                                                            rel="noopener noreferrer"
+                                                                                                                                                        >
+                                                                                                                                                            {url}
+                                                                                                                                                        </a>
+                                                                                                                                                    );
+                                                                                                                                                    lastIndex = regex.lastIndex;
+                                                                                                                                                }
+                                                                                                                                                // Add remaining text
+                                                                                                                                                if (lastIndex < message.content.length) {
+                                                                                                                                                    parts.push(message.content.slice(lastIndex));
+                                                                                                                                                }
+                                                                                                                                                return parts.length > 0 ? parts : message.content;
+                                                                                                                                            })()}
+                                                                                                                                        </p>
                                                                 </div>
                                                                 <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
                                                                     <span className="text-xs text-gray-500">

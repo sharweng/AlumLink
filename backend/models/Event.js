@@ -81,6 +81,7 @@ const eventSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    shareCount: { type: Number, default: 0 },
     editedAt: {
         type: Date
     },

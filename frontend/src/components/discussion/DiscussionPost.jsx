@@ -30,6 +30,7 @@ import { MoreVertical, Flag } from 'lucide-react';
 import { formatDistanceToNow } from "date-fns";
 import ConfirmModal from "../common/ConfirmModal";
 import ReportModal from '../common/ReportModal'
+import ShareModal from '../common/ShareModal'
 
 const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = null }) => {
   const navigate = useNavigate();
@@ -64,6 +65,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportSubTarget, setReportSubTarget] = useState(null);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [openCommentMenu, setOpenCommentMenu] = useState(null);
   const [openReplyMenu, setOpenReplyMenu] = useState(null);
   const [showDeleteCommentConfirm, setShowDeleteCommentConfirm] = useState(false);
@@ -1309,15 +1311,12 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
         </button>
 
         <button
-          onClick={() => {
-            // Share functionality will be implemented later
-            console.log("Share clicked");
-          }}
+          onClick={() => setShowShareModal(true)}
           className="flex items-center gap-2 text-gray-600 hover:text-primary transition-colors"
           title="Share discussion"
         >
           <Share2 size={20} />
-          <span className="text-sm min-w-[20px] text-left">0</span>
+          <span className="text-sm min-w-[20px] text-left">{formatCount(discussion.shareCount || 0)}</span>
         </button>
       </div>
 
@@ -1766,6 +1765,15 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
             })}
           </div>
         </div>
+      )}
+      {showShareModal && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          itemType="discussion"
+          itemId={discussion._id}
+          itemTitle={discussion.title}
+        />
       )}
 
       {/* Image Lightbox Modal */}

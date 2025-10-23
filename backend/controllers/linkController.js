@@ -136,10 +136,10 @@ export const getUserLinks = async (req, res) => {
     try {
         const userId = req.user._id;   
 
-        const user = await User.findById(userId)
-        .populate("links", "name username profilePicture headline links");
+    const user = await User.findById(userId)
+    .populate("links", "name username profilePicture headline links banned");
 
-        res.json(user.links);
+    res.json(user.links);
     } catch (error) {
         console.log("Error in getUserLinks linkController:", error.message);
         res.status(500).json({ message: "Internal server error" });

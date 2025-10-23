@@ -24,6 +24,7 @@ import {
   XCircle,
   CircleCheck
 } from "lucide-react"
+import ShareModal from '../common/ShareModal'
 import { MoreVertical, Flag } from 'lucide-react'
 import PostAction from "./PostAction"
 import { formatDistanceToNow } from "date-fns"
@@ -61,6 +62,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   const [showUnbanPostConfirm, setShowUnbanPostConfirm] = useState(false)
   const [banReason, setBanReason] = useState("")
   const [showActionsDropdown, setShowActionsDropdown] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
   const [reportSubTarget, setReportSubTarget] = useState(null)
   const [openCommentMenu, setOpenCommentMenu] = useState(null)
@@ -660,8 +662,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   }
 
   const handleSharePost = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/post/${post._id}`)
-    toast.success('Link copied to clipboard!')
+  setShowShareModal(true)
   }
 
   const handleReplyToComment = (commentId, username) => {
@@ -1044,11 +1045,20 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
           title="Share post"
         >
           <Share2 size={20} />
-          <span className="text-sm min-w-[20px] text-left">0</span>
+          <span className="text-sm min-w-[20px] text-left">{formatCount(post.shareCount || 0)}</span>
         </button>
       </div>
       
       {/* Comments Section */}
+      {showShareModal && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          itemType="post"
+          itemId={post._id}
+          itemTitle={post.content?.slice(0,80)}
+        />
+      )}
       {showComments && (
         <div className="pt-4 border-t border-gray-200 px-4 pb-4">
           {/* Comment Header with Sort */}
