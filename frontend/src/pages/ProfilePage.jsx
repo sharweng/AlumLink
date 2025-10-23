@@ -284,7 +284,11 @@ const ProfilePage = () => {
                 ) : userLinks?.links?.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {userLinks.links.map(link => (
-                      <div key={link._id} className="bg-white p-4 rounded-lg shadow border">
+                      <a
+                        key={link._id}
+                        href={`/profile/${link.username}`}
+                        className="block bg-white p-4 rounded-lg shadow border hover:bg-gray-50 transition"
+                      >
                         <div className="flex items-center gap-3">
                           <img src={link.profilePicture || '/avatar.png'} alt={link.name} className="w-10 h-10 rounded-full" />
                           <div>
@@ -292,7 +296,7 @@ const ProfilePage = () => {
                             <p className="text-sm text-gray-500">@{link.username}</p>
                           </div>
                         </div>
-                      </div>
+                      </a>
                     ))}
                   </div>
                 ) : (

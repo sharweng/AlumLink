@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { Clock, UserPlus, UserCheck, Check, X } from 'lucide-react'
 
 const RecommendedUser = ({ user }) => {
+  if (user.banned) return null;
   const queryClient = useQueryClient()
 
   const { data:linkStatus, isLoading } = useQuery({

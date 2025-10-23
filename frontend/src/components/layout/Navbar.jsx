@@ -141,8 +141,8 @@ const Navbar = () => {
   const unreadLinkRequestsCount = linkRequests?.data?.length
   const unreadMessagesCount = unreadMessagesData?.data?.unreadCount || 0
 
-  return (
-    <nav className='bg-secondary shadow-md sticky top-0 z-10'>
+	return (
+		<nav className='bg-secondary shadow-md sticky top-0 z-[30]'>
 			<div className='max-w-7xl mx-auto px-4'>
 				<div className='flex justify-between items-center py-3'>
 					<div className='flex items-center space-x-4'>
@@ -171,14 +171,16 @@ const Navbar = () => {
 													}}
 												/>
 							</div>
-							{showResults && (
-								<SearchResults
-									results={searchResults}
-									isLoading={isSearching}
-									query={searchQuery}
-									onClose={closeSearch}
-								/>
-							)}
+											{showResults && (
+												<div className="absolute left-0 right-0 z-[40]">
+													<SearchResults
+														results={searchResults}
+														isLoading={isSearching}
+														query={searchQuery}
+														onClose={closeSearch}
+													/>
+												</div>
+											)}
 						</div>
 					)}
 					
