@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import { useQueryClient } from "@tanstack/react-query";
+import axios from "../lib/axios";
 
 const SocketContext = createContext();
 
@@ -30,19 +31,14 @@ export const SocketProvider = ({ children }) => {
             // Fetch token from backend (can't read httpOnly cookies in JS)
             const connectSocket = async () => {
                 try {
-                    const response = await fetch('http://localhost:5000/api/v1/auth/socket-token', {
-                        credentials: 'include' // Send cookies
+                    const apiUrl = import.meta.env.CLIENT_URL || "http://localhost:5000";
+                    const response = await axios.get(`${apiUrl}/api/v1/auth/socket-token`, {
+                        withCredentials: true
                     });
-                    
-                    if (!response.ok) {
-                        console.error('❌ Failed to get socket token');
-                        return;
-                    }
-                    
-                    const { token } = await response.json();
+                    const { token } = response.data;
                     console.log('🔑 Socket token received (length:', token.length, ')');
-                    
-                    const newSocket = io('http://localhost:5000', {
+
+                    const newSocket = io(apiUrl, {
                         auth: { token }
                     });
 
@@ -84,20 +80,20 @@ export const SocketProvider = ({ children }) => {
                         console.log('🔔 NEW MESSAGE EVENT RECEIVED!');
                         console.log('Message:', message);
                         console.log('Conversation ID:', conversationId);
-                        
+
                         // Force immediate refetch of queries
                         queryClient.refetchQueries(['conversations']);
                         queryClient.refetchQueries(['messages', conversationId]);
                         queryClient.refetchQueries(['unreadMessages']);
-                        
+
                         console.log('✅ Queries refetched');
                     });
-                    
+
                 } catch (error) {
                     console.error('❌ Error connecting to Socket.IO:', error);
                 }
             };
-            
+
             connectSocket();
             
             return () => {
