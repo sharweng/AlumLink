@@ -2,6 +2,12 @@ import { transporter } from "../lib/nodemailer.js";
 import { createVerificationEmailTemplate, createCommentNotificationEmailTemplate, createLinkAcceptedEmailTemplate, createWelcomeEmailTemplate } from "./emailTemplates.js";
 
 export const sendVerificationEmail = async (email, code) => {
+    if (process.env.NODE_ENV === 'production') {
+        // Use Mailtrap in production
+        const { sendVerificationEmail: mailtrapSendVerificationEmail } = await import('./emailHandlers.js');
+        return mailtrapSendVerificationEmail(email, code);
+    }
+    // Default: use Nodemailer in development
     try {
         const mailOptions = {
             from: process.env.NODEMAILER_EMAIL_FROM,
@@ -25,7 +31,12 @@ export const sendVerificationEmail = async (email, code) => {
 }
 
 export const sendWelcomeEmail = async (email, userName, profileUrl) => {
-
+    if (process.env.NODE_ENV === 'production') {
+        // Use Mailtrap in production
+        const { sendWelcomeEmail: mailtrapSendWelcomeEmail } = await import('./emailHandlers.js');
+        return mailtrapSendWelcomeEmail(email, userName, profileUrl);
+    }
+    // Default: use Nodemailer in development
     try {
         const mailOptions = {
             from: process.env.NODEMAILER_EMAIL_FROM,
@@ -35,7 +46,6 @@ export const sendWelcomeEmail = async (email, userName, profileUrl) => {
             html: createWelcomeEmailTemplate(userName, profileUrl),
             category: "welcome"
         };
-
         await transporter.sendMail(mailOptions, function(error, info){
             if (error) {
                 console.log('Error:', error);
@@ -50,6 +60,11 @@ export const sendWelcomeEmail = async (email, userName, profileUrl) => {
 }
 
 export const sendCommentNotificationEmail = async (recipientEmail, recipientName, commenterName, postUrl, commentContent) => {
+    if (process.env.NODE_ENV === 'production') {
+        // Do not send comment notification emails in production via Mailtrap
+        return;
+    }
+    // Default: use Nodemailer in development
     if (!recipientEmail) {
         throw new Error("Recipient email is required for comment notification email.");
     }
@@ -62,7 +77,6 @@ export const sendCommentNotificationEmail = async (recipientEmail, recipientName
             html: createCommentNotificationEmailTemplate(recipientName, commenterName, postUrl, commentContent),
             category: "comment_notification"
         };
-
         await transporter.sendMail(mailOptions, function(error, info){
             if (error) {
                 console.log('Error:', error);
@@ -77,6 +91,12 @@ export const sendCommentNotificationEmail = async (recipientEmail, recipientName
 }
 
 export const sendLinkAcceptedEmail = async (senderEmail, senderName, recipientName, profileUrl) => {
+    if (process.env.NODE_ENV === 'production') {
+        // Use Mailtrap in production
+        const { sendLinkAcceptedEmail: mailtrapSendLinkAcceptedEmail } = await import('./emailHandlers.js');
+        return mailtrapSendLinkAcceptedEmail(senderEmail, senderName, recipientName, profileUrl);
+    }
+    // Default: use Nodemailer in development
     try {
         const mailOptions = {
             from: process.env.NODEMAILER_EMAIL_FROM,
@@ -86,7 +106,6 @@ export const sendLinkAcceptedEmail = async (senderEmail, senderName, recipientNa
             html: createLinkAcceptedEmailTemplate(senderName, recipientName, profileUrl),
             category: "link_accepted"
         };
-        
         await transporter.sendMail(mailOptions, function(error, info){
             if (error) {
                 console.log('Error:', error);   
