@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar'
 import { UserPlus } from 'lucide-react'
 import  FriendRequest  from '../components/network/FriendRequest'
 import UserCard from '../components/UserCard'
+import { useState } from 'react'
 
 const NetworkPage = () => {
   const queryClient = useQueryClient()
@@ -18,6 +19,13 @@ const NetworkPage = () => {
     queryKey: ["links"],
     queryFn: () => axiosInstance.get("/links")
   })
+
+  const [search, setSearch] = useState("");
+  const filteredLinks = links?.data?.filter(link =>
+    link.name.toLowerCase().includes(search.toLowerCase()) ||
+    link.headline?.toLowerCase().includes(search.toLowerCase()) ||
+    link.username?.toLowerCase().includes(search.toLowerCase())
+  ) || [];
 
 
   return (
@@ -50,15 +58,28 @@ const NetworkPage = () => {
 						</div>
           )}
           { links?.data?.length > 0 && (
-						<div className='mb-8'>
-							<h2 className='text-xl font-semibold mb-4'>My Links</h2>
-							<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-								{links.data.map((link) => (
-									<UserCard key={link._id} user={link} isLink={true} />
-								))}
-							</div>
-						</div>
-					)}
+            <div className='mb-8'>
+              <div className='flex items-center justify-between mb-4'>
+                <h2 className='text-xl font-semibold'>My Links</h2>
+                <input
+                  type='text'
+                  className='px-3 py-2 border border-gray-300 rounded w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-primary ml-4'
+                  placeholder='Search links...'
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
+              <div className='grid grid-cols-4 gap-3'>
+                {filteredLinks.length > 0 ? (
+                  filteredLinks.map((link) => (
+                    <UserCard key={link._id} user={link} isLink={true} />
+                  ))
+                ) : (
+                  <div className='col-span-full text-center text-gray-500 py-8'>No links found.</div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

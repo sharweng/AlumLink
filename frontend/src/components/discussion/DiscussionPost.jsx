@@ -1235,7 +1235,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
             {/* Images - Full view in detail, count in list */}
             {discussion.images && discussion.images.length > 0 && (
               isDetailView ? (
-                <div className={`grid gap-2 mb-4 ${discussion.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                <div className={`grid gap-0 mb-0 ${discussion.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                   {discussion.images.map((image, index) => (
                     <div key={index} className="w-full aspect-square bg-gray-100">
                       <img
@@ -1258,7 +1258,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
             {/* Files - Full view in detail, count in list */}
             {discussion.files && discussion.files.length > 0 && (
               isDetailView ? (
-                <div className="mb-4 space-y-2 px-4">
+                <div className="mb-4 space-y-2 px-4 pt-2">
                   <h4 className="text-sm font-semibold text-gray-700">Attachments:</h4>
                   {discussion.files.map((file, index) => (
                     <a
