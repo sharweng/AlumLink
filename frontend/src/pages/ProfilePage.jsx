@@ -174,24 +174,27 @@ const ProfilePage = () => {
 
             {activeTab === 'posts' && (
               <div>
-                {isPostsLoading ? (
-                  <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
-                    <Loader className="animate-spin h-10 w-10 text-primary mb-4" />
-                    <span className="text-lg text-info font-medium">Loading posts...</span>
-                  </div>
-                ) : userPosts?.length > 0 ? (
-                  <div className="space-y-4">
-                    {userPosts.map(post => (
-                      <Post key={post._id} post={post} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
-                    <Users size={64} className="mx-auto text-red-500 mb-3" />
-                    <span className="text-xl font-semibold text-gray-500">No Posts Yet</span>
-                    <span className="text-info mt-1">This user hasn't posted anything yet.</span>
-                  </div>
-                )}
+                
+                  {isPostsLoading ? (
+                    <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
+                      <Loader className="animate-spin h-10 w-10 text-primary mb-4" />
+                      <span className="text-lg text-info font-medium">Loading posts...</span>
+                    </div>
+                  ) : (
+                    userPosts && userPosts.length > 0 ? (
+                      <div className="space-y-4">
+                        {userPosts.map(post => (
+                          <Post key={post._id} post={post} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
+                        <Users size={64} className="mx-auto text-red-500 mb-3" />
+                        <span className="text-xl font-semibold text-gray-500">{userDataFinal.postsVisibility === 'public' ? 'No Posts Yet' : 'Posts are set to private'}</span>
+                        <span className="text-info mt-1">{userDataFinal.postsVisibility === 'public' ? "This user hasn't posted anything yet." : (isOwnProfile ? "You haven't posted anything yet." : "This user only shares posts with linked users.")}</span>
+                      </div>
+                    )
+                  )}
               </div>
             )}
 
@@ -256,55 +259,39 @@ const ProfilePage = () => {
 
             {activeTab === 'links' && (
               <div>
-                {isOwnProfile && (
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Links Visibility</label>
-                    <select
-                      value={userDataFinal.linksVisibility || 'public'}
-                      onChange={(e) => updateLinksVisibilityMutation.mutate(e.target.value)}
-                      className="border rounded px-3 py-2"
-                    >
-                      <option value="private">Private - Only you can see</option>
-                      <option value="public">Public - Everyone can see</option>
-                      <option value="links">Links - Only linked users can see</option>
-                    </select>
-                  </div>
-                )}
+              
 
                 {isLinksLoading ? (
                   <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
                     <Loader className="animate-spin h-10 w-10 text-primary mb-4" />
                     <span className="text-lg text-info font-medium">Loading links...</span>
                   </div>
-                ) : !isOwnProfile && userLinks?.visibility === 'private' ? (
-                  <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
-                    <XCircle className="h-12 w-12 text-gray-400 mb-3" />
-                    <span className="text-xl font-semibold text-gray-500">{userLinks.message}</span>
-                  </div>
-                ) : userLinks?.links?.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {userLinks.links.map(link => (
-                      <a
-                        key={link._id}
-                        href={`/profile/${link.username}`}
-                        className="block bg-white p-4 rounded-lg shadow border hover:bg-gray-50 transition"
-                      >
-                        <div className="flex items-center gap-3">
-                          <img src={link.profilePicture || '/avatar.png'} alt={link.name} className="w-10 h-10 rounded-full" />
-                          <div>
-                            <p className="font-semibold">{link.name}</p>
-                            <p className="text-sm text-gray-500">@{link.username}</p>
-                          </div>
-                        </div>
-                      </a>
-                    ))}
-                  </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
-                    <Link2 size={64} className="mx-auto text-red-500 mb-3" />
-                    <span className="text-xl font-semibold text-gray-500">No Links Yet</span>
-                    <span className="text-info mt-1">This user hasn't linked with anyone yet.</span>
-                  </div>
+                  userLinks?.links?.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {userLinks.links.map(link => (
+                        <a
+                          key={link._id}
+                          href={`/profile/${link.username}`}
+                          className="block bg-white p-4 rounded-lg shadow border hover:bg-gray-50 transition"
+                        >
+                          <div className="flex items-center gap-3">
+                            <img src={link.profilePicture || '/avatar.png'} alt={link.name} className="w-10 h-10 rounded-full" />
+                            <div>
+                              <p className="font-semibold">{link.name}</p>
+                              <p className="text-sm text-gray-500">@{link.username}</p>
+                            </div>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
+                      <Link2 size={64} className="mx-auto text-red-500 mb-3" />
+                      <span className="text-xl font-semibold text-gray-500">{userLinks?.visibility === 'public' ? 'No Links Yet' : 'Links are set to private'}</span>
+                      <span className="text-info mt-1">{userLinks?.visibility === 'public' ? "This user hasn't linked with anyone yet." : (isOwnProfile ? "You haven't linked with anyone yet." : "This user only shares links with linked users.")}</span>
+                    </div>
+                  )
                 )}
               </div>
             )}

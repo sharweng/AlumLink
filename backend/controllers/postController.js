@@ -3,6 +3,7 @@ import cloudinary from "../lib/cloudinary.js";
 import Notification from "../models/Notification.js";
 import Post from "../models/Post.js"
 import ModerationLog from "../models/ModerationLog.js";
+import User from "../models/User.js";
 
 export const getFeedPosts = async (req, res) => {
     try {
@@ -33,6 +34,20 @@ export const getUserPosts = async (req, res) => {
         const User = (await import("../models/User.js")).default;
         const user = await User.findOne({ username });
         if (!user) return res.status(404).json({ message: "User not found" });
+
+        // Check postsVisibility
+        let canView = false;
+        if (isAdmin || isOwner) {
+            canView = true;
+        } else if (user.postsVisibility === 'public') {
+            canView = true;
+        } else if (user.postsVisibility === 'links') {
+            // Check if viewer is linked
+            canView = user.links.map(l => l.toString()).includes(req.user._id.toString());
+        }
+        if (!canView) {
+            return res.status(200).json([]);
+        }
 
         let query = { author: user._id };
         if (!isAdmin && !isOwner) {
@@ -839,3 +854,17 @@ export const unbanReply = async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 }
+
+// Update posts visibility
+export const updatePostsVisibility = async (req, res) => {
+    try {
+        const { visibility } = req.body;
+        if (!['public', 'links'].includes(visibility)) {
+            return res.status(400).json({ message: "Invalid visibility option." });
+        }
+        await User.findByIdAndUpdate(req.user._id, { postsVisibility: visibility });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ message: "Failed to update posts visibility." });
+    }
+};

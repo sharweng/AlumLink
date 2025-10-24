@@ -70,6 +70,11 @@ const userSchema = new mongoose.Schema({
         enum: ['private', 'public', 'links'],
         default: 'public',
     },
+    postsVisibility: {
+        type: String,
+        enum: ['public', 'links'],
+        default: 'public',
+    },
     role: {
         type: String,
         enum: ['user', 'admin'],

@@ -353,6 +353,48 @@ const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving, tabs, activeT
               </button>
             )}
           </div>
+          {/* Lower right: Visibility dropdown for owner only, shown only in correct tab */}
+          {isOwnProfile && activeTab === 'posts' && (
+            <div className="flex items-center gap-2 mr-4">
+              <label className="text-sm font-medium text-gray-700">Posts Visibility</label>
+              <select
+                value={userData.postsVisibility || 'public'}
+                onChange={e => {
+                  axiosInstance.put('/posts/visibility', { visibility: e.target.value })
+                    .then(() => {
+                      queryClient.invalidateQueries(["userPosts", userData.username]);
+                      toast.success("Posts visibility updated");
+                    })
+                    .catch(() => toast.error("Failed to update posts visibility"));
+                }}
+                className="border rounded px-3 py-2"
+              >
+                <option value="public">Public (default)</option>
+                <option value="links">Links</option>
+              </select>
+            </div>
+          )}
+          {isOwnProfile && activeTab === 'links' && (
+            <div className="flex items-center gap-2 mr-4">
+              <label className="text-sm font-medium text-gray-700">Links Visibility</label>
+              <select
+                value={userData.linksVisibility || 'private'}
+                onChange={e => {
+                  axiosInstance.put('/links/visibility', { visibility: e.target.value })
+                    .then(() => {
+                      queryClient.invalidateQueries(["userLinks", userData.username]);
+                      toast.success("Links visibility updated");
+                    })
+                    .catch(() => toast.error("Failed to update links visibility"));
+                }}
+                className="border rounded px-3 py-2"
+              >
+                <option value="private">Private (default)</option>
+                <option value="public">Public</option>
+                <option value="links">Links</option>
+              </select>
+            </div>
+          )}
           {/* BANNED badge and More options icon/menu */}
           {!isOwnProfile && (
             <div className="flex items-center mr-2 relative">
