@@ -943,25 +943,18 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
             {post.images && post.images.length > 0 && (
               <>
                 {post.images.length === 1 ? (
-                  // Single image - Facebook style
-                  <div ref={imageContainerRef} className="relative w-full bg-gray-100 justify-center flex">
-                    <img 
-                      src={post.images[0]} 
-                      alt="Post image" 
-                      className="h-auto object-contain cursor-pointer hover:opacity-90 transition-opacity"
-                      style={{ maxHeight: '600px' }}
+                  // Single image - improved portrait handling
+                  <div
+                    ref={imageContainerRef}
+                    className="relative w-full flex items-center justify-center bg-gray-100 overflow-hidden"
+                    style={{ minHeight: '300px', maxHeight: '600px' }}
+                  >
+                    <img
+                      src={post.images[0]}
+                      alt="Post image"
+                      className="max-w-full max-h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                      style={{ maxHeight: '580px', width: 'auto', height: 'auto' }}
                       onClick={() => setSelectedImageIndex(0)}
-                      onLoad={(e) => {
-                        const img = e.target;
-                        const aspectRatio = img.naturalWidth / img.naturalHeight;
-                        
-                        // If portrait (height > width), make container square and use object-cover
-                        if (aspectRatio < 1) {
-                          img.parentElement.classList.add('aspect-square');
-                          img.classList.remove('object-contain', 'h-auto');
-                          img.classList.add('object-cover', 'h-full');
-                        }
-                      }}
                     />
                   </div>
                 ) : (
@@ -997,23 +990,16 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
             
             {/* Display single image (backward compatibility) - Facebook style */}
             {!post.images && post.image && (
-              <div ref={imageContainerRef} className="relative w-full bg-gray-100">
-                <img 
-                  src={post.image} 
-                  alt="Post content" 
-                  className="w-full h-auto object-contain"
-                  style={{ maxHeight: '600px' }}
-                  onLoad={(e) => {
-                    const img = e.target;
-                    const aspectRatio = img.naturalWidth / img.naturalHeight;
-                    
-                    // If portrait (height > width), make container square and use object-cover
-                    if (aspectRatio < 1) {
-                      img.parentElement.classList.add('aspect-square');
-                      img.classList.remove('object-contain', 'h-auto');
-                      img.classList.add('object-cover', 'h-full');
-                    }
-                  }}
+              <div
+                ref={imageContainerRef}
+                className="relative w-full flex items-center justify-center bg-gray-100 rounded-lg overflow-hidden"
+                style={{ minHeight: '300px', maxHeight: '600px' }}
+              >
+                <img
+                  src={post.image}
+                  alt="Post content"
+                  className="max-w-full max-h-full object-contain"
+                  style={{ maxHeight: '580px', width: 'auto', height: 'auto' }}
                 />
               </div>
             )}

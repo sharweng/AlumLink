@@ -308,10 +308,16 @@ const Navbar = () => {
                     <span className='text-xs hidden md:block'>Notifs</span>
                     {unreadNotificationCount > 0 && (
                       <span
-                        className='absolute -top-1 -right-1 md:right-4 bg-red-500 text-white text-xs 
-                      rounded-full size-3 md:size-4 flex items-center justify-center'
+                        className="absolute -top-1 md:right-4 bg-red-500 text-white rounded-full flex items-center justify-center font-bold transition-all"
+                        style={{
+                          minWidth: '1.1rem',
+                          height: '1.1rem',
+                          fontSize: '0.65rem',
+                          padding: 0,
+                          lineHeight: '1.1rem',
+                        }}
                       >
-                        {unreadNotificationCount}
+                        {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
                       </span>
                     )}
                   </Link>
