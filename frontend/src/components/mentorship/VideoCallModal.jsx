@@ -410,12 +410,23 @@ const CallContent = ({ onLeave }) => {
         };
     }, [isHoveringControls]);
 
+    // Responsive top position for participant info bar
+    const [infoBarTop, setInfoBarTop] = useState('16px');
+    useEffect(() => {
+        const handleResize = () => {
+            setInfoBarTop(window.innerWidth <= 600 ? '72px' : '16px');
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     return (
         // Ensure text inside the call (user names, labels) is white by default
         <StreamTheme className="w-full h-full text-white">
             <div className="flex flex-col h-full bg-transparent">
                 {/* Participant Info Bar */}
-                <div className="absolute top-[16px] left-0 right-0 z-40 px-4">
+                <div className="absolute left-0 right-0 z-40 px-4" style={{ top: infoBarTop }}>
                     <div className="flex justify-center">
                         <div className="bg-black/60 backdrop-blur-md rounded-full px-6 py-3 shadow-xl border border-gray-700">
                             <div className="flex items-center space-x-2 text-white">
