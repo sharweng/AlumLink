@@ -36,7 +36,14 @@ export const SocketProvider = ({ children }) => {
                         socketUrl = socketUrl.replace('/api/v1', '');
                     }
                     const response = await axiosInstance.get('/auth/socket-token');
-                    const { token } = response.data;
+                    const { token } = response.data || {};
+                    // Defensive checks: token might be undefined (server error or no auth)
+                    if (!token || typeof token !== 'string') {
+                        console.error('❌ No valid socket token received from /auth/socket-token', response.data);
+                        setConnectionStatus('error');
+                        return;
+                    }
+
                     console.log('🔑 Socket token received (length:', token.length, ')');
 
                     const newSocket = io(socketUrl, {

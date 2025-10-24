@@ -181,8 +181,8 @@ const Navbar = () => {
     return () => window.removeEventListener("resize", checkWidth);
   }, []);
 
-  const unreadNotificationCount = notifications?.data.filter(notif => !notif.read).length
-  const unreadLinkRequestsCount = linkRequests?.data?.length
+  const unreadNotificationCount = Array.isArray(notifications?.data) ? notifications.data.filter(notif => !notif.read).length : 0
+  const unreadLinkRequestsCount = Array.isArray(linkRequests?.data) ? linkRequests.data.length : 0
   const unreadMessagesCount = unreadMessagesData?.data?.unreadCount || 0
 
   return (
