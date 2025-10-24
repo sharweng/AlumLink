@@ -307,8 +307,8 @@ const VideoCallModal = ({ isOpen, onClose, callId, authUser, otherUser }) => {
 
     return (
         // Use a solid dark background for the modal body and add dedicated top/bottom gradient overlays
-        <div className="fixed inset-0 bg-[#071026] flex items-center justify-center z-50">
-            <div className="relative w-full h-full flex flex-col">
+        <div className="fixed inset-0 bg-[#071026] flex items-center justify-center z-50 overflow-hidden">
+            <div className="relative w-full h-full flex flex-col overflow-hidden">
                 {/* Top gradient overlay (keeps header readable) */}
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/70 to-transparent z-40"></div>
                 {/* Bottom gradient overlay (soft fade near controls) */}
@@ -386,6 +386,8 @@ const CallContent = ({ onLeave }) => {
     const { useCallCallingState, useParticipants } = useCallStateHooks();
     const callingState = useCallCallingState();
     const participants = useParticipants();
+    const [showControls, setShowControls] = useState(false);
+    const [isHoveringControls, setIsHoveringControls] = useState(false);
 
     useEffect(() => {
         if (callingState === CallingState.LEFT) {
@@ -393,12 +395,27 @@ const CallContent = ({ onLeave }) => {
         }
     }, [callingState, onLeave]);
 
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            const threshold = 48; // px from bottom
+            if (window.innerHeight - e.clientY <= threshold) {
+                setShowControls(true);
+            } else if (!isHoveringControls) {
+                setShowControls(false);
+            }
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+        };
+    }, [isHoveringControls]);
+
     return (
         // Ensure text inside the call (user names, labels) is white by default
         <StreamTheme className="w-full h-full text-white">
             <div className="flex flex-col h-full bg-transparent">
                 {/* Participant Info Bar */}
-                <div className="absolute top-20 left-0 right-0 z-40 px-4">
+                <div className="absolute top-[16px] left-0 right-0 z-40 px-4">
                     <div className="flex justify-center">
                         <div className="bg-black/60 backdrop-blur-md rounded-full px-6 py-3 shadow-xl border border-gray-700">
                             <div className="flex items-center space-x-2 text-white">
@@ -416,12 +433,15 @@ const CallContent = ({ onLeave }) => {
                     <SpeakerLayout />
                 </div>
 
-                {/* Control Bar */}
-                <div className="pb-6 pt-8 bg-transparent">
-                    <div className="flex justify-center">
-                        <div className="bg-gray-800/90 backdrop-blur-md rounded-full px-4 py-3 shadow-2xl border border-gray-700">
-                            <CallControls />
-                        </div>
+                {/* Control Bar - hidden by default, slides up when mouse is near bottom or hovered */}
+                <div
+                    className={`absolute left-0 right-0 bg-transparent flex items-center justify-center transition-all duration-300 z-50`
+                        + (showControls ? ' bottom-4 opacity-100' : ' -bottom-24 opacity-0')}
+                    onMouseEnter={() => setIsHoveringControls(true)}
+                    onMouseLeave={() => setIsHoveringControls(false)}
+                >
+                    <div className="bg-gray-800/90 backdrop-blur-md rounded-full px-4 py-3 shadow-2xl border border-gray-700">
+                        <CallControls />
                     </div>
                 </div>
             </div>
