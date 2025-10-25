@@ -21,12 +21,18 @@ export const requestPasswordReset = async (req, res) => {
     passwordResetCodes.set(email, { code, expires });
     // Send email
     try {
-        await transporter.sendMail({
-            from: process.env.NODEMAILER_EMAIL_FROM,
-            to: email,
-            subject: "AlumniLink Password Reset Code",
-            html: createVerificationEmailTemplate(code),
-        });
+        if (process.env.NODE_ENV === 'production') {
+            // Use SendGrid handler in production
+            const { sendVerificationEmail } = await import("../emails/emailHandlers.js");
+            await sendVerificationEmail(email, code);
+        } else {
+            await transporter.sendMail({
+                from: process.env.NODEMAILER_EMAIL_FROM,
+                to: email,
+                subject: "AlumniLink Password Reset Code",
+                html: createVerificationEmailTemplate(code),
+            });
+        }
     } catch (err) {
         return res.status(500).json({ message: "Failed to send reset code email." });
     }
