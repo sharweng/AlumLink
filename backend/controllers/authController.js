@@ -35,8 +35,8 @@ export const signup = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
         let headline = "AlumniLink User";
-        if (batch && course && tuptId) {
-            headline = `${batch} Graduate, ${course} (${tuptId})`;
+        if (batch && course) {
+            headline = `Batch ${batch}, ${course}`;
         }
         // Generate verification code
         const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
