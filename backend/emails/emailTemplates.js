@@ -14,7 +14,7 @@ export function createVerificationEmailTemplate(code) {
     </div>
     <div style="background-color: #ffffff; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
       <p style="font-size: 18px; color: #CC0000;"><strong>Welcome to AlumniLink!</strong></p>
-      <p>To complete your registration, please enter the verification code below in the sign-up form:</p>
+      <p>To complete your registration, please enter the verification code below.</p>
       <div style="background-color: #fce4e4; padding: 24px; border-radius: 8px; margin: 24px 0; text-align:center;">
         <span style="font-size: 40px; font-weight: bold; color: #CC0000; letter-spacing: 6px;">${code}</span>
       </div>

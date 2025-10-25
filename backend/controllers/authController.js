@@ -1,10 +1,69 @@
+
 import User from "../models/User.js";
 import PendingUser from "../models/PendingUser.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-// import { sendWelcomeEmail } from "../emails/emailHandlers.js"; // for production
 import { sendWelcomeEmail } from "../emails/nodemailerHandlers.js"; // for sandbox
 import { transporter } from "../lib/nodemailer.js";
+import { createVerificationEmailTemplate } from "../emails/emailTemplates.js";
+
+// In-memory store for reset codes (for demo; use DB in production)
+const passwordResetCodes = new Map(); // email -> { code, expires }
+
+export const requestPasswordReset = async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: "No account found with that email." });
+    // Generate code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+    passwordResetCodes.set(email, { code, expires });
+    // Send email
+    try {
+        await transporter.sendMail({
+            from: process.env.NODEMAILER_EMAIL_FROM,
+            to: email,
+            subject: "AlumniLink Password Reset Code",
+            html: createVerificationEmailTemplate(code),
+        });
+    } catch (err) {
+        return res.status(500).json({ message: "Failed to send reset code email." });
+    }
+    res.json({ message: "Password reset code sent to your email." });
+};
+
+export const verifyResetCode = async (req, res) => {
+    const { email, code } = req.body;
+    if (!email || !code) return res.status(400).json({ message: "Email and code are required" });
+    const entry = passwordResetCodes.get(email);
+    if (!entry || entry.code !== code) return res.status(400).json({ message: "Invalid or expired code." });
+    if (entry.expires < new Date()) {
+        passwordResetCodes.delete(email);
+        return res.status(400).json({ message: "Code expired. Please request a new one." });
+    }
+    res.json({ message: "Code verified. You may reset your password." });
+};
+
+export const resetPassword = async (req, res) => {
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword) return res.status(400).json({ message: "All fields are required" });
+    const entry = passwordResetCodes.get(email);
+    if (!entry || entry.code !== code) return res.status(400).json({ message: "Invalid or expired code." });
+    if (entry.expires < new Date()) {
+        passwordResetCodes.delete(email);
+        return res.status(400).json({ message: "Code expired. Please request a new one." });
+    }
+    if (newPassword.length < 6) return res.status(400).json({ message: "Password must be at least 6 characters" });
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: "No account found with that email." });
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+    passwordResetCodes.delete(email);
+    res.json({ message: "Password reset successful. You can now log in." });
+};
+
 
 export const signup = async (req, res) => {
     try {
