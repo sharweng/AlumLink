@@ -182,32 +182,32 @@ export const verifySignupCode = async (req, res) => {
 }
 export const login = async (req, res) => {
     try {
-        const { username, password } = req.body;
-
-        if(!username || !password) {
+        const { identifier, password } = req.body;
+        if (!identifier || !password) {
             return res.status(400).json({ message: "All fields are required" });
         }
-
-        const user = await User.findOne({ username });
+        // Check if identifier is an email
+        let user;
+        if (/^\S+@\S+\.\S+$/.test(identifier)) {
+            user = await User.findOne({ email: identifier });
+        } else {
+            user = await User.findOne({ username: identifier });
+        }
         if (!user) {
             return res.status(400).json({ message: "Invalid credentials" });
         }
-
         // Check if user is banned
         if (user.banned) {
             return res.status(403).json({ message: "Your account has been banned." });
         }
-
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ message: "Invalid credentials" });
         }
-
         // Check if user is deactivated
         if (!user.isActive) {
             return res.status(403).json({ message: "Your account has been deactivated. Please contact an administrator." });
         }
-
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "3d" });
         await res.cookie("jwt-alumnilink", token, {
             httpOnly: true,
@@ -215,7 +215,6 @@ export const login = async (req, res) => {
             sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax", // lax for development
             maxAge: 3 * 24 * 60 * 60 * 1000,
         });
-
         res.json({ 
             message: "Logged in successfully", 
             user: {

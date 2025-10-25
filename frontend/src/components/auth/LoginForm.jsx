@@ -6,7 +6,7 @@ import { Loader } from "lucide-react"
 
 
 const LoginForm = () => {
-    const [username, setUsername] = useState("");
+    const [identifier, setIdentifier] = useState(""); // can be username or email
     const [password, setPassword] = useState("");
     const [errors, setErrors] = useState({});
     const [showForgot, setShowForgot] = useState(false);
@@ -38,11 +38,11 @@ const LoginForm = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         const newErrors = {};
-        if (!username) newErrors.username = "Username is required";
+        if (!identifier) newErrors.identifier = "Email or Username is required";
         if (!password) newErrors.password = "Password is required";
         setErrors(newErrors);
         if (Object.keys(newErrors).length > 0) return;
-        loginMutation({ username, password });
+        loginMutation({ identifier, password });
     };
 
     // Forgot password flow
@@ -111,12 +111,12 @@ const LoginForm = () => {
             <form onSubmit={handleSubmit} className='space-y-4'>
                 <input
                     type='text'
-                    placeholder='Username'
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder='Email or Username'
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
                     className='input input-bordered w-full'
                 />
-                {errors.username && <span className='text-red-500 text-xs'>{errors.username}</span>}
+                {errors.identifier && <span className='text-red-500 text-xs'>{errors.identifier}</span>}
                 <input
                     type='password'
                     placeholder='Password'
@@ -215,7 +215,7 @@ const LoginForm = () => {
                                 <button className="btn btn-primary w-full" onClick={() => {
                                     setForgotStep("none");
                                     setShowForgot(false);
-                                    setUsername("");
+                                    setIdentifier("");
                                     setPassword("");
                                 }}>
                                     Back to Login
