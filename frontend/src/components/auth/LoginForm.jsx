@@ -142,9 +142,9 @@ const LoginForm = () => {
 
             {/* Forgot password modal */}
             {forgotStep !== "none" && (
-                <div className="fixed z-20 inset-0 flex items-center justify-center min-h-screen px-4">
-                    <div className="fixed inset-0 bg-black opacity-30" onClick={() => setForgotStep("none")}/>
-                    <div className="bg-white rounded-lg max-w-md mx-auto p-6 z-30 relative shadow-lg w-full">
+                <div className="fixed z-[100] inset-0 flex items-center justify-center min-h-screen px-4">
+                    <div className="fixed inset-0 bg-black opacity-40" style={{zIndex:101}} onClick={() => setForgotStep("none")}/>
+                    <div className="bg-white rounded-lg max-w-md mx-auto p-6 z-[102] relative shadow-lg w-full">
                         {forgotStep === "email" && (
                             <form onSubmit={handleForgotEmailSubmit} className="space-y-4">
                                 <div className="font-bold text-lg mb-2">Forgot Password</div>
@@ -160,7 +160,13 @@ const LoginForm = () => {
                                 <button type="submit" className="btn btn-primary w-full" disabled={forgotLoading}>
                                     {forgotLoading ? <Loader className="size-5 animate-spin" /> : "Send Verification Code"}
                                 </button>
-                                <button type="button" className="btn btn-link w-full" onClick={() => setForgotStep("none")}>Back to Login</button>
+                                <button
+                                    type="button"
+                                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-red-600 bg-white hover:bg-gray-50 mt-2"
+                                    onClick={() => setForgotStep("none")}
+                                >
+                                    Back to Login
+                                </button>
                             </form>
                         )}
                         {forgotStep === "code" && (
@@ -179,7 +185,13 @@ const LoginForm = () => {
                                 <button type="submit" className="btn btn-primary w-full" disabled={forgotLoading}>
                                     {forgotLoading ? <Loader className="size-5 animate-spin" /> : "Verify Code"}
                                 </button>
-                                <button type="button" className="btn btn-link w-full" onClick={() => setForgotStep("email")}>Back</button>
+                                <button
+                                    type="button"
+                                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-red-600 bg-white hover:bg-gray-50 mt-2"
+                                    onClick={() => setForgotStep("email")}
+                                >
+                                    Back
+                                </button>
                             </form>
                         )}
                         {forgotStep === "reset" && (
@@ -211,13 +223,16 @@ const LoginForm = () => {
                         )}
                         {forgotStep === "done" && (
                             <div className="space-y-4 flex flex-col items-center">
-                                <div className="font-bold text-lg mb-2 text-green-600">Password changed successfully!</div>
-                                <button className="btn btn-primary w-full" onClick={() => {
-                                    setForgotStep("none");
-                                    setShowForgot(false);
-                                    setIdentifier("");
-                                    setPassword("");
-                                }}>
+                                <div className="font-bold text-lg mb-2 text-black">Password changed successfully!</div>
+                                <button
+                                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-red-600 bg-white hover:bg-gray-50 mt-2"
+                                    onClick={() => {
+                                        setForgotStep("none");
+                                        setShowForgot(false);
+                                        setIdentifier("");
+                                        setPassword("");
+                                    }}
+                                >
                                     Back to Login
                                 </button>
                             </div>
