@@ -73,6 +73,20 @@ export const resetPassword = async (req, res) => {
 
 export const signup = async (req, res) => {
     try {
+        // PATCH: Only do duplicate checks and return if resend is true (pre-check, don't create/update PendingUser)
+        if (req.body.resend) {
+            const { email, username, tuptId } = req.body;
+            const errors = {};
+            if (await User.findOne({ email })) errors.email = "Email already in use";
+            if (await User.findOne({ username })) errors.username = "Username already in use";
+            if (await User.findOne({ tuptId })) errors.tuptId = "TUPT-ID already in use";
+            if (Object.keys(errors).length > 0) {
+                return res.status(400).json({ message: Object.values(errors)[0] });
+            }
+            // No errors, just return success
+            return res.json({ message: "OK" });
+        }
+
         const { name, username, email, password, confirmPassword, batch, course, tuptId } = req.body;
         if(!name || !username || !email || !password || !confirmPassword || !batch || !course || !tuptId) {
             return res.status(400).json({ message: "All fields are required" });
