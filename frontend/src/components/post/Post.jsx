@@ -688,8 +688,8 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   }
 
 
-  // If post is banned and the current user is neither the owner nor an admin, don't render
-  if (post.banned && authUser?._id !== post.author._id && authUser?.role !== 'admin') {
+  // If post is banned and the current user is neither the owner nor an admin/superAdmin, don't render
+  if (post.banned && authUser?._id !== post.author._id && !(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin')) {
     return null
   }
 

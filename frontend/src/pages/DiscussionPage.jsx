@@ -115,8 +115,12 @@ const DiscussionPage = () => {
     )
   }
 
-  // If author is banned, show banned user UI for non-admin/non-owner
-  if (discussion?.data?.author?.banned && !(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin' || authUser?._id === discussion.data.author._id)) {
+  // If discussion is banned or author is banned, show banned UI for non-admin/non-owner
+  const isAdminOrSuper = authUser?.permission === 'admin' || authUser?.permission === 'superAdmin';
+  const isOwner = authUser?._id === discussion?.data?.author?._id;
+  const isBannedDiscussion = discussion?.data?.banned;
+  const isBannedAuthor = discussion?.data?.author?.banned;
+  if ((isBannedDiscussion || isBannedAuthor) && !(isAdminOrSuper || isOwner)) {
     return (
       <div className='grid grid-cols-1 lg:grid-cols-4 gap-6'>
         <div className='lg:col-span-1'>
@@ -132,8 +136,8 @@ const DiscussionPage = () => {
           </Link>
           <div className='flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow p-6'>
             <XCircle className='h-12 w-12 text-red-400 mb-3' />
-            <h2 className='text-2xl font-semibold mb-2'>The user who created this discussion is banned</h2>
-            <p className='text-gray-600'>The user who created this discussion has been banned by the admins.</p>
+            <h2 className='text-2xl font-semibold mb-2'>{isBannedDiscussion ? "This discussion post has been banned" : "The user who created this discussion is banned"}</h2>
+            <p className='text-gray-600'>{isBannedDiscussion ? "The content you're trying to view has been removed by the admins." : "The user who created this discussion has been banned by the admins."}</p>
           </div>
         </div>
       </div>

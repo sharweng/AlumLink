@@ -121,7 +121,7 @@ const DiscussionForumsPage = () => {
           discussions?.filter(d => {
             // hide banned discussions from regular users
             if (d.banned || d.author?.banned) {
-              return authUser?.role === 'admin' || authUser?._id === d.author?._id
+              return authUser?.permission === 'admin' || authUser?.permission === 'superAdmin' || authUser?._id === d.author?._id
             }
             return true
           }).map((discussion) => (
