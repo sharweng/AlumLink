@@ -666,7 +666,9 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {reportsView === 'recent' ? (
+              {(!reports || reports.length === 0) ? (
+                <div className="text-center text-gray-400">No reports</div>
+              ) : ( reportsView === 'recent' ? (
                 <div className="space-y-2 max-h-72 overflow-auto">
                   {reports && reports.slice(0, 5).map(r => (
                     <div key={r._id} className={`p-3 border rounded flex items-start justify-between cursor-pointer ${!r.seen ? 'border-red-500' : ''}`} onClick={() => { setSelectedReport(r); setShowReportModal(true); markReportSeenMutation.mutate(r._id); }}>
@@ -752,7 +754,7 @@ const AdminDashboard = () => {
                     ))}
                   </div>
                 </div>
-              )}
+              ))}
             </div>
 
             <div className="bg-white rounded-lg shadow p-4">
@@ -776,7 +778,9 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {feedbackView === 'recent' ? (
+              {(!feedbacks || feedbacks.length === 0) ? (
+                <div className="text-center text-gray-400">No feedback</div>
+              ) :(feedbackView === 'recent' ? (
                 <div className="space-y-2 max-h-72 overflow-auto">
                   {feedbacks && feedbacks.slice(0, 5).map(f => (
                     <div key={f._id} className={`p-3 border rounded cursor-pointer ${!f.seen ? 'border-red-500' : ''}`} onClick={() => { setSelectedFeedback(f); setShowFeedbackModal(true); markFeedbackSeenMutation.mutate(f._id); }}>
@@ -819,7 +823,7 @@ const AdminDashboard = () => {
                     ))}
                   </div>
                 </div>
-              )}
+              ))}
             </div>
           </div>
         </div>
@@ -858,7 +862,11 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {moderationLogs?.map((log) => (
+                    {(!moderationLogs || moderationLogs.length === 0) ? (
+                      <tr>
+                        <td colSpan={5} className="text-center text-gray-400 pt-4">No moderation logs</td>
+                      </tr>
+                    ) : ( moderationLogs?.map((log) => (
                       <tr key={log._id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => { setSelectedLog(log); setShowLogModal(true); }}>
                         <td className="px-3 py-2 text-center">{log.action.toUpperCase()}</td>
                         <td className="px-3 py-2 text-center">{log.targetType}</td>
@@ -902,7 +910,7 @@ const AdminDashboard = () => {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    )))}
                   </tbody>
                 </table>
               </div>
