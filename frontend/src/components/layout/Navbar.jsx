@@ -8,32 +8,33 @@ import toast from "react-hot-toast"
 import { X } from "lucide-react"
 
 const Navbar = () => {
-  // Universal modal state
+  // Universal modal state (feedback modal)
+  const feedbackModalEnabled = import.meta.env.VITE_ENABLE_FEEDBACK_MODAL !== 'false';
+  const widthWarningEnabled = import.meta.env.VITE_ENABLE_WIDTH_WARNING !== 'false';
   const [showUniversalModal, setShowUniversalModal] = useState(false);
   const modalTimerRef = useRef(null);
 
-  // Show modal every 1 minute
+  // Show modal every 3 minutes if enabled
   useEffect(() => {
-    // Function to show modal
+    if (!feedbackModalEnabled) return;
     const showModal = () => setShowUniversalModal(true);
-    // Initial timer
     modalTimerRef.current = setTimeout(showModal, 180000);
     return () => {
       if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
     };
-  }, []);
+  }, [feedbackModalEnabled]);
 
-  // When modal is closed, set timer to reopen after 1 minute
+  // When modal is closed, set timer to reopen after 3 minutes if enabled
   useEffect(() => {
+    if (!feedbackModalEnabled) return;
     if (!showUniversalModal) {
       if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
       modalTimerRef.current = setTimeout(() => setShowUniversalModal(true), 180000);
     }
-    // Clean up on unmount
     return () => {
       if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
     };
-  }, [showUniversalModal]);
+  }, [showUniversalModal, feedbackModalEnabled]);
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const authUser = queryClient.getQueryData(["authUser"])
@@ -169,6 +170,10 @@ const Navbar = () => {
   }, [])
 
   useEffect(() => {
+    if (!widthWarningEnabled) {
+      setShowWidthWarning(false);
+      return;
+    }
     const checkWidth = () => {
       if (window.innerWidth < 1024) {
         setShowWidthWarning(true);
@@ -179,7 +184,7 @@ const Navbar = () => {
     checkWidth();
     window.addEventListener("resize", checkWidth);
     return () => window.removeEventListener("resize", checkWidth);
-  }, []);
+  }, [widthWarningEnabled]);
 
   const unreadNotificationCount = Array.isArray(notifications?.data) ? notifications.data.filter(notif => !notif.read).length : 0
   const unreadLinkRequestsCount = Array.isArray(linkRequests?.data) ? linkRequests.data.length : 0
@@ -188,7 +193,7 @@ const Navbar = () => {
   return (
     <>
       {/* Universal Modal: Experience Feedback */}
-      {showUniversalModal && (
+  {feedbackModalEnabled && showUniversalModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-60">
           <div className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full border-2 border-primary flex flex-col items-center animate-fade-in">
             <button
@@ -215,7 +220,7 @@ const Navbar = () => {
           </div>
         </div>
       )}
-      {showWidthWarning && (
+  {widthWarningEnabled && showWidthWarning && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-60">
           <div className="text-center bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full border-2 border-red-400 flex flex-col items-center animate-fade-in">
             <img src="/alumniLink.png" alt="AlumniLink Logo" className="w-20 h-20 mb-4 rounded-full border-2 border-red-300 shadow" />
