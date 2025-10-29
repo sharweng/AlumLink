@@ -156,10 +156,10 @@ export const getUserLinksByUsername = async (req, res) => {
 
         const isOwner = user._id.toString() === currentUserId.toString();
         const isLinked = user.links.includes(currentUserId);
-        const isAdmin = req.user.role === 'admin';
+    const isAdmin = ['admin', 'superAdmin'].includes(req.user.permission);
 
         let canView = false;
-        if (isOwner || isAdmin) {
+    if (isOwner || isAdmin) {
             canView = true;
         } else if (user.linksVisibility === 'public') {
             canView = true;

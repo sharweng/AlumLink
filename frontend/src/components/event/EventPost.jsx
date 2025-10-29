@@ -32,7 +32,7 @@ const EventPost = ({ event }) => {
   const navigate = useNavigate();
   const authUser = queryClient.getQueryData(["authUser"]);
   const isOrganizer = authUser?._id === event.organizer._id;
-  const isAdmin = authUser?.role === 'admin';
+  const isAdmin = authUser?.permission === 'admin' || authUser?.permission === 'superAdmin';
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showActions, setShowActions] = useState(false);

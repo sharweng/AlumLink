@@ -2,7 +2,7 @@ import ModerationLog from "../models/ModerationLog.js";
 
 export const getModerationLogs = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (!['admin', 'superAdmin'].includes(req.user.permission)) {
       return res.status(403).json({ message: 'Access denied. Admins only.' })
     }
 
@@ -16,7 +16,7 @@ export const getModerationLogs = async (req, res) => {
 
 export const deleteModerationLog = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (!['admin', 'superAdmin'].includes(req.user.permission)) {
       return res.status(403).json({ message: 'Access denied. Admins only.' })
     }
 
@@ -34,7 +34,7 @@ export const deleteModerationLog = async (req, res) => {
 
 export const deleteAllModerationLogs = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (!['admin', 'superAdmin'].includes(req.user.permission)) {
       return res.status(403).json({ message: 'Access denied. Admins only.' })
     }
 

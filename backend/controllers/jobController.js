@@ -449,7 +449,7 @@ export const deleteCommentFromJobPost = async (req, res) => {
 // Admin: ban a job post
 export const banJobPost = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
             return res.status(403).json({ message: 'Access denied. Admins only.' });
         }
 
@@ -474,7 +474,7 @@ export const banJobPost = async (req, res) => {
 // Admin: unban a job post
 export const unbanJobPost = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
             return res.status(403).json({ message: 'Access denied. Admins only.' });
         }
 

@@ -575,7 +575,7 @@ export const deleteReply = async (req, res) => {
 // Admin: ban a discussion
 export const banDiscussion = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
             return res.status(403).json({ message: 'Access denied. Admins only.' });
         }
 
@@ -604,7 +604,7 @@ export const banDiscussion = async (req, res) => {
 // Admin: unban a discussion
 export const unbanDiscussion = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
             return res.status(403).json({ message: 'Access denied. Admins only.' });
         }
 
@@ -633,7 +633,7 @@ export const unbanDiscussion = async (req, res) => {
 // Admin: ban a discussion comment
 export const banDiscussionComment = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admins only' });
+    if (!['admin', 'superAdmin'].includes(req.user.permission)) return res.status(403).json({ message: 'Admins only' });
         const { id, commentId } = req.params;
         const discussion = await Discussion.findById(id);
         if (!discussion) return res.status(404).json({ message: 'Discussion not found' });
@@ -662,7 +662,7 @@ export const banDiscussionComment = async (req, res) => {
 // Admin: unban a discussion comment
 export const unbanDiscussionComment = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admins only' });
+    if (!['admin', 'superAdmin'].includes(req.user.permission)) return res.status(403).json({ message: 'Admins only' });
         const { id, commentId } = req.params;
         const discussion = await Discussion.findById(id);
         if (!discussion) return res.status(404).json({ message: 'Discussion not found' });
@@ -691,7 +691,7 @@ export const unbanDiscussionComment = async (req, res) => {
 // Admin: ban a discussion reply
 export const banDiscussionReply = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admins only' });
+    if (!['admin', 'superAdmin'].includes(req.user.permission)) return res.status(403).json({ message: 'Admins only' });
         const { id, commentId, replyId } = req.params;
         const discussion = await Discussion.findById(id);
         if (!discussion) return res.status(404).json({ message: 'Discussion not found' });
@@ -723,7 +723,7 @@ export const banDiscussionReply = async (req, res) => {
 // Admin: unban a discussion reply
 export const unbanDiscussionReply = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admins only' });
+    if (!['admin', 'superAdmin'].includes(req.user.permission)) return res.status(403).json({ message: 'Admins only' });
         const { id, commentId, replyId } = req.params;
         const discussion = await Discussion.findById(id);
         if (!discussion) return res.status(404).json({ message: 'Discussion not found' });

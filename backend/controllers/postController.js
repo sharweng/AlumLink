@@ -27,7 +27,7 @@ export const getFeedPosts = async (req, res) => {
 export const getUserPosts = async (req, res) => {
     try {
         const { username } = req.params;
-        const isAdmin = req.user.role === 'admin';
+    const isAdmin = ['admin', 'superAdmin'].includes(req.user.permission);
         const isOwner = req.user.username === username;
 
         // Find user by username to get _id
@@ -667,7 +667,7 @@ export const dislikeComment = async (req, res) => {
 export const banPost = async (req, res) => {
     try {
         // Only admins can ban content
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
             return res.status(403).json({ message: "Access denied. Admins only." });
         }
 
@@ -697,7 +697,7 @@ export const banPost = async (req, res) => {
 // Admin: unban a post
 export const unbanPost = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
             return res.status(403).json({ message: "Access denied. Admins only." });
         }
 
@@ -726,7 +726,7 @@ export const unbanPost = async (req, res) => {
 // Admin: ban a comment
 export const banComment = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
             return res.status(403).json({ message: "Access denied. Admins only." });
         }
 
@@ -757,7 +757,7 @@ export const banComment = async (req, res) => {
 // Admin: unban a comment
 export const unbanComment = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
             return res.status(403).json({ message: "Access denied. Admins only." });
         }
 
@@ -788,7 +788,7 @@ export const unbanComment = async (req, res) => {
 // Admin: ban a reply
 export const banReply = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
             return res.status(403).json({ message: "Access denied. Admins only." });
         }
 
@@ -823,7 +823,7 @@ export const banReply = async (req, res) => {
 // Admin: unban a reply
 export const unbanReply = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
             return res.status(403).json({ message: "Access denied. Admins only." });
         }
 

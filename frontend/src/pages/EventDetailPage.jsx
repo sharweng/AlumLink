@@ -201,7 +201,7 @@ const EventDetailPage = () => {
   }
 
   // If event has been banned, show a banned notice for non-admin/non-organizer (like PostPage behavior)
-  if (event.banned && !(authUser?.role === 'admin' || authUser?._id === event.organizer._id)) {
+  if (event.banned && !(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin' || authUser?._id === event.organizer._id)) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-1">
@@ -259,7 +259,7 @@ const EventDetailPage = () => {
             </div>
             <div className='relative ml-2 flex items-center'>
               {/* Banned badge for admins/organizer */}
-              {event?.banned && (authUser?.role === 'admin' || isOrganizer) && (
+              {event?.banned && ((authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') || isOrganizer) && (
                 <span className="mr-1 inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
               )}
               <button
@@ -274,7 +274,7 @@ const EventDetailPage = () => {
                   <div className='fixed inset-0 z-10' onClick={() => setShowDropdown(false)} />
                   <div className='absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
                       {/* For regular users show report; admins see ban/unban */}
-                      {!isOrganizer && !(authUser?.role === 'admin') && (
+                      {!isOrganizer && !(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setShowDropdown(false); setShowReportModal(true); }}
                           className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
@@ -311,7 +311,7 @@ const EventDetailPage = () => {
                           </button>
 
                       {/* Admin Ban / Unban */}
-                      {authUser?.role === 'admin' && (
+                      {(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') && (
                         event.banned ? (
                           <button
                             onClick={(e) => { e.stopPropagation(); setShowDropdown(false); setShowUnbanConfirm(true); }}

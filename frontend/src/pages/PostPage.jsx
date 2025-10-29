@@ -34,7 +34,7 @@ const PostPage = () => {
           <span className="text-info mt-1">The post you are looking for does not exist or was removed.</span>
         </div>
       );
-    } else if ((post.data.banned || post.data.author?.banned) && !(authUser?.role === 'admin' || authUser?._id === post.data.author._id)) {
+  } else if ((post.data.banned || post.data.author?.banned) && !(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin' || authUser?._id === post.data.author._id)) {
       // Explicit banned page for non-admin and non-owner
       return (
         <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow p-6">

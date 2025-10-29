@@ -19,7 +19,7 @@ const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving, tabs, activeT
   const queryClient = useQueryClient();
   const authUser = queryClient.getQueryData(["authUser"]);
   // Assume authUser.role is 'admin' for admin check, and userData.banned for banned status
-  const isAdmin = authUser?.role === 'admin';
+  const isAdmin = authUser?.permission === 'admin' || authUser?.permission === 'superAdmin';
   const isBanned = userData?.banned;
   const navigate = useNavigate();
 

@@ -4,7 +4,7 @@ import User from "../models/User.js";
 export const getAllUsers = async (req, res) => {
     try {
         // Check if requester is admin
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
             return res.status(403).json({ message: "Access denied. Admins only." });
         }
 
@@ -26,7 +26,7 @@ export const updateUserRole = async (req, res) => {
         const { role } = req.body;
 
         // Check if requester is admin
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
             return res.status(403).json({ message: "Access denied. Admins only." });
         }
 
@@ -46,9 +46,9 @@ export const updateUserRole = async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Prevent regular admins from changing super admin roles
-        if (targetUser.isSuperAdmin && !req.user.isSuperAdmin) {
-            return res.status(403).json({ message: "Only super admins can modify super admin roles." });
+        // Prevent regular admins from changing super admin permissions
+        if (targetUser.permission === 'superAdmin' && req.user.permission !== 'superAdmin') {
+            return res.status(403).json({ message: "Only super admins can modify super admin permissions." });
         }
 
         const user = await User.findByIdAndUpdate(
@@ -71,13 +71,70 @@ export const updateUserRole = async (req, res) => {
     }
 };
 
+// Update user permission (admin only)
+export const updateUserPermission = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { permission } = req.body;
+
+        // Check if requester is admin
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
+            return res.status(403).json({ message: "Access denied. Admins only." });
+        }
+
+        // Validate permission
+        if (!['regular', 'admin', 'superAdmin'].includes(permission)) {
+            return res.status(400).json({ message: "Invalid permission. Must be 'regular', 'admin', or 'superAdmin'." });
+        }
+
+        // Prevent admin from changing their own permission
+        if (userId === req.user._id.toString()) {
+            return res.status(400).json({ message: "You cannot change your own permission." });
+        }
+
+        // Check if target user exists
+        const targetUser = await User.findById(userId);
+        if (!targetUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Prevent regular admins from changing super admin permissions
+        if (targetUser.permission === 'superAdmin' && req.user.permission !== 'superAdmin') {
+            return res.status(403).json({ message: "Only super admins can modify super admin permissions." });
+        }
+
+        // If trying to set someone to superAdmin, only superAdmin can do this
+        if (permission === 'superAdmin' && req.user.permission !== 'superAdmin') {
+            return res.status(403).json({ message: "Only super admins can promote users to superAdmin." });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { permission },
+            { new: true }
+        ).select('-password');
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json({ 
+            message: `User permission updated to ${permission}`, 
+            user
+        });
+    } catch (error) {
+        console.log("Error in updateUserPermission adminController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
 // Toggle user active status (admin only)
 export const toggleUserStatus = async (req, res) => {
     try {
         const { userId } = req.params;
 
         // Check if requester is admin
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
             return res.status(403).json({ message: "Access denied. Admins only." });
         }
 
@@ -93,7 +150,7 @@ export const toggleUserStatus = async (req, res) => {
         }
 
         // Prevent regular admins from deactivating super admins
-        if (targetUser.isSuperAdmin && !req.user.isSuperAdmin) {
+        if (targetUser.permission === 'superAdmin' && req.user.permission !== 'superAdmin') {
             return res.status(403).json({ message: "Only super admins can deactivate super admins." });
         }
 
@@ -126,7 +183,7 @@ export const toggleUserStatus = async (req, res) => {
 export const getDashboardStats = async (req, res) => {
     try {
         // Check if requester is admin
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
             return res.status(403).json({ message: "Access denied. Admins only." });
         }
 
@@ -160,7 +217,7 @@ export const getDashboardStats = async (req, res) => {
 // Ban a user (admin only)
 export const banUser = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
             return res.status(403).json({ message: "Access denied. Admins only." });
         }
         const { userId } = req.params;
@@ -185,7 +242,7 @@ export const banUser = async (req, res) => {
 // Unban a user (admin only)
 export const unbanUser = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
             return res.status(403).json({ message: "Access denied. Admins only." });
         }
         const { userId } = req.params;

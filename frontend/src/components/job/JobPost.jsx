@@ -40,7 +40,7 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
     return applicantUserId === authUser._id;
   });
 
-  const isAdmin = authUser?.role === 'admin';
+  const isAdmin = authUser?.permission === 'admin' || authUser?.permission === 'superAdmin';
 
   // Ban/Unban state for card-level admin actions
   const [showBanConfirm, setShowBanConfirm] = useState(false);

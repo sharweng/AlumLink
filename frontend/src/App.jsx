@@ -57,7 +57,7 @@ function App() {
         <Route path="/signup" element={ !authUser ? <SignUpPage /> : <Navigate to={"/"} /> } />
         <Route path="/login" element={ !authUser ? <LoginPage /> : <Navigate to={"/"} /> } />
         <Route path="/admin/dashboard" element={ 
-          authUser?.role === 'admin' ? <AdminDashboard /> : <Navigate to={"/"} /> 
+          authUser?.permission === 'admin' || authUser?.permission === 'superAdmin' ? <AdminDashboard /> : <Navigate to={"/"} /> 
         } />
         <Route path="/jobs" element={ authUser ? <JobBoardPage /> : <Navigate to={"/login"} /> } />
         <Route path="/job/:jobId" element={ authUser ? <JobPostPage /> : <Navigate to={"/login"} /> } />

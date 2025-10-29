@@ -3,6 +3,7 @@ import { protectRoute } from "../middleware/authMiddleware.js";
 import {
     getAllUsers,
     updateUserRole,
+    updateUserPermission,
     toggleUserStatus,
     getDashboardStats,
     banUser,
@@ -16,6 +17,7 @@ const router = express.Router();
 router.get("/stats", protectRoute, getDashboardStats);
 router.get("/users", protectRoute, getAllUsers);
 router.put("/users/:userId/role", protectRoute, updateUserRole);
+router.put("/users/:userId/permission", protectRoute, updateUserPermission);
 router.put("/users/:userId/toggle-status", protectRoute, toggleUserStatus);
 router.put("/users/:userId/ban", protectRoute, banUser);
 router.put("/users/:userId/unban", protectRoute, unbanUser);

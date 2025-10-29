@@ -53,8 +53,8 @@ export const getSuggestedLinks = async (req, res) => {
         const suggestedUsers = await User.find({
             _id: { $ne: req.user._id, $nin: currentUser.links },
             banned: { $ne: true },
-            isSuperAdmin: { $ne: true }
-        }).select("name username profilePicture headline batch course banned").limit(5) // 5 is the current limit for suggestion (can be changed later)
+            permission: { $ne: 'superAdmin' }
+        }).select("name username profilePicture headline batch course banned").limit(5)
 
         res.json(suggestedUsers)
     } catch (error) {

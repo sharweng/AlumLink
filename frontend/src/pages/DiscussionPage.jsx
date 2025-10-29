@@ -116,7 +116,7 @@ const DiscussionPage = () => {
   }
 
   // If author is banned, show banned user UI for non-admin/non-owner
-  if (discussion?.data?.author?.banned && !(authUser?.role === 'admin' || authUser?._id === discussion.data.author._id)) {
+  if (discussion?.data?.author?.banned && !(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin' || authUser?._id === discussion.data.author._id)) {
     return (
       <div className='grid grid-cols-1 lg:grid-cols-4 gap-6'>
         <div className='lg:col-span-1'>

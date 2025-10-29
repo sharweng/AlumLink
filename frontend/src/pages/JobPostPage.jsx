@@ -60,7 +60,7 @@ const JobPostPage = () => {
     return applicantUserId === authUser._id;
   });
 
-  const isAdmin = authUser?.role === 'admin';
+  const isAdmin = authUser?.permission === 'admin' || authUser?.permission === 'superAdmin';
 
   // If job is banned, hide from regular users and show a banned notice for non-owner/admin
   if (jobPost?.banned && !isAdmin && !isOwner) {

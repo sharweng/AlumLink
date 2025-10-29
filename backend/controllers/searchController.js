@@ -36,11 +36,11 @@ export const globalSearch = async (req, res) => {
                 userSearchConditions.push({ batch: parseInt(searchQuery) });
             }
 
-            userSearchResults = await User.find({
-                 $or: userSearchConditions,
-                 banned: { $ne: true },
-                 isSuperAdmin: { $ne: true }
-            })
+          userSearchResults = await User.find({
+              $or: userSearchConditions,
+              banned: { $ne: true },
+              permission: { $ne: 'superAdmin' }
+          })
             .select("name username profilePicture headline location batch course skills banned")
             .limit(10);
         }
@@ -167,7 +167,7 @@ export const searchSuggestions = async (req, res) => {
         const courses = await User.distinct('course', {
             course: { $regex: searchQuery, $options: 'i' },
             banned: { $ne: true },
-            isSuperAdmin: { $ne: true }
+            permission: { $ne: 'superAdmin' }
         });
         courses.forEach(course => {
             if (course) suggestions.push({ type: 'course', value: course });
@@ -177,7 +177,7 @@ export const searchSuggestions = async (req, res) => {
         const locations = await User.distinct('location', {
             location: { $regex: searchQuery, $options: 'i' },
             banned: { $ne: true },
-            isSuperAdmin: { $ne: true }
+            permission: { $ne: 'superAdmin' }
         });
         locations.forEach(location => {
             if (location) suggestions.push({ type: 'location', value: location });
@@ -187,7 +187,7 @@ export const searchSuggestions = async (req, res) => {
         const skills = await User.distinct('skills', {
             skills: { $regex: searchQuery, $options: 'i' },
             banned: { $ne: true },
-            isSuperAdmin: { $ne: true }
+            permission: { $ne: 'superAdmin' }
         });
         skills.forEach(skill => {
             if (skill) suggestions.push({ type: 'skill', value: skill });
@@ -198,7 +198,7 @@ export const searchSuggestions = async (req, res) => {
             const batches = await User.distinct('batch', {
                 batch: parseInt(searchQuery),
                 banned: { $ne: true },
-                isSuperAdmin: { $ne: true }
+                permission: { $ne: 'superAdmin' }
             });
             batches.forEach(batch => {
                 if (batch) suggestions.push({ type: 'batch', value: batch.toString() });

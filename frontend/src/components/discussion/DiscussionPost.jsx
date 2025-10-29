@@ -844,7 +844,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
           </div>
           <div className="flex items-center gap-2">
             {/* If discussion is banned, show badge for admins/owner in header near actions */}
-            {discussion.banned && (authUser?.role === 'admin' || authUser?._id === discussion.author._id) && (
+            {discussion.banned && ((authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') || authUser?._id === discussion.author._id) && (
               <span className="mr-1 inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
             )}
 
@@ -877,7 +877,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                     <div className='fixed inset-0 z-10' onClick={() => setShowActionsDropdown(false)} />
                     <div className='absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
                       {/* Admin-only Ban/Unban */}
-                      {authUser?.role === 'admin' ? (
+                      {(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') ? (
                         discussion.banned ? (
                           <button
                             onClick={(e) => { e.stopPropagation(); setShowUnbanDiscussionConfirm(true); setShowActionsDropdown(false); }}
@@ -1397,7 +1397,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                           </h4>
                         </Link>
                         <div className="flex items-center gap-2">
-                          {comment.banned && (authUser?.role === 'admin' || isCommentOwner) && (
+                          {comment.banned && ((authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') || isCommentOwner) && (
                             <span className="inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
                           )}
                           <span className="text-xs text-gray-500">
@@ -1445,7 +1445,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                                   <div className='fixed inset-0 z-10' onClick={() => setOpenCommentMenu(null)} />
                                   <div className='absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
                                     {/* Admin: Ban/Unban comment */}
-                                    {authUser?.role === 'admin' ? (
+                                    {(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') ? (
                                       comment.banned ? (
                                         <button
                                           onClick={(e) => { e.stopPropagation(); setModerationCommentId(comment._id); setShowUnbanCommentConfirm(true); setOpenCommentMenu(null); }}
@@ -1539,7 +1539,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                           { /* compute visible replies so banned replies are not counted for regular users */ }
                           {comment.replies && (
                             (() => {
-                              const visibleRepliesForCount = comment.replies.filter(r => !r.banned || authUser?.role === 'admin' || authUser?._id === r.user?._id)
+                              const visibleRepliesForCount = comment.replies.filter(r => !r.banned || authUser?.permission === 'admin' || authUser?.permission === 'superAdmin' || authUser?._id === r.user?._id)
                               const visibleRepliesCount = visibleRepliesForCount.length
                               return visibleRepliesCount > 0 ? (
                                 <button
@@ -1563,7 +1563,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                     {/* Replies */}
                     {comment.replies && comment.replies.length > 0 && expandedComments.has(comment._id) && (
                       <div className="mt-2 ml-4 space-y-2">
-                        {comment.replies.filter(r => !r.banned || authUser?.role === 'admin' || authUser?._id === r.user?._id).map((reply) => {
+                        {comment.replies.filter(r => !r.banned || authUser?.permission === 'admin' || authUser?.permission === 'superAdmin' || authUser?._id === r.user?._id).map((reply) => {
                           const isReplyOwner = reply.user?._id === authUser?._id;
                           const isEditingThisReply = editingReplyId === reply._id;
 
@@ -1585,7 +1585,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                                     </h5>
                                   </Link>
                                   <div className="flex items-center gap-2">
-                                    {reply.banned && (authUser?.role === 'admin' || isReplyOwner) && (
+                                    {reply.banned && ((authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') || isReplyOwner) && (
                                       <span className="inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
                                     )}
                                     <span className="text-xs text-gray-500">
@@ -1606,7 +1606,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                                           <>
                                             <div className='fixed inset-0 z-10' onClick={() => setOpenReplyMenu(null)} />
                                             <div className='absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
-                                              {authUser?.role === 'admin' ? (
+                                              {(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') ? (
                                                 reply.banned ? (
                                                   <button
                                                     onClick={(e) => { e.stopPropagation(); setModerationReply({ commentId: comment._id, replyId: reply._id }); setShowUnbanReplyConfirm(true); setOpenReplyMenu(null); }}

@@ -47,35 +47,7 @@ const AdminDashboard = () => {
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);
   const [editUserData, setEditUserData] = useState({});
-
-  const handleEditUserChange = (field, value) => {
-    setEditUserData(prev => ({ ...prev, [field]: value }));
-  };
-
-  // Check if current user is deactivated on mount and periodically
-  useEffect(() => {
-    const checkUserStatus = async () => {
-      try {
-        const res = await axiosInstance.get("/auth/me");
-        if (!res.data.isActive) {
-          queryClient.setQueryData(["authUser"], null);
-          toast.error("Your account has been deactivated");
-          navigate("/login");
-        }
-      } catch (error) {
-        // If user check fails, they're likely logged out
-        console.error("Error checking user status:", error);
-      }
-    };
-
-    // Check immediately
-    checkUserStatus();
-
-    // Check every 5 seconds
-    const interval = setInterval(checkUserStatus, 5000);
-
-    return () => clearInterval(interval);
-  }, [navigate, queryClient]);
+  
 
   useEffect(() => {
     // basic auth check (non-blocking)
@@ -131,7 +103,7 @@ const AdminDashboard = () => {
       const res = await axiosInstance.get('/admin/moderation-logs')
       return res.data
     },
-    enabled: authUser?.role === 'admin'
+  enabled: authUser?.permission === 'admin' || authUser?.permission === 'superAdmin'
   })
 
   const deleteLogMutation = useMutation({
@@ -175,6 +147,22 @@ const AdminDashboard = () => {
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || "Failed to update role");
+    },
+  });
+
+  // Update user permission mutation
+  const updatePermissionMutation = useMutation({
+    mutationFn: async ({ userId, permission }) => {
+      const res = await axiosInstance.put(`/admin/users/${userId}/permission`, { permission });
+      return res.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["adminStats"] });
+      toast.success(data.message);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to update permission");
     },
   });
 
@@ -234,9 +222,15 @@ const AdminDashboard = () => {
 
   // prepare sortedUsers: super-admins, admins, then users; each group newest-first
   // Keep original array safe by creating a shallow copy
+  // Sort by permission: superAdmin, admin, then regular; each group newest-first
   const sortedUsers = users
     ? [...users].sort((a, b) => {
-        const rank = (u) => (u.isSuperAdmin ? 0 : u.role === "admin" ? 1 : 2);
+        const rank = (u) =>
+          u.permission === "superAdmin"
+            ? 0
+            : u.permission === "admin"
+            ? 1
+            : 2;
         const ra = rank(a);
         const rb = rank(b);
         if (ra !== rb) return ra - rb;
@@ -333,14 +327,15 @@ const AdminDashboard = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
                       User
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
-                      Email
-                    </th>
+                    {/* Email column removed; email shown on hover inside User cell */}
                     <th className="px-8 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
                       TUPT-ID
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                       Role
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                      Permission
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                       Status
@@ -364,37 +359,37 @@ const AdminDashboard = () => {
                       {editingUserId === user._id ? (
                         <>
                           <td className="px-6 py-4 w-1/4">
-                            <div className="flex items-center">
+                            <div className="flex items-center group" title={`${user.name} — ${user.email}`}>
                               <a href={`/profile/${user.username}`} className="block">
                                 <img
-                                  className="h-10 w-10 rounded-full flex-shrink-0 hover:ring-2 hover:ring-primary transition"
+                                  className="h-8 w-8 rounded-full flex-shrink-0 hover:ring-2 hover:ring-primary transition"
                                   src={user.profilePicture || "/avatar.png"}
                                   alt={user.name}
                                 />
                               </a>
-                              <div className="ml-4 min-w-0 flex-1">
-                                <a href={`/profile/${user.username}`} className="text-sm font-medium text-gray-900 truncate hover:underline" title={user.name}>
+                              <div className="ml-3 min-w-0 flex-1 relative">
+                                <a href={`/profile/${user.username}`} className="text-sm font-medium text-gray-900 truncate hover:underline">
                                   {user.name}
                                 </a>
                                 <div 
-                                  className="text-sm text-gray-500 truncate"
+                                  className="text-xs text-gray-500 truncate"
                                   title={`@${user.username}`}
                                 >
                                   @{user.username}
                                 </div>
+                                {/* fullname + email tooltip on hover (absolute) with title fallback */}
+                                <div className="absolute left-0 top-full mt-2 hidden group-hover:block z-10">
+                                  <div className="bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-normal" title={`${user.name} — ${user.email}`}>
+                                    <div className="font-semibold text-sm">{user.name}</div>
+                                    <div className="text-[11px] opacity-90">{user.email}</div>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 w-1/4">
-                            <div 
-                              className="text-sm text-gray-900 truncate"
-                              title={user.email}
-                            >
-                              {user.email}
-                            </div>
-                          </td>
+                          {/* Email column removed; show email on hover inside the User cell */}
                           <td className="px-8 py-4 w-1/4 text-center">
-                            {authUser?.isSuperAdmin ? (
+                            {authUser?.permission === 'superAdmin' ? (
                               <input
                                 type="text"
                                 className="px-2 py-1 w-full text-center bg-transparent outline-none"
@@ -418,30 +413,38 @@ const AdminDashboard = () => {
                             )}
                           </td>
                           <td className="px-6 py-4 w-1/6 text-center">
-                            {user._id === authUser._id || (user.isSuperAdmin && !authUser.isSuperAdmin) ? (
-                              <span className={`w-20 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
-                                user.isSuperAdmin 
-                                  ? 'bg-purple-100 text-purple-800' 
-                                  : user.role === 'admin' 
-                                    ? 'bg-purple-100 text-purple-800' 
-                                    : 'bg-gray-100 text-gray-800'
-                              }`}>
-                                {user.isSuperAdmin ? 'Admin+' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                              </span>
-                            ) : (
+                            {/* Role column: show actual role (student/alumni/staff) */}
+                            <span className={`w-20 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'N/A'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 w-1/6 text-center">
+                            {/* Permission column: editable by admins */}
+                            {(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') && user._id !== authUser?._id && !(user.permission === 'superAdmin' && authUser?.permission !== 'superAdmin') ? (
                               <select
-                                value={user.role}
-                                onChange={(e) => updateRoleMutation.mutate({ userId: user._id, role: e.target.value })}
-                                disabled={updateRoleMutation.isPending}
-                                className={`w-20 px-2 py-1 text-xs leading-5 font-semibold rounded-full border text-center ${
-                                  user.role === 'admin' 
-                                    ? 'bg-purple-100 text-purple-800 border-purple-300' 
-                                    : 'bg-gray-100 text-gray-800 border-gray-300'
+                                value={user.permission}
+                                onChange={(e) => updatePermissionMutation.mutate({ userId: user._id, permission: e.target.value })}
+                                disabled={updatePermissionMutation.isPending}
+                                className={`w-24 px-2 py-1 text-xs leading-5 font-semibold rounded-full border text-center ${
+                                  user.permission === 'superAdmin' ? 'bg-purple-100 text-purple-800 border-purple-300' : user.permission === 'admin' ? 'bg-blue-100 text-blue-800 border-blue-300' : 'bg-gray-100 text-gray-800 border-gray-300'
                                 } cursor-pointer hover:opacity-80`}
                               >
-                                <option value="user">User</option>
+                                <option value="regular">Regular</option>
                                 <option value="admin">Admin</option>
+                                {authUser?.permission === 'superAdmin' && <option value="superAdmin">Admin+</option>}
                               </select>
+                            ) : (
+                              <span className={`w-24 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
+                                user.permission === 'superAdmin'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : user.permission === 'admin'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {user.permission === 'superAdmin' ? 'Admin+' : user.permission === 'admin' ? 'Admin' : 'Regular'}
+                              </span>
                             )}
                           </td>
                           <td className="px-6 py-4 w-1/6 text-center">
@@ -460,7 +463,7 @@ const AdminDashboard = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-sm font-medium w-1/12 text-center">
-                            {user._id !== authUser._id && !(user.isSuperAdmin && !authUser.isSuperAdmin) && (
+                            {user._id !== authUser._id && !(user.permission === 'superAdmin' && authUser?.permission !== 'superAdmin') && (
                               <div className="flex flex-col gap-1 items-center">
                                 <button
                                   onClick={() => toggleStatusMutation.mutate(user._id)}
@@ -481,37 +484,31 @@ const AdminDashboard = () => {
                       ) : (
                         <>
                           <td className="px-6 py-4 w-1/4">
-                            <div className="flex items-center">
+                            <div className="flex items-center group" title={`${user.name} — ${user.email}`}>
                               <a href={`/profile/${user.username}`} className="block">
-                                <img
-                                  className="h-10 w-10 rounded-full flex-shrink-0 hover:ring-2 hover:ring-primary transition"
-                                  src={user.profilePicture || "/avatar.png"}
-                                  alt={user.name}
-                                />
-                              </a>
-                              <div className="ml-4 min-w-0 flex-1">
-                                <a href={`/profile/${user.username}`} className="text-sm font-medium text-gray-900 truncate hover:underline" title={user.name}>
-                                  {user.name}
+                                  <img
+                                    className="h-8 w-8 rounded-full flex-shrink-0 hover:ring-2 hover:ring-primary transition"
+                                    src={user.profilePicture || "/avatar.png"}
+                                    alt={user.name}
+                                  />
                                 </a>
-                                <div 
-                                  className="text-sm text-gray-500 truncate"
-                                  title={`@${user.username}`}
-                                >
-                                  @{user.username}
+                                <div className="ml-3 min-w-0 flex-1 relative">
+                                  <a href={`/profile/${user.username}`} className="text-sm font-medium text-gray-900 truncate hover:underline">
+                                    {user.name}
+                                  </a>
+                                  <div 
+                                    className="text-xs text-gray-500 truncate"
+                                    title={`@${user.username}`}
+                                  >
+                                    @{user.username}
+                                  </div>
+                                
                                 </div>
-                              </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 w-1/4">
-                            <div 
-                              className="text-sm text-gray-900 truncate"
-                              title={user.email}
-                            >
-                              {user.email}
-                            </div>
-                          </td>
+                          {/* Email column removed; show email on hover inside the User cell */}
                           <td className="px-8 py-4 w-1/4 text-center">
-                            {authUser?.isSuperAdmin ? (
+                            {authUser?.permission === 'superAdmin' ? (
                               <input
                                 type="text"
                                 className="px-2 py-1 w-full text-center bg-transparent outline-none"
@@ -535,30 +532,38 @@ const AdminDashboard = () => {
                             )}
                           </td>
                           <td className="px-6 py-4 w-1/6 text-center">
-                            {user._id === authUser._id || (user.isSuperAdmin && !authUser.isSuperAdmin) ? (
-                              <span className={`w-20 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
-                                user.isSuperAdmin 
-                                  ? 'bg-purple-100 text-purple-800' 
-                                  : user.role === 'admin' 
-                                    ? 'bg-purple-100 text-purple-800' 
-                                    : 'bg-gray-100 text-gray-800'
-                              }`}>
-                                {user.isSuperAdmin ? 'Admin+' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                              </span>
-                            ) : (
+                            {/* Role column: show actual role (student/alumni/staff) */}
+                            <span className={`w-20 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'N/A'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 w-1/6 text-center">
+                            {/* Permission column: editable by admins */}
+                            {(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') && user._id !== authUser?._id && !(user.permission === 'superAdmin' && authUser?.permission !== 'superAdmin') ? (
                               <select
-                                value={user.role}
-                                onChange={(e) => updateRoleMutation.mutate({ userId: user._id, role: e.target.value })}
-                                disabled={updateRoleMutation.isPending}
-                                className={`w-20 px-2 py-1 text-xs leading-5 font-semibold rounded-full border text-center ${
-                                  user.role === 'admin' 
-                                    ? 'bg-purple-100 text-purple-800 border-purple-300' 
-                                    : 'bg-gray-100 text-gray-800 border-gray-300'
+                                value={user.permission}
+                                onChange={(e) => updatePermissionMutation.mutate({ userId: user._id, permission: e.target.value })}
+                                disabled={updatePermissionMutation.isPending}
+                                className={`w-24 px-2 py-1 text-xs leading-5 font-semibold rounded-full border text-center ${
+                                  user.permission === 'superAdmin' ? 'bg-purple-100 text-purple-800 border-purple-300' : user.permission === 'admin' ? 'bg-blue-100 text-blue-800 border-blue-300' : 'bg-gray-100 text-gray-800 border-gray-300'
                                 } cursor-pointer hover:opacity-80`}
                               >
-                                <option value="user">User</option>
+                                <option value="regular">Regular</option>
                                 <option value="admin">Admin</option>
+                                {authUser?.permission === 'superAdmin' && <option value="superAdmin">Admin+</option>}
                               </select>
+                            ) : (
+                              <span className={`w-24 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
+                                user.permission === 'superAdmin'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : user.permission === 'admin'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {user.permission === 'superAdmin' ? 'Admin+' : user.permission === 'admin' ? 'Admin' : 'Regular'}
+                              </span>
                             )}
                           </td>
                           <td className="px-6 py-4 w-1/6 text-center">
@@ -577,7 +582,7 @@ const AdminDashboard = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-sm font-medium w-1/12 text-center">
-                            {user._id !== authUser._id && !(user.isSuperAdmin && !authUser.isSuperAdmin) && (
+                            {user._id !== authUser._id && !(user.permission === 'superAdmin' && authUser?.permission !== 'superAdmin') && (
                               <div className="flex flex-col gap-1 items-center">
                                 <button
                                   onClick={() => toggleStatusMutation.mutate(user._id)}

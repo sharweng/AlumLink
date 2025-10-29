@@ -759,7 +759,7 @@ export const banEvent = async (req, res) => {
         if (!event) return res.status(404).json({ message: 'Event not found' });
 
         // Only admins can ban
-        if (req.user.role !== 'admin') return res.status(403).json({ message: 'Not authorized' });
+    if (!['admin', 'superAdmin'].includes(req.user.permission)) return res.status(403).json({ message: 'Not authorized' });
 
         event.banned = true;
         await event.save();
@@ -783,7 +783,7 @@ export const unbanEvent = async (req, res) => {
         const event = await Event.findById(eventId);
         if (!event) return res.status(404).json({ message: 'Event not found' });
 
-        if (req.user.role !== 'admin') return res.status(403).json({ message: 'Not authorized' });
+    if (!['admin', 'superAdmin'].includes(req.user.permission)) return res.status(403).json({ message: 'Not authorized' });
 
         event.banned = false;
         await event.save();

@@ -38,8 +38,8 @@ const Navbar = () => {
   const navigate = useNavigate()
   const authUser = queryClient.getQueryData(["authUser"])
 
-  // Helper: is admin or super admin
-  const isAdmin = authUser?.role === "admin" || authUser?.isSuperAdmin
+  // Helper: is admin or super admin (use permission field)
+  const isAdmin = authUser?.permission === "admin" || authUser?.permission === "superAdmin"
   
   // Search state
   const [searchQuery, setSearchQuery] = useState("")

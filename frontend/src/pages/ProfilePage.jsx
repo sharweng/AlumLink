@@ -105,7 +105,7 @@ const ProfilePage = () => {
     );
   }
 
-  if (userData.data.banned && !(authUser?.role === 'admin' || authUser?._id === userData.data._id)) {
+  if (userData.data.banned && !(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin' || authUser?._id === userData.data._id)) {
     // Explicit banned page for non-admin and non-owner
     return (
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
