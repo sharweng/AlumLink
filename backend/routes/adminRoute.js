@@ -7,7 +7,9 @@ import {
     toggleUserStatus,
     getDashboardStats,
     banUser,
-    unbanUser
+    unbanUser,
+    getAllPostsAdmin,
+    getAllJobsAdmin
 } from "../controllers/adminController.js";
 import { getModerationLogs } from "../controllers/moderationController.js";
 import { deleteModerationLog, deleteAllModerationLogs } from "../controllers/moderationController.js";
@@ -15,6 +17,8 @@ import { deleteModerationLog, deleteAllModerationLogs } from "../controllers/mod
 const router = express.Router();
 
 router.get("/stats", protectRoute, getDashboardStats);
+router.get("/all-posts", protectRoute, getAllPostsAdmin);
+router.get("/all-jobs", protectRoute, getAllJobsAdmin);
 router.get("/users", protectRoute, getAllUsers);
 router.put("/users/:userId/role", protectRoute, updateUserRole);
 router.put("/users/:userId/permission", protectRoute, updateUserPermission);

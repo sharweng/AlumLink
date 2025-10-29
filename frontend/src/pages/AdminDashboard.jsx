@@ -1,5 +1,6 @@
 import BanUnbanButton from "../components/common/BanUnbanButton";
 import AdminStats from "../components/adminDashboard/AdminStats";
+import AdminDetails from "../components/adminDashboard/AdminDetails";
 import AdminUsers from "../components/adminDashboard/AdminUsers";
 import AdminFeedbackReports from "../components/adminDashboard/AdminFeedbackReports";
 import AdminModeration from "../components/adminDashboard/AdminModeration";
@@ -133,6 +134,8 @@ const AdminDashboard = () => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex gap-2">
           <button onClick={() => setSearchParams({ tab: 'users' })} className={`px-4 py-2 rounded ${activeTab === 'users' ? 'bg-primary text-white' : 'bg-gray-100'}`}>Users</button>
+          <button onClick={() => setSearchParams({ tab: 'stats' })} className={`px-4 py-2 rounded ${activeTab === 'stats' ? 'bg-primary text-white' : 'bg-gray-100'}`}>Stats</button>
+          <button onClick={() => setSearchParams({ tab: 'details' })} className={`px-4 py-2 rounded ${activeTab === 'details' ? 'bg-primary text-white' : 'bg-gray-100'}`}>Details</button>
           <button onClick={() => setSearchParams({ tab: 'reports' })} className={`px-4 py-2 rounded ${activeTab === 'reports' ? 'bg-primary text-white' : 'bg-gray-100'}`}>Feedback & Reports</button>
           <button onClick={() => setSearchParams({ tab: 'moderation' })} className={`px-4 py-2 rounded ${activeTab === 'moderation' ? 'bg-primary text-white' : 'bg-gray-100'}`}>Moderation</button>
         </div>
@@ -148,6 +151,14 @@ const AdminDashboard = () => {
             toggleStatusMutation={toggleStatusMutation} 
           />
         </>
+      )}
+
+      {activeTab === 'stats' && (
+        <AdminStats stats={stats} />
+      )}
+
+      {activeTab === 'details' && (
+        <AdminDetails stats={stats} />
       )}
 
       {activeTab === 'reports' && (

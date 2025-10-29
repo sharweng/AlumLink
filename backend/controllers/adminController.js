@@ -1,3 +1,32 @@
+import Post from "../models/Post.js";
+import JobPost from "../models/JobPost.js";
+// Admin: Get all posts (including banned)
+export const getAllPostsAdmin = async (req, res) => {
+    try {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
+            return res.status(403).json({ message: "Access denied. Admins only." });
+        }
+        const posts = await Post.find().sort({ createdAt: -1 });
+        res.status(200).json(posts);
+    } catch (error) {
+        console.log("Error in getAllPostsAdmin:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+// Admin: Get all jobs (including banned)
+export const getAllJobsAdmin = async (req, res) => {
+    try {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
+            return res.status(403).json({ message: "Access denied. Admins only." });
+        }
+        const jobs = await JobPost.find().sort({ createdAt: -1 });
+        res.status(200).json(jobs);
+    } catch (error) {
+        console.log("Error in getAllJobsAdmin:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
 import User from "../models/User.js";
 
 // Get all users (admin only)
