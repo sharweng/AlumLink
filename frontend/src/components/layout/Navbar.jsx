@@ -275,11 +275,6 @@ const Navbar = () => {
 						<div className='flex items-center gap-2 md:gap-6'>
               {authUser ? (
                 <>
-                  {/* Home always goes to homepage */}
-                  <Link to='/' className='text-neutral flex flex-col items-center'>
-                    <Home size={20} />
-                    <span className='text-xs hidden md:block'>Home</span>
-                  </Link>
                   {/* Admin Dashboard icon for admins */}
                   {isAdmin && (
                     <Link to='/admin/dashboard' className='text-neutral flex flex-col items-center'>
@@ -287,6 +282,12 @@ const Navbar = () => {
                       <span className='text-xs hidden md:block'>DBoard</span>
                     </Link>
                   )}
+                  {/* Home always goes to homepage */}
+                  <Link to='/' className='text-neutral flex flex-col items-center'>
+                    <Home size={20} />
+                    <span className='text-xs hidden md:block'>Home</span>
+                  </Link>
+                  
                   <Link to='/jobs' className='text-neutral flex flex-col items-center'>
                     <Briefcase size={20} />
                     <span className='text-xs hidden md:block'>Jobs</span>

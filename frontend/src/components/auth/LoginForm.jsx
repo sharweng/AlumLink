@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { axiosInstance } from "../../lib/axios"
 import { toast } from "react-hot-toast"
 import { Loader } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 
 const LoginForm = () => {
@@ -20,11 +21,20 @@ const LoginForm = () => {
     const [confirmNewPassword, setConfirmNewPassword] = useState("");
     const [resetPasswordError, setResetPasswordError] = useState("");
     const queryClient = useQueryClient();
+    const navigate = useNavigate();
 
     const { mutate: loginMutation, isLoading } = useMutation({
         mutationFn: (userData) => axiosInstance.post("/auth/login", userData),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["authUser"] });
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: ["authUser"] });
+            // After login, fetch the user and redirect if admin/superAdmin
+            const res = await axiosInstance.get("/auth/me");
+            const user = res.data;
+            if (user?.permission === 'admin' || user?.permission === 'superAdmin') {
+                navigate('/admin/dashboard', { replace: true });
+            } else {
+                navigate('/', { replace: true });
+            }
         },
         onError: (error) => {
             const msg = error.response?.data?.message || "Failed to login user";

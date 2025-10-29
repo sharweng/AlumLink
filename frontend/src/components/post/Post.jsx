@@ -139,7 +139,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     const visibleComments = post.comments.filter(c => {
       if (!c.banned) return true
       // if banned, only include if current user is admin or the comment owner
-      return authUser?.role === 'admin' || authUser?._id === c.user._id
+      return authUser?.permission === 'admin' || authUser?._id === c.user._id
     })
 
     const commentsCopy = [...visibleComments]
@@ -725,7 +725,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
         
           <div className='flex items-center gap-2'>
             {/* Show banned badge left of actions for admins/owners */}
-            {(post.banned && (authUser?.role === 'admin' || isOwner)) && (
+            {(post.banned && (authUser?.permission === 'admin' || isOwner)) && (
               <span className="mr-1 inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
             )}
 
@@ -763,34 +763,34 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                   <>
                     <div className='fixed inset-0 z-10' onClick={() => setShowActionsDropdown(false)} />
                     <div className='absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
-                              {/* Admins only see Ban/Unban, regular users see Report */}
-                                {authUser?.role === 'admin' ? (
-                                post.banned ? (
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setShowUnbanPostConfirm(true); setShowActionsDropdown(false); }}
-                                    className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
-                                  >
-                                    <CheckCircle size={16} className='text-red-600' />
-                                    Unban
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setShowBanPostConfirm(true); setShowActionsDropdown(false); }}
-                                    className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
-                                  >
-                                    <XCircle size={16} className='text-red-500' />
-                                    Ban
-                                  </button>
-                                )
-                              ) : (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setReportSubTarget(null); setShowReportModal(true); setShowActionsDropdown(false); }}
-                                  className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
-                                >
-                                  <Flag size={14} className='text-red-500' />
-                                  Report
-                                </button>
-                              )}
+                      {/* Admins and superAdmins see Ban/Unban, regular users see Report */}
+                      {(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') ? (
+                        post.banned ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setShowUnbanPostConfirm(true); setShowActionsDropdown(false); }}
+                            className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                          >
+                            <CheckCircle size={16} className='text-red-600' />
+                            Unban
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setShowBanPostConfirm(true); setShowActionsDropdown(false); }}
+                            className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                          >
+                            <XCircle size={16} className='text-red-500' />
+                            Ban
+                          </button>
+                        )
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setReportSubTarget(null); setShowReportModal(true); setShowActionsDropdown(false); }}
+                          className='w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2'
+                        >
+                          <Flag size={14} className='text-red-500' />
+                          Report
+                        </button>
+                      )}
                         </div>
                   </>
                 )}
@@ -1107,7 +1107,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
               const isEditingComment = editingCommentId === comment._id
               const isCommentExpanded = expandedComments.has(comment._id)
               // Count only replies visible to the current user (exclude banned replies unless admin or reply owner)
-              const visibleReplies = (comment.replies || []).filter(r => !r.banned || authUser?._id === r.user._id || authUser?.role === 'admin')
+              const visibleReplies = (comment.replies || []).filter(r => !r.banned || authUser?._id === r.user._id || authUser?.permission === 'admin')
               const repliesCount = visibleReplies.length
               
               return (
@@ -1129,7 +1129,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                             </h4>
                           </Link>
                           <div className="flex items-center gap-2">
-                            {comment.banned && (authUser?.role === 'admin' || isCommentOwner) && (
+                            {comment.banned && (authUser?.permission === 'admin' || isCommentOwner) && (
                               <span className="inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
                             )}
                             <span className="text-xs text-gray-500">
@@ -1149,7 +1149,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                   <>
                                     <div className='fixed inset-0 z-10' onClick={() => setOpenCommentMenu(null)} />
                                     <div className='absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
-                                      {authUser?.role === 'admin' ? (
+                                      {authUser?.permission === 'admin' ? (
                                         comment.banned ? (
                                           <button
                                             onClick={(e) => { e.stopPropagation(); setModerationCommentId(comment._id); setShowUnbanCommentConfirm(true); setOpenCommentMenu(null); }}
@@ -1326,7 +1326,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                       </h5>
                                     </Link>
                                       <div className="flex items-center gap-2">
-                                      {reply.banned && (authUser?.role === 'admin' || isReplyOwner) && (
+                                      {reply.banned && (authUser?.permission === 'admin' || isReplyOwner) && (
                                         <span className="inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
                                       )}
                                       <span className="text-xs text-gray-500">
@@ -1346,7 +1346,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                             <>
                                               <div className='fixed inset-0 z-10' onClick={() => setOpenReplyMenu(null)} />
                                               <div className='absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
-                                                {authUser?.role === 'admin' ? (
+                                                {authUser?.permission === 'admin' ? (
                                                   reply.banned ? (
                                                     <button
                                                       onClick={(e) => { e.stopPropagation(); setModerationReply({ commentId: comment._id, replyId: reply._id }); setShowUnbanReplyConfirm(true); setOpenReplyMenu(null); }}
