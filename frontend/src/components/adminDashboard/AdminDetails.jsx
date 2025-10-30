@@ -5,6 +5,7 @@ import {
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { axiosInstance } from "../../lib/axios";
+import { Loader } from "lucide-react";
 import {
   getPostStatusData,
   getPostTimeData,
@@ -29,7 +30,7 @@ import {
   getModerationActionData,
   getModerationTimeData,
   getModerationTargetData
-} from "./adminDetailsUtils";
+} from "../../lib/adminDetailsUtils";
 
 const pieColors = ["#6366f1", "#f59e42", "#10b981", "#f43f5e", "#a78bfa", "#fbbf24", "#3b82f6"];
 
@@ -176,7 +177,7 @@ const AdminDetails = ({ stats = {} }) => {
   if (postsLoading || jobsLoading || discussionsLoading || eventsLoading || usersLoading || feedbacksLoading || reportsLoading || moderationLogsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <span className="text-lg text-gray-500">Loading detailed charts...</span>
+        <Loader className="animate-spin text-primary" size={48} />
       </div>
     );
   }

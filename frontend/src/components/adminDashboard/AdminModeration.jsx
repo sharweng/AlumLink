@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { axiosInstance } from "../../lib/axios";
-import { Trash2 } from "lucide-react";
+import { Trash2, Loader } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const AdminModeration = ({ setShowModerationModal, setSelectedModeration }) => {
@@ -45,8 +45,8 @@ const AdminModeration = ({ setShowModerationModal, setSelectedModeration }) => {
       </div>
 
       {moderationLoading ? (
-        <div className="text-center py-6">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+        <div className="flex items-center justify-center py-6">
+          <Loader className="animate-spin text-primary" size={32} />
         </div>
       ) : (
         <div className="overflow-auto max-h-96">
