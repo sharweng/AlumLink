@@ -1,11 +1,12 @@
 // --- DISCUSSION ANALYTICS ---
 export function getDiscussionCategoryData(discussions) {
   const catCounts = discussions.reduce((acc, d) => {
-    const cat = d.category || 'Other';
+    const cat = d.category || 'General';
     acc[cat] = (acc[cat] || 0) + 1;
     return acc;
   }, {});
-  return Object.entries(catCounts).map(([category, count]) => ({ category, count }));
+  const allCategories = ['General', 'Technical', 'Career', 'Events', 'Help', 'Other'];
+  return allCategories.map(category => ({ category, count: catCounts[category] || 0 }));
 }
 
 export function getDiscussionStatusData(discussions) {
@@ -68,11 +69,12 @@ export function getDiscussionTimeData(discussions, mode = 'month') {
 // --- EVENT ANALYTICS ---
 export function getEventTypeData(events) {
   const typeCounts = events.reduce((acc, e) => {
-    const type = e.type || 'Other';
+    const type = e.type || 'Reunion';
     acc[type] = (acc[type] || 0) + 1;
     return acc;
   }, {});
-  return Object.entries(typeCounts).map(([type, count]) => ({ type, count }));
+  const allTypes = ['Reunion', 'Webinar', 'Workshop'];
+  return allTypes.map(type => ({ type, count: typeCounts[type] || 0 }));
 }
 
 export function getEventPhysicalVirtualData(events) {
@@ -89,11 +91,15 @@ export function getEventPhysicalVirtualData(events) {
 
 export function getEventStatusData(events) {
   const statusCounts = events.reduce((acc, e) => {
-    const status = e.status || 'Other';
+    const status = e.status || 'upcoming';
     acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {});
-  return Object.entries(statusCounts).map(([status, count]) => ({ status, count }));
+  const allStatuses = ['upcoming', 'ongoing', 'completed', 'cancelled'];
+  return allStatuses.map(status => ({
+    status: status.charAt(0).toUpperCase() + status.slice(1),
+    count: statusCounts[status] || 0
+  }));
 }
 
 export function getEventBannedData(events) {
@@ -223,11 +229,12 @@ export function getJobTypeData(jobs) {
     else if (job.type === 'part-time') type = 'Part-Time';
     else if (job.type === 'internship') type = 'Internship';
     else if (job.type === 'freelance') type = 'Freelance';
-    else type = 'Other';
+    else type = 'Full-Time'; // fallback to Full-Time if invalid
     acc[type] = (acc[type] || 0) + 1;
     return acc;
   }, {});
-  return Object.entries(typeCounts).map(([type, count]) => ({ type, count }));
+  const allTypes = ['Full-Time', 'Part-Time', 'Internship', 'Freelance'];
+  return allTypes.map(type => ({ type, count: typeCounts[type] || 0 }));
 }
 
 
@@ -242,7 +249,8 @@ export function getJobWorkTypeData(jobs) {
     acc[worktype] = (acc[worktype] || 0) + 1;
     return acc;
   }, {});
-  return Object.entries(worktypeCounts).map(([worktype, count]) => ({ worktype, count }));
+  const allWorkTypes = ['Remote', 'Onsite', 'Hybrid'];
+  return allWorkTypes.map(worktype => ({ worktype, count: worktypeCounts[worktype] || 0 }));
 }
 // Job posts per month/week (like posts)
 export function getJobTimeData(jobs, mode = "month") {
@@ -302,4 +310,170 @@ export function getJobStatusData(jobs) {
     { status: "Active", count: statusCounts["Active"] || 0 },
     { status: "Banned", count: statusCounts["Banned"] || 0 },
   ];
+}
+
+// --- USER ANALYTICS ---
+export function getUserStatusData(users) {
+  const statusCounts = users.reduce((acc, user) => {
+    if (user.banned) {
+      acc.Banned = (acc.Banned || 0) + 1;
+    } else if (user.isActive) {
+      acc.Active = (acc.Active || 0) + 1;
+    } else {
+      acc.Inactive = (acc.Inactive || 0) + 1;
+    }
+    return acc;
+  }, {});
+  return [
+    { status: "Active", count: statusCounts["Active"] || 0 },
+    { status: "Inactive", count: statusCounts["Inactive"] || 0 },
+    { status: "Banned", count: statusCounts["Banned"] || 0 },
+  ];
+}
+
+export function getUserPermissionData(users) {
+  const permissionCounts = users.reduce((acc, user) => {
+    const perm = user.permission || 'regular';
+    acc[perm] = (acc[perm] || 0) + 1;
+    return acc;
+  }, {});
+  const allPermissions = ['regular', 'admin', 'superAdmin'];
+  return allPermissions.map(perm => ({
+    permission: perm.charAt(0).toUpperCase() + perm.slice(1),
+    count: permissionCounts[perm] || 0
+  }));
+}
+
+export function getUserRoleData(users) {
+  const roleCounts = users.reduce((acc, user) => {
+    const role = user.role || 'student';
+    acc[role] = (acc[role] || 0) + 1;
+    return acc;
+  }, {});
+  const allRoles = ['student', 'alumni', 'staff'];
+  return allRoles.map(role => ({
+    role: role.charAt(0).toUpperCase() + role.slice(1),
+    count: roleCounts[role] || 0
+  }));
+}
+
+// --- FEEDBACK ANALYTICS ---
+export function getFeedbackStatusData(feedbacks) {
+  const statusCounts = feedbacks.reduce((acc, fb) => {
+    const status = fb.seen ? 'Seen' : 'Unseen';
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+  return [
+    { status: 'Seen', count: statusCounts['Seen'] || 0 },
+    { status: 'Unseen', count: statusCounts['Unseen'] || 0 },
+  ];
+}
+
+// --- REPORTS ANALYTICS ---
+export function getReportsByTypeData(reports) {
+  const typeCounts = reports.reduce((acc, r) => {
+    const type = r.type || 'other';
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {});
+  const allTypes = ['post', 'job', 'event', 'discussion', 'other'];
+  return allTypes.map(type => ({
+    type: type.charAt(0).toUpperCase() + type.slice(1),
+    count: typeCounts[type] || 0
+  }));
+}
+
+export function getReportsByStatusData(reports) {
+  const statusCounts = reports.reduce((acc, r) => {
+    const status = r.seen ? 'Seen' : 'Unseen';
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+  return [
+    { status: 'Seen', count: statusCounts['Seen'] || 0 },
+    { status: 'Unseen', count: statusCounts['Unseen'] || 0 },
+  ];
+}
+
+// --- MODERATION LOGS ANALYTICS ---
+export function getModerationActionData(logs) {
+  const actionCounts = logs.reduce((acc, log) => {
+    const action = log.action.toLowerCase();
+    if (action.includes('unban')) {
+      acc.Unban = (acc.Unban || 0) + 1;
+    } else if (action.includes('ban')) {
+      acc.Ban = (acc.Ban || 0) + 1;
+    }
+    return acc;
+  }, {});
+  return [
+    { action: 'Ban', count: actionCounts['Ban'] || 0 },
+    { action: 'Unban', count: actionCounts['Unban'] || 0 },
+  ];
+}
+
+export function getModerationTargetData(logs) {
+  const targetCounts = logs.reduce((acc, log) => {
+    const target = log.targetType || 'other';
+    acc[target] = (acc[target] || 0) + 1;
+    return acc;
+  }, {});
+  const allTargets = ['post', 'comment', 'reply', 'job', 'event', 'discussion', 'user'];
+  return allTargets.map(target => ({
+    target: target.charAt(0).toUpperCase() + target.slice(1),
+    count: targetCounts[target] || 0
+  }));
+}
+
+export function getModerationTimeData(logs, mode = 'month') {
+  const now = new Date();
+  if (mode === 'month') {
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        key: `${d.getFullYear()}-${d.getMonth() + 1}`,
+        label: d.toLocaleString('default', { month: 'short' }),
+        bans: 0,
+        unbans: 0,
+      });
+    }
+    logs.forEach((log) => {
+      const dt = new Date(log.performedAt);
+      const key = `${dt.getFullYear()}-${dt.getMonth() + 1}`;
+      const idx = months.findIndex((m) => m.key === key);
+      if (idx !== -1) {
+        const action = log.action.toLowerCase();
+        if (action.includes('unban')) months[idx].unbans++;
+        else if (action.includes('ban')) months[idx].bans++;
+      }
+    });
+    return months.map((m) => ({ period: m.label, bans: m.bans, unbans: m.unbans }));
+  } else {
+    const weeks = [];
+    let start = new Date(now);
+    start.setDate(start.getDate() - (now.getDay() || 7));
+    for (let i = 4; i >= 0; i--) {
+      const weekStart = new Date(start);
+      weekStart.setDate(start.getDate() - i * 7);
+      const label = `W${5 - i}`;
+      weeks.push({ key: weekStart.toISOString().slice(0, 10), label, bans: 0, unbans: 0 });
+    }
+    logs.forEach((log) => {
+      const dt = new Date(log.performedAt);
+      for (let i = 0; i < weeks.length; i++) {
+        const weekStart = new Date(weeks[i].key);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+        if (dt >= weekStart && dt < weekEnd) {
+          const action = log.action.toLowerCase();
+          if (action.includes('unban')) weeks[i].unbans++;
+          else if (action.includes('ban')) weeks[i].bans++;
+          break;
+        }
+      }
+    });
+    return weeks.map((w) => ({ period: w.label, bans: w.bans, unbans: w.unbans }));
+  }
 }
