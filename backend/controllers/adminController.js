@@ -366,33 +366,9 @@ export const importUsers = async (req, res) => {
                 });
 
                 if (existingUser) {
-                    // Track if experience changed (only count updates for experience changes)
+                    // For existing users, ONLY update experience fields
+                    // Do not update any other fields (name, email, course, role, etc.)
                     let experienceChanged = false;
-
-                    // Update user fields without tracking for update count
-                    if (existingUser.name !== fullname) {
-                        existingUser.name = fullname;
-                    }
-                    
-                    if (existingUser.email !== email.toLowerCase()) {
-                        existingUser.email = email.toLowerCase();
-                    }
-                    
-                    if (existingUser.tuptId !== tuptId) {
-                        existingUser.tuptId = tuptId;
-                    }
-                    
-                    if (existingUser.batch !== batch) {
-                        existingUser.batch = batch;
-                    }
-                    
-                    if (course && existingUser.course !== course) {
-                        existingUser.course = course;
-                    }
-
-                    if (role && existingUser.role !== role) {
-                        existingUser.role = role;
-                    }
 
                     // Update or replace experience if provided
                     if (experienceTitle && experienceCompany && experienceStartDate && experienceEndDate) {
@@ -417,17 +393,16 @@ export const importUsers = async (req, res) => {
                         }
                     }
 
-                    // Always save changes, but only count as updated if experience changed
-                    await existingUser.save();
-                    
+                    // Only save if experience changed
                     if (experienceChanged) {
+                        await existingUser.save();
                         results.updated.push({ 
                             username: existingUser.username, 
                             email: existingUser.email, 
                             name: existingUser.name 
                         });
                     }
-                    // If no experience changes, don't count as updated
+                    // If no experience changes, don't save or count as updated
                 } else {
                     // Check if username already exists, if so, add a number
                     let finalUsername = username;
