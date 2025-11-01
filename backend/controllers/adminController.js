@@ -296,8 +296,8 @@ export const unbanUser = async (req, res) => {
 // Import users from CSV (admin only)
 export const importUsers = async (req, res) => {
     try {
-        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
-            return res.status(403).json({ message: "Access denied. Admins only." });
+        if (req.user.permission !== 'superAdmin') {
+            return res.status(403).json({ message: "Access denied. Super admins only." });
         }
 
         const { users } = req.body;
@@ -314,7 +314,7 @@ export const importUsers = async (req, res) => {
 
         for (const userData of users) {
             try {
-                const { fullname, tuptId, email, course, experienceTitle, experienceCompany, experienceStartDate, experienceEndDate } = userData;
+                let { fullname, tuptId, email, course, experienceTitle, experienceCompany, experienceStartDate, experienceEndDate, role } = userData;
 
                 // Validate required fields
                 if (!fullname || !tuptId || !email) {
@@ -327,6 +327,28 @@ export const importUsers = async (req, res) => {
                     continue;
                 }
 
+                // Handle comma-separated names (Last, First Middle -> First Middle Last)
+                if (fullname.includes(',')) {
+                    const parts = fullname.split(',').map(p => p.trim());
+                    if (parts.length === 2) {
+                        // parts[0] is last name, parts[1] is first and middle names
+                        fullname = `${parts[1]} ${parts[0]}`;
+                    }
+                }
+
+                // Extract batch from TUPT-ID (e.g., TUPT-20-0563 -> 2020)
+                let batch = new Date().getFullYear(); // Default to current year
+                const tuptIdMatch = tuptId.match(/TUPT-(\d{2})-/i);
+                if (tuptIdMatch) {
+                    const yearPrefix = parseInt(tuptIdMatch[1]);
+                    // Assume 20XX for years 00-99
+                    batch = 2000 + yearPrefix;
+                }
+
+                // Extract last 4 digits from TUPT-ID
+                const last4Match = tuptId.match(/(\d{4})$/);
+                const last4Digits = last4Match ? last4Match[1] : '0000';
+
                 // Generate username from fullname
                 // Example: Sharwin John Marbella -> sjmarbella
                 const nameParts = fullname.trim().split(/\s+/);
@@ -334,8 +356,9 @@ export const importUsers = async (req, res) => {
                 const initials = nameParts.slice(0, -1).map(part => part.charAt(0).toLowerCase()).join('');
                 const username = initials + lastName;
 
-                // Generate password from last name
-                const password = lastName;
+                // Generate password: lastname + last4digits
+                // Example: marbella1119 or reyes0895
+                const password = lastName + last4Digits;
 
                 // Check if user exists by tuptId or email
                 let existingUser = await User.findOne({ 
@@ -347,9 +370,14 @@ export const importUsers = async (req, res) => {
                     existingUser.name = fullname;
                     existingUser.email = email;
                     existingUser.tuptId = tuptId;
+                    existingUser.batch = batch;
                     
                     if (course) {
                         existingUser.course = course;
+                    }
+
+                    if (role) {
+                        existingUser.role = role;
                     }
 
                     // Update or add experience if provided
@@ -406,6 +434,18 @@ export const importUsers = async (req, res) => {
                         experience.push(experienceEntry);
                     }
 
+                    // Determine headline based on role
+                    let headline = "AlumniLink User";
+                    if (course) {
+                        if (role === 'student') {
+                            headline = `Student, ${course}`;
+                        } else if (role === 'alumni') {
+                            headline = `Alumni, ${course}`;
+                        } else if (role === 'staff') {
+                            headline = `Staff, ${course}`;
+                        }
+                    }
+
                     const newUser = new User({
                         name: fullname,
                         username: finalUsername,
@@ -413,10 +453,10 @@ export const importUsers = async (req, res) => {
                         password: hashedPassword,
                         tuptId: tuptId,
                         course: course || "Not Specified",
-                        batch: new Date().getFullYear(), // Default to current year
-                        headline: course ? `Student, ${course}` : "AlumniLink User",
+                        batch: batch,
+                        headline: headline,
                         experience: experience.length > 0 ? experience : undefined,
-                        role: "student"
+                        role: role || "student"
                     });
 
                     await newUser.save();

@@ -18,6 +18,7 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
   const [showToggleStatusModal, setShowToggleStatusModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
+  const [importRole, setImportRole] = useState("student");
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -117,15 +118,22 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
                 if (dateRegex.test(trimmed)) {
                   return trimmed;
                 }
+                // Try to parse as date string
+                const parsedDate = new Date(trimmed);
+                if (!isNaN(parsedDate.getTime())) {
+                  const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+                  const day = String(parsedDate.getDate()).padStart(2, '0');
+                  const year = parsedDate.getFullYear();
+                  return `${month}/${day}/${year}`;
+                }
                 return trimmed;
               }
               
               // If it's an Excel serial number
               if (typeof value === 'number') {
-                // Excel stores dates as days since 1900-01-01
-                const excelEpoch = new Date(1900, 0, 1);
-                const daysOffset = value - 2; // Excel has a leap year bug, subtract 2
-                const date = new Date(excelEpoch.getTime() + daysOffset * 24 * 60 * 60 * 1000);
+                // Excel stores dates as days since 1899-12-30 (not 1900-01-01 due to a bug)
+                const excelEpoch = new Date(1899, 11, 30);
+                const date = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000);
                 
                 // Format as MM/DD/YYYY
                 const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -145,7 +153,8 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
               experienceTitle: jobTitleCol !== -1 ? row[jobTitleCol]?.toString().trim() || '' : '',
               experienceCompany: companyCol !== -1 ? row[companyCol]?.toString().trim() || '' : '',
               experienceStartDate: startDateCol !== -1 ? parseExcelDate(row[startDateCol]) : '',
-              experienceEndDate: endDateCol !== -1 ? parseExcelDate(row[endDateCol]) : ''
+              experienceEndDate: endDateCol !== -1 ? parseExcelDate(row[endDateCol]) : '',
+              role: '' // Will be set from modal selection
             };
             
             // Only add if we have at least name, tuptId, and email
@@ -191,6 +200,9 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
         return;
       }
 
+      // Add role to all users
+      users = users.map(user => ({ ...user, role: importRole }));
+
       const response = await axiosInstance.post("/admin/users/import", { users });
       
       const { results } = response.data;
@@ -212,6 +224,7 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
       
       // Reset and close modal
       setImportFile(null);
+      setImportRole("student");
       setShowImportModal(false);
       
     } catch (error) {
@@ -559,7 +572,7 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
               </p>
               <ul className="text-xs text-gray-500 space-y-1 mb-4">
                 <li><strong>Name / Full Name:</strong> Required ✓</li>
-                <li><strong>TUPT-ID / ID Number:</strong> Required ✓</li>
+                <li><strong>TUPT-ID / ID Number:</strong> Required ✓ (Format: TUPT-XX-XXXX)</li>
                 <li><strong>TUP Email:</strong> Required ✓</li>
                 <li><strong>Course:</strong> Optional</li>
                 <li><strong>Position / Job Title:</strong> Optional</li>
@@ -567,10 +580,30 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
                 <li><strong>Start Work Date / Start Date:</strong> Optional</li>
                 <li><strong>End Work Date / End Date:</strong> Optional</li>
               </ul>
-              <p className="text-xs text-gray-500 mb-3">
+              <p className="text-xs text-gray-500 mb-4">
                 <strong>Note:</strong> Username will be auto-generated (first letters + last name). 
-                Password will be set to the last name. Dates will be automatically parsed from Excel format.
+                Password will be last name + last 4 digits of TUPT-ID (e.g., "marbella1119"). 
+                Batch will be extracted from TUPT-ID (e.g., TUPT-20-0563 → Batch 2020).
+                Names with commas will be repositioned (e.g., "Marbella, Sharwin John" → "Sharwin John Marbella").
               </p>
+              
+              {/* Role Selection */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select User Role:
+                </label>
+                <select
+                  value={importRole}
+                  onChange={(e) => setImportRole(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  disabled={importing}
+                >
+                  <option value="student">Student</option>
+                  <option value="alumni">Alumni</option>
+                  <option value="staff">Staff</option>
+                </select>
+              </div>
+
               <input
                 type="file"
                 accept=".csv,.xlsx,.xls"
@@ -588,6 +621,7 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
                 onClick={() => {
                   setShowImportModal(false);
                   setImportFile(null);
+                  setImportRole("student");
                 }}
                 disabled={importing}
                 className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50"
@@ -671,14 +705,16 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
             >
               Refresh
             </button>
-            <button
-              type="button"
-              className="px-3 py-1 rounded bg-primary hover:bg-primary/90 text-white flex items-center"
-              onClick={() => setShowImportModal(true)}
-              title="Import users from CSV"
-            >
-              Import Users
-            </button>
+            {authUser?.permission === 'superAdmin' && (
+              <button
+                type="button"
+                className="px-3 py-1 rounded bg-primary hover:bg-primary/90 text-white flex items-center"
+                onClick={() => setShowImportModal(true)}
+                title="Import users from CSV/XLSX"
+              >
+                Import Users
+              </button>
+            )}
           </div>
         </div>
 
