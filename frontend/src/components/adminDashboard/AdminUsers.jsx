@@ -4,6 +4,7 @@ import { axiosInstance } from "../../lib/axios";
 import toast from "react-hot-toast";
 import BanUnbanButton from "../common/BanUnbanButton";
 import * as XLSX from 'xlsx';
+import { Loader } from "lucide-react";
 
 const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMutation }) => {
   const queryClient = useQueryClient();
@@ -11,6 +12,9 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0, percentage: 0 });
+  const [importStartTime, setImportStartTime] = useState(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
   const [selectedUsers, setSelectedUsers] = useState(new Set());
   const [processingBulkAction, setProcessingBulkAction] = useState(false);
   const [showBanModal, setShowBanModal] = useState(false);
@@ -196,6 +200,15 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
     }
 
     setImporting(true);
+    setImportProgress({ current: 0, total: 0, percentage: 0 });
+    const startTime = Date.now();
+    setImportStartTime(startTime);
+    setElapsedTime(0);
+    
+    // Start elapsed time counter
+    const timerInterval = setInterval(() => {
+      setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
     
     try {
       let users;
@@ -211,6 +224,7 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
       
       if (users.length === 0) {
         toast.error("No valid user data found in file");
+        clearInterval(timerInterval);
         setImporting(false);
         return;
       }
@@ -218,25 +232,55 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
       // Add role to all users
       users = users.map(user => ({ ...user, role: importRole }));
 
-      const response = await axiosInstance.post("/admin/users/import", { users });
+      // Set initial progress
+      setImportProgress({ current: 0, total: users.length, percentage: 0 });
+
+      // Process users in batches to show progress
+      const batchSize = 5; // Process 5 users at a time
+      const batches = [];
+      for (let i = 0; i < users.length; i += batchSize) {
+        batches.push(users.slice(i, i + batchSize));
+      }
+
+      const allResults = {
+        created: [],
+        updated: [],
+        errors: []
+      };
+
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        const response = await axiosInstance.post("/admin/users/import", { users: batch });
+        const { results } = response.data;
+        
+        // Accumulate results
+        allResults.created.push(...results.created);
+        allResults.updated.push(...results.updated);
+        allResults.errors.push(...results.errors);
+        
+        // Update progress
+        const processed = Math.min((i + 1) * batchSize, users.length);
+        const percentage = Math.round((processed / users.length) * 100);
+        setImportProgress({ current: processed, total: users.length, percentage });
+      }
       
-      const { results } = response.data;
+      clearInterval(timerInterval);
       
       // Show results
-      if (results.created.length > 0) {
-        toast.success(`Created ${results.created.length} new user(s)`);
+      if (allResults.created.length > 0) {
+        toast.success(`Created ${allResults.created.length} new user(s)`);
       }
-      if (results.updated.length > 0) {
-        toast.success(`Updated ${results.updated.length} existing user(s)`);
+      if (allResults.updated.length > 0) {
+        toast.success(`Updated ${allResults.updated.length} existing user(s)`);
       }
-      if (results.errors.length > 0) {
-        toast.error(`${results.errors.length} error(s) occurred during import`);
-        console.log("Import errors:", results.errors);
+      if (allResults.errors.length > 0) {
+        toast.error(`${allResults.errors.length} error(s) occurred during import`);
+        console.log("Import errors:", allResults.errors);
       }
       
       // Show info if no users were created or updated
-      if (results.created.length === 0 && results.updated.length === 0) {
-        if (results.errors.length > 0) {
+      if (allResults.created.length === 0 && allResults.updated.length === 0) {
+        if (allResults.errors.length > 0) {
           toast.error("No users were imported due to errors");
         } else {
           toast("No new or updated users. All data is already up to date.");
@@ -252,6 +296,7 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
       setShowImportModal(false);
       
     } catch (error) {
+      clearInterval(timerInterval);
       console.error("Import error:", error);
       toast.error(error.response?.data?.message || "Failed to import users");
     } finally {
@@ -472,9 +517,10 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
               <button
                 onClick={handleBulkBan}
                 disabled={processingBulkAction}
-                className="px-4 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-700 disabled:opacity-50"
+                className="px-4 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-700 disabled:opacity-50 flex items-center gap-2"
               >
-                {processingBulkAction ? "Banning..." : "Ban Users"}
+                {processingBulkAction && <Loader className="animate-spin" size={16} />}
+                {processingBulkAction ? "Banning" : "Ban Users"}
               </button>
             </div>
           </div>
@@ -500,9 +546,10 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
               <button
                 onClick={handleBulkUnban}
                 disabled={processingBulkAction}
-                className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
               >
-                {processingBulkAction ? "Unbanning..." : "Unban Users"}
+                {processingBulkAction && <Loader className="animate-spin" size={16} />}
+                {processingBulkAction ? "Unbanning" : "Unban Users"}
               </button>
             </div>
           </div>
@@ -528,9 +575,10 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
               <button
                 onClick={handleBulkToggleStatus}
                 disabled={processingBulkAction}
-                className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
               >
-                {processingBulkAction ? "Processing..." : "Toggle Status"}
+                {processingBulkAction && <Loader className="animate-spin" size={16} />}
+                {processingBulkAction ? "Processing" : "Toggle Status"}
               </button>
             </div>
           </div>
@@ -580,9 +628,10 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
               <button
                 onClick={handleBulkDelete}
                 disabled={processingBulkAction || !deletePassword}
-                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
               >
-                {processingBulkAction ? "Deleting..." : "Delete Users"}
+                {processingBulkAction && <Loader className="animate-spin" size={16} />}
+                {processingBulkAction ? "Deleting" : "Delete Users"}
               </button>
             </div>
           </div>
@@ -642,6 +691,34 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
                   Selected: {importFile.name}
                 </p>
               )}
+              
+              {/* Progress Indicator */}
+              {importing && importProgress.total > 0 && (
+                <div className="mt-4 space-y-2">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="font-medium text-gray-700">
+                      Processing: {importProgress.current} / {importProgress.total} users
+                    </span>
+                    <span className="font-bold text-primary">
+                      {importProgress.percentage}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div
+                      className="bg-primary h-2.5 rounded-full transition-all duration-300"
+                      style={{ width: `${importProgress.percentage}%` }}
+                    ></div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-gray-500">
+                      Time elapsed: {elapsedTime}s
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Please wait...
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-2">
               <button
@@ -658,9 +735,10 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
               <button
                 onClick={handleImport}
                 disabled={!importFile || importing}
-                className="px-4 py-2 rounded bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
+                className="px-4 py-2 rounded bg-primary text-white hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
               >
-                {importing ? "Importing..." : "Import"}
+                {importing && <Loader className="animate-spin" size={16} />}
+                {importing ? "Importing" : "Import"}
               </button>
             </div>
           </div>

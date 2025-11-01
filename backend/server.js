@@ -26,13 +26,16 @@ import reportRoutes from "./routes/reportRoute.js"
 import { connectDB } from "./lib/db.js";
 import { initializeSocket } from "./lib/socket.js";
 
-dotenv.config()
+// Get the directory name of the current module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env from parent directory (AlumLink root)
+dotenv.config({ path: path.join(__dirname, '../.env') })
 
 const app = express();
 const server = createServer(app);
 const PORT = process.env.PORT || 5000
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Initialize Socket.IO
 initializeSocket(server);

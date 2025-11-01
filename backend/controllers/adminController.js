@@ -1,6 +1,7 @@
 import Post from "../models/Post.js";
 import JobPost from "../models/JobPost.js";
 import bcrypt from "bcryptjs";
+import { isExperienceRelatedToCourse } from "../lib/gemini.js";
 // Admin: Get all posts (including banned)
 export const getAllPostsAdmin = async (req, res) => {
     try {
@@ -380,6 +381,20 @@ export const importUsers = async (req, res) => {
                             endDate: new Date(experienceEndDate)
                         };
 
+                        // Use Gemini AI to check if experience is related to course
+                        try {
+                            const isRelated = await isExperienceRelatedToCourse(
+                                experienceTitle, 
+                                experienceCompany, 
+                                existingUser.course || course
+                            );
+                            experienceEntry.isRelatedToCourse = isRelated;
+                        } catch (error) {
+                            console.log("Error checking experience relevance:", error.message);
+                            // If AI fails, set to undefined (will use keyword matching on frontend)
+                            experienceEntry.isRelatedToCourse = undefined;
+                        }
+
                         // Check if experience is different
                         const currentExp = existingUser.experience && existingUser.experience[0];
                         if (!currentExp || 
@@ -423,6 +438,23 @@ export const importUsers = async (req, res) => {
                         if (experienceCompany) experienceEntry.company = experienceCompany;
                         if (experienceStartDate) experienceEntry.startDate = new Date(experienceStartDate);
                         if (experienceEndDate) experienceEntry.endDate = new Date(experienceEndDate);
+                        
+                        // Use Gemini AI to check if experience is related to course
+                        if (experienceTitle && experienceCompany && course) {
+                            try {
+                                const isRelated = await isExperienceRelatedToCourse(
+                                    experienceTitle, 
+                                    experienceCompany, 
+                                    course
+                                );
+                                experienceEntry.isRelatedToCourse = isRelated;
+                            } catch (error) {
+                                console.log("Error checking experience relevance:", error.message);
+                                // If AI fails, set to undefined (will use keyword matching on frontend)
+                                experienceEntry.isRelatedToCourse = undefined;
+                            }
+                        }
+                        
                         experience.push(experienceEntry);
                     }
 

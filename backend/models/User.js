@@ -46,6 +46,7 @@ const userSchema = new mongoose.Schema({
             startDate: Date,
             endDate: Date,
             description: String,
+            isRelatedToCourse: Boolean,
         },
     ],
     batch: {
