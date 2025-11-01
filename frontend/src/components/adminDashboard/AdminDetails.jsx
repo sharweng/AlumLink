@@ -5,7 +5,9 @@ import {
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { axiosInstance } from "../../lib/axios";
-import { Loader } from "lucide-react";
+import { Loader, Download } from "lucide-react";
+import html2canvas from "html2canvas-pro";
+import jsPDF from "jspdf";
 import {
   getPostStatusData,
   getPostTimeData,
@@ -45,6 +47,121 @@ const AdminDetails = ({ stats = {} }) => {
   const [moderationTimeMode, setModerationTimeMode] = useState("month");
   const [showAlumniWorkExpModal, setShowAlumniWorkExpModal] = useState(false);
   const [showAlumniRelevanceModal, setShowAlumniRelevanceModal] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [selectedTabs, setSelectedTabs] = useState({
+    users: false,
+    alumni: false,
+    feedback: false,
+    reports: false,
+    moderation: false,
+    posts: false,
+    jobs: false,
+    discussions: false,
+    events: false,
+  });
+
+  // Download handler functions
+  const handleSelectAll = () => {
+    const allSelected = Object.values(selectedTabs).every(val => val);
+    const newState = {};
+    Object.keys(selectedTabs).forEach(key => {
+      newState[key] = !allSelected;
+    });
+    setSelectedTabs(newState);
+  };
+
+  const handleTabToggle = (tab) => {
+    setSelectedTabs(prev => ({
+      ...prev,
+      [tab]: !prev[tab]
+    }));
+  };
+
+  const handleDownload = async () => {
+    const selectedSections = Object.entries(selectedTabs)
+      .filter(([_, isSelected]) => isSelected)
+      .map(([tab]) => tab);
+
+    if (selectedSections.length === 0) return;
+
+    try {
+      // Hide the modal during capture
+      setShowDownloadModal(false);
+      
+      // Wait for modal to close
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      const pdf = new jsPDF("l", "mm", "a4"); // "l" for landscape orientation
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let isFirstPage = true;
+
+      // Add title page
+      pdf.setFontSize(24);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("AlumLink Analytics Report", pageWidth / 2, 40, { align: "center" });
+      
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth / 2, 50, { align: "center" });
+
+      for (const section of selectedSections) {
+        // Switch to the tab to render its content
+        setActiveTab(section);
+        
+        // Wait for tab to render and charts to fully load (increased wait time)
+        await new Promise(resolve => setTimeout(resolve, 3500));
+
+        // Get the section content by ID
+        const contentElement = document.getElementById(`${section}-section`);
+        
+        if (contentElement) {
+          if (!isFirstPage) {
+            pdf.addPage();
+          } else {
+            pdf.addPage();
+          }
+          isFirstPage = false;
+
+          // Capture using html2canvas-pro (supports oklch)
+          const canvas = await html2canvas(contentElement, {
+            scale: 2,
+            backgroundColor: "#ffffff",
+            logging: false,
+            useCORS: true,
+          });
+
+          const imgData = canvas.toDataURL("image/png");
+          const imgWidth = pageWidth - 20;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+          // If content is taller than one page, split across multiple pages
+          if (imgHeight > pageHeight - 20) {
+            let yPos = 0;
+            let heightLeft = imgHeight;
+            
+            while (heightLeft > 0) {
+              pdf.addImage(imgData, "PNG", 10, 10 - yPos, imgWidth, imgHeight);
+              heightLeft -= (pageHeight - 20);
+              yPos += (pageHeight - 20);
+              
+              if (heightLeft > 0) {
+                pdf.addPage();
+              }
+            }
+          } else {
+            pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
+          }
+        }
+      }
+
+      // Save the PDF
+      pdf.save(`alumnilink-analytics-${new Date().toISOString().split("T")[0]}.pdf`);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Failed to generate PDF. Please try again.");
+    }
+  };
 
   // Fetch all posts, jobs, discussions, events (admin endpoints)
 
@@ -414,84 +531,95 @@ const AdminDetails = ({ stats = {} }) => {
       )}
 
       {/* Tab Navigation */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6 items-center justify-between">
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setActiveTab("users")}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "users" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            Users
+          </button>
+          <button
+            onClick={() => setActiveTab("alumni")}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "alumni" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            Alumni
+          </button>
+          <button
+            onClick={() => setActiveTab("feedback")}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "feedback" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            Feedback
+          </button>
+          <button
+            onClick={() => setActiveTab("reports")}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "reports" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            Reports
+          </button>
+          <button
+            onClick={() => setActiveTab("moderation")}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "moderation" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            Moderation Logs
+          </button>
+          <button
+            onClick={() => setActiveTab("posts")}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "posts" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            Posts
+          </button>
+          <button
+            onClick={() => setActiveTab("jobs")}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "jobs" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            Jobs
+          </button>
+          <button
+            onClick={() => setActiveTab("discussions")}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "discussions" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            Discussions
+          </button>
+          <button
+            onClick={() => setActiveTab("events")}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "events" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            Events
+          </button>
+        </div>
+        
+        {/* Download Button */}
         <button
-          onClick={() => setActiveTab("users")}
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-            activeTab === "users" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          }`}
+          onClick={() => setShowDownloadModal(true)}
+          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center gap-2 text-sm font-medium"
         >
-          Users
-        </button>
-        <button
-          onClick={() => setActiveTab("alumni")}
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-            activeTab === "alumni" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          }`}
-        >
-          Alumni
-        </button>
-        <button
-          onClick={() => setActiveTab("feedback")}
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-            activeTab === "feedback" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          }`}
-        >
-          Feedback
-        </button>
-        <button
-          onClick={() => setActiveTab("reports")}
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-            activeTab === "reports" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          }`}
-        >
-          Reports
-        </button>
-        <button
-          onClick={() => setActiveTab("moderation")}
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-            activeTab === "moderation" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          }`}
-        >
-          Moderation Logs
-        </button>
-        <button
-          onClick={() => setActiveTab("posts")}
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-            activeTab === "posts" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          }`}
-        >
-          Posts
-        </button>
-        <button
-          onClick={() => setActiveTab("jobs")}
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-            activeTab === "jobs" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          }`}
-        >
-          Jobs
-        </button>
-        <button
-          onClick={() => setActiveTab("discussions")}
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-            activeTab === "discussions" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          }`}
-        >
-          Discussions
-        </button>
-        <button
-          onClick={() => setActiveTab("events")}
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-            activeTab === "events" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          }`}
-        >
-          Events
+          <Download size={16} />
+          Download Data
         </button>
       </div>
 
       {/* Users Section */}
       {activeTab === "users" && (
-        <div>
+        <div id="users-section">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Users</h2>
             <span className="text-base text-gray-700">Total Users: <span className="font-bold">{users ? users.length : 0}</span></span>
@@ -548,7 +676,7 @@ const AdminDetails = ({ stats = {} }) => {
 
       {/* Alumni Section */}
       {activeTab === "alumni" && (
-        <div>
+        <div id="alumni-section">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Alumni</h2>
             <span className="text-base text-gray-700">Total Alumni: <span className="font-bold">{users ? users.filter(u => u.role === 'alumni').length : 0}</span></span>
@@ -611,7 +739,7 @@ const AdminDetails = ({ stats = {} }) => {
 
       {/* Feedback Section */}
       {activeTab === "feedback" && (
-        <div>
+        <div id="feedback-section">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Feedback</h2>
             <span className="text-base text-gray-700">Total Feedback: <span className="font-bold">{feedbacks ? feedbacks.length : 0}</span></span>
@@ -638,7 +766,7 @@ const AdminDetails = ({ stats = {} }) => {
 
       {/* Reports Section */}
       {activeTab === "reports" && (
-        <div>
+        <div id="reports-section">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Reports</h2>
             <span className="text-base text-gray-700">Total Reports: <span className="font-bold">{reports ? reports.length : 0}</span></span>
@@ -680,7 +808,7 @@ const AdminDetails = ({ stats = {} }) => {
 
       {/* Moderation Logs Section */}
       {activeTab === "moderation" && (
-        <div>
+        <div id="moderation-section">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Moderation Logs</h2>
             <span className="text-base text-gray-700">Total Logs: <span className="font-bold">{moderationLogs ? moderationLogs.length : 0}</span></span>
@@ -742,7 +870,7 @@ const AdminDetails = ({ stats = {} }) => {
 
       {/* Posts Section */}
       {activeTab === "posts" && (
-        <div>
+        <div id="posts-section">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Posts</h2>
             <span className="text-base text-gray-700">Total Posts: <span className="font-bold">{posts ? posts.length : 0}</span></span>
@@ -789,7 +917,7 @@ const AdminDetails = ({ stats = {} }) => {
 
       {/* Jobs Section */}
       {activeTab === "jobs" && (
-        <div>
+        <div id="jobs-section">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Job Posts</h2>
             <span className="text-base text-gray-700">Total Job Posts: <span className="font-bold">{jobs ? jobs.length : 0}</span></span>
@@ -866,7 +994,7 @@ const AdminDetails = ({ stats = {} }) => {
 
       {/* Discussion Section */}
       {activeTab === "discussions" && (
-        <div>
+        <div id="discussions-section">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Discussions</h2>
             <span className="text-base text-gray-700">Total Discussions: <span className="font-bold">{discussions ? discussions.length : 0}</span></span>
@@ -927,7 +1055,7 @@ const AdminDetails = ({ stats = {} }) => {
 
       {/* Event Section */}
       {activeTab === "events" && (
-        <div>
+        <div id="events-section">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Events</h2>
             <span className="text-base text-gray-700">Total Events: <span className="font-bold">{events ? events.length : 0}</span></span>
@@ -1015,6 +1143,71 @@ const AdminDetails = ({ stats = {} }) => {
                   <Bar dataKey="events" fill="#a78bfa" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Download Modal */}
+      {showDownloadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="px-6 py-4 border-b flex items-center justify-between">
+              <h3 className="text-xl font-semibold">Download Analytics Data</h3>
+              <button
+                onClick={() => setShowDownloadModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-600 mb-4">
+                Select which sections to include in the PDF:
+              </p>
+              
+              {/* Select All */}
+              <div className="mb-4 pb-4 border-b">
+                <label className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                  <input
+                    type="checkbox"
+                    checked={Object.values(selectedTabs).every(val => val)}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                  />
+                  <span className="font-semibold text-gray-900">Select All</span>
+                </label>
+              </div>
+
+              {/* Individual Sections */}
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {Object.keys(selectedTabs).map(tab => (
+                  <label key={tab} className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                    <input
+                      type="checkbox"
+                      checked={selectedTabs[tab]}
+                      onChange={() => handleTabToggle(tab)}
+                      className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                    />
+                    <span className="text-gray-700 capitalize">{tab}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDownloadModal(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDownload}
+                disabled={!Object.values(selectedTabs).some(val => val)}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                Download PDF
+              </button>
             </div>
           </div>
         </div>
