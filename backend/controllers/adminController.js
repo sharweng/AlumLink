@@ -1,5 +1,6 @@
 import Post from "../models/Post.js";
 import JobPost from "../models/JobPost.js";
+import bcrypt from "bcryptjs";
 // Admin: Get all posts (including banned)
 export const getAllPostsAdmin = async (req, res) => {
     try {
@@ -288,6 +289,161 @@ export const unbanUser = async (req, res) => {
         res.status(200).json({ message: "User unbanned successfully." });
     } catch (error) {
         console.log("Error in unbanUser adminController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+// Import users from CSV (admin only)
+export const importUsers = async (req, res) => {
+    try {
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
+            return res.status(403).json({ message: "Access denied. Admins only." });
+        }
+
+        const { users } = req.body;
+        
+        if (!users || !Array.isArray(users) || users.length === 0) {
+            return res.status(400).json({ message: "No users data provided" });
+        }
+
+        const results = {
+            created: [],
+            updated: [],
+            errors: []
+        };
+
+        for (const userData of users) {
+            try {
+                const { fullname, tuptId, email, course, experienceTitle, experienceCompany, experienceStartDate, experienceEndDate } = userData;
+
+                // Validate required fields
+                if (!fullname || !tuptId || !email) {
+                    results.errors.push({ 
+                        fullname, 
+                        tuptId, 
+                        email, 
+                        error: "Missing required fields (fullname, tuptId, or email)" 
+                    });
+                    continue;
+                }
+
+                // Generate username from fullname
+                // Example: Sharwin John Marbella -> sjmarbella
+                const nameParts = fullname.trim().split(/\s+/);
+                const lastName = nameParts[nameParts.length - 1].toLowerCase();
+                const initials = nameParts.slice(0, -1).map(part => part.charAt(0).toLowerCase()).join('');
+                const username = initials + lastName;
+
+                // Generate password from last name
+                const password = lastName;
+
+                // Check if user exists by tuptId or email
+                let existingUser = await User.findOne({ 
+                    $or: [{ tuptId }, { email }] 
+                });
+
+                if (existingUser) {
+                    // Update existing user
+                    existingUser.name = fullname;
+                    existingUser.email = email;
+                    existingUser.tuptId = tuptId;
+                    
+                    if (course) {
+                        existingUser.course = course;
+                    }
+
+                    // Update or add experience if provided
+                    if (experienceTitle || experienceCompany) {
+                        const experienceEntry = {};
+                        if (experienceTitle) experienceEntry.title = experienceTitle;
+                        if (experienceCompany) experienceEntry.company = experienceCompany;
+                        if (experienceStartDate) experienceEntry.startDate = new Date(experienceStartDate);
+                        if (experienceEndDate) experienceEntry.endDate = new Date(experienceEndDate);
+
+                        // Check if experience already exists, if not add it
+                        if (!existingUser.experience) {
+                            existingUser.experience = [];
+                        }
+                        
+                        // Find existing experience with same title/company or add new one
+                        const existingExpIndex = existingUser.experience.findIndex(
+                            exp => exp.title === experienceTitle && exp.company === experienceCompany
+                        );
+                        
+                        if (existingExpIndex >= 0) {
+                            existingUser.experience[existingExpIndex] = experienceEntry;
+                        } else {
+                            existingUser.experience.push(experienceEntry);
+                        }
+                    }
+
+                    await existingUser.save();
+                    results.updated.push({ 
+                        username: existingUser.username, 
+                        email: existingUser.email, 
+                        name: existingUser.name 
+                    });
+                } else {
+                    // Check if username already exists, if so, add a number
+                    let finalUsername = username;
+                    let counter = 1;
+                    while (await User.findOne({ username: finalUsername })) {
+                        finalUsername = `${username}${counter}`;
+                        counter++;
+                    }
+
+                    // Create new user
+                    const salt = await bcrypt.genSalt(10);
+                    const hashedPassword = await bcrypt.hash(password, salt);
+
+                    const experience = [];
+                    if (experienceTitle || experienceCompany) {
+                        const experienceEntry = {};
+                        if (experienceTitle) experienceEntry.title = experienceTitle;
+                        if (experienceCompany) experienceEntry.company = experienceCompany;
+                        if (experienceStartDate) experienceEntry.startDate = new Date(experienceStartDate);
+                        if (experienceEndDate) experienceEntry.endDate = new Date(experienceEndDate);
+                        experience.push(experienceEntry);
+                    }
+
+                    const newUser = new User({
+                        name: fullname,
+                        username: finalUsername,
+                        email: email,
+                        password: hashedPassword,
+                        tuptId: tuptId,
+                        course: course || "Not Specified",
+                        batch: new Date().getFullYear(), // Default to current year
+                        headline: course ? `Student, ${course}` : "AlumniLink User",
+                        experience: experience.length > 0 ? experience : undefined,
+                        role: "student"
+                    });
+
+                    await newUser.save();
+                    results.created.push({ 
+                        username: finalUsername, 
+                        email: email, 
+                        name: fullname,
+                        tempPassword: password 
+                    });
+                }
+            } catch (error) {
+                console.log("Error processing user:", error.message);
+                results.errors.push({ 
+                    fullname: userData.fullname, 
+                    tuptId: userData.tuptId, 
+                    email: userData.email, 
+                    error: error.message 
+                });
+            }
+        }
+
+        res.status(200).json({
+            message: "Import completed",
+            results
+        });
+    } catch (error) {
+        console.log("Error in importUsers adminController:", error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 };
