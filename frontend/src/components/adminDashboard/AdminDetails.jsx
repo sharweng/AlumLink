@@ -24,6 +24,8 @@ import {
   getUserStatusData,
   getUserPermissionData,
   getUserRoleData,
+  getAlumniByWorkExperienceData,
+  getAlumniWorkRelevanceData,
   getFeedbackStatusData,
   getReportsByTypeData,
   getReportsByStatusData,
@@ -41,6 +43,8 @@ const AdminDetails = ({ stats = {} }) => {
   const [discussionTimeMode, setDiscussionTimeMode] = useState("month");
   const [eventTimeMode, setEventTimeMode] = useState("month");
   const [moderationTimeMode, setModerationTimeMode] = useState("month");
+  const [showAlumniWorkExpModal, setShowAlumniWorkExpModal] = useState(false);
+  const [showAlumniRelevanceModal, setShowAlumniRelevanceModal] = useState(false);
 
   // Fetch all posts, jobs, discussions, events (admin endpoints)
 
@@ -163,6 +167,58 @@ const AdminDetails = ({ stats = {} }) => {
   const userPermissionData = users ? getUserPermissionData(users) : [];
   const userRoleData = users ? getUserRoleData(users) : [];
 
+  // Alumni
+  const alumniByWorkExperienceData = users ? getAlumniByWorkExperienceData(users) : [];
+  const alumniWorkRelevanceData = users ? getAlumniWorkRelevanceData(users) : [];
+
+  // Get detailed alumni lists for modal
+  const getAlumniDetails = () => {
+    if (!users) return { related: [], notRelated: [], withoutExperience: [] };
+    
+    const alumni = users.filter(user => user.role === 'alumni');
+    const withoutExperience = alumni.filter(user => !user.experience || user.experience.length === 0);
+    const withExperience = alumni.filter(user => user.experience && user.experience.length > 0);
+    
+    const isWorkRelatedToCourse = (user) => {
+      if (!user.course || !user.experience || user.experience.length === 0) return false;
+      
+      const course = user.course.toLowerCase();
+      const experience = user.experience[0];
+      const jobTitle = (experience.title || '').toLowerCase();
+      const company = (experience.company || '').toLowerCase();
+      
+      const courseKeywords = {
+        'bsit': ['developer', 'programmer', 'software', 'it', 'web', 'tech', 'data', 'system', 'network', 'database', 'engineer', 'analyst', 'qa', 'devops', 'frontend', 'backend', 'fullstack'],
+        'bscs': ['developer', 'programmer', 'software', 'computer', 'tech', 'data', 'ai', 'ml', 'algorithm', 'system', 'engineer', 'analyst', 'researcher'],
+        'bsis': ['analyst', 'system', 'business', 'data', 'it', 'information', 'database', 'erp', 'crm', 'consultant'],
+        'bsece': ['engineer', 'electrical', 'electronics', 'circuit', 'embedded', 'hardware', 'telecom', 'signal'],
+        'bsme': ['engineer', 'mechanical', 'manufacturing', 'design', 'cad', 'production', 'maintenance'],
+        'bsce': ['engineer', 'civil', 'construction', 'structural', 'infrastructure', 'building', 'project'],
+      };
+      
+      let keywords = [];
+      for (const [key, words] of Object.entries(courseKeywords)) {
+        if (course.includes(key)) {
+          keywords = words;
+          break;
+        }
+      }
+      
+      if (keywords.length === 0 && (course.includes('bs') || course.includes('engineering'))) {
+        keywords = ['engineer', 'developer', 'analyst', 'technician', 'specialist'];
+      }
+      
+      return keywords.some(keyword => jobTitle.includes(keyword) || company.includes(keyword));
+    };
+    
+    const related = withExperience.filter(user => isWorkRelatedToCourse(user));
+    const notRelated = withExperience.filter(user => !isWorkRelatedToCourse(user));
+    
+    return { related, notRelated, withoutExperience };
+  };
+
+  const alumniDetails = getAlumniDetails();
+
   // Feedback
   const feedbackStatusData = feedbacks ? getFeedbackStatusData(feedbacks) : [];
 
@@ -192,6 +248,164 @@ const AdminDetails = ({ stats = {} }) => {
 
   return (
     <div className="space-y-6">
+      {/* Alumni Work Experience Modal */}
+      {showAlumniWorkExpModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b flex items-center justify-between">
+              <h3 className="text-xl font-semibold">Alumni Work Experience Details</h3>
+              <button
+                onClick={() => setShowAlumniWorkExpModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              {/* With Work Experience */}
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-green-700 mb-3">
+                  With Work Experience ({alumniDetails.related.length + alumniDetails.notRelated.length})
+                </h4>
+                {(alumniDetails.related.length + alumniDetails.notRelated.length) > 0 ? (
+                  <div className="space-y-2">
+                    {[...alumniDetails.related, ...alumniDetails.notRelated].map((user) => (
+                      <div key={user._id} className="bg-green-50 border border-green-200 rounded p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{user.name}</p>
+                            <p className="text-sm text-gray-600">Course: {user.course}</p>
+                            <p className="text-sm text-gray-600">
+                              Work: {user.experience?.[0]?.title || 'N/A'} at {user.experience?.[0]?.company || 'N/A'}
+                            </p>
+                          </div>
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Has Experience</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 italic">No alumni with work experience</p>
+                )}
+              </div>
+
+              {/* Without Work Experience */}
+              <div>
+                <h4 className="text-lg font-semibold text-gray-700 mb-3">
+                  Without Work Experience ({alumniDetails.withoutExperience.length})
+                </h4>
+                {alumniDetails.withoutExperience.length > 0 ? (
+                  <div className="space-y-2">
+                    {alumniDetails.withoutExperience.map((user) => (
+                      <div key={user._id} className="bg-gray-50 border border-gray-200 rounded p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{user.name}</p>
+                            <p className="text-sm text-gray-600">Course: {user.course}</p>
+                            <p className="text-sm text-gray-600">No work experience added</p>
+                          </div>
+                          <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">No Experience</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 italic">No alumni without work experience</p>
+                )}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t flex justify-end">
+              <button
+                onClick={() => setShowAlumniWorkExpModal(false)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alumni Work Relevance Modal */}
+      {showAlumniRelevanceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b flex items-center justify-between">
+              <h3 className="text-xl font-semibold">Work Relevance to Course Details</h3>
+              <button
+                onClick={() => setShowAlumniRelevanceModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              {/* Related to Course */}
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-green-700 mb-3">
+                  Work Related to Course ({alumniDetails.related.length})
+                </h4>
+                {alumniDetails.related.length > 0 ? (
+                  <div className="space-y-2">
+                    {alumniDetails.related.map((user) => (
+                      <div key={user._id} className="bg-green-50 border border-green-200 rounded p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{user.name}</p>
+                            <p className="text-sm text-gray-600">Course: {user.course}</p>
+                            <p className="text-sm text-gray-600">
+                              Work: {user.experience?.[0]?.title || 'N/A'} at {user.experience?.[0]?.company || 'N/A'}
+                            </p>
+                          </div>
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Related</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 italic">No alumni in this category</p>
+                )}
+              </div>
+
+              {/* Not Related to Course */}
+              <div>
+                <h4 className="text-lg font-semibold text-orange-700 mb-3">
+                  Work Not Related to Course ({alumniDetails.notRelated.length})
+                </h4>
+                {alumniDetails.notRelated.length > 0 ? (
+                  <div className="space-y-2">
+                    {alumniDetails.notRelated.map((user) => (
+                      <div key={user._id} className="bg-orange-50 border border-orange-200 rounded p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{user.name}</p>
+                            <p className="text-sm text-gray-600">Course: {user.course}</p>
+                            <p className="text-sm text-gray-600">
+                              Work: {user.experience?.[0]?.title || 'N/A'} at {user.experience?.[0]?.company || 'N/A'}
+                            </p>
+                          </div>
+                          <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">Not Related</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 italic">No alumni in this category</p>
+                )}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t flex justify-end">
+              <button
+                onClick={() => setShowAlumniRelevanceModal(false)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tab Navigation */}
       <div className="flex flex-wrap gap-2 mb-6">
         <button
@@ -201,6 +415,14 @@ const AdminDetails = ({ stats = {} }) => {
           }`}
         >
           Users
+        </button>
+        <button
+          onClick={() => setActiveTab("alumni")}
+          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "alumni" ? "bg-primary text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+          }`}
+        >
+          Alumni
         </button>
         <button
           onClick={() => setActiveTab("feedback")}
@@ -306,6 +528,69 @@ const AdminDetails = ({ stats = {} }) => {
                   <Pie data={userRoleData} dataKey="count" nameKey="role" cx="50%" cy="50%" outerRadius={70} label>
                     {userRoleData.map((entry, idx) => (
                       <Cell key={`cell-user-role-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alumni Section */}
+      {activeTab === "alumni" && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">Alumni</h2>
+            <span className="text-base text-gray-700">Total Alumni: <span className="font-bold">{users ? users.filter(u => u.role === 'alumni').length : 0}</span></span>
+          </div>
+          <div className="grid gap-3 mb-4 md:grid-cols-2 grid-cols-1">
+            {/* Alumni by Work Experience */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold">Alumni by Work Experience</h3>
+                <button
+                  onClick={() => setShowAlumniWorkExpModal(true)}
+                  className="px-3 py-1 bg-primary text-white rounded text-xs hover:bg-primary/90 transition-colors"
+                  title="View detailed list"
+                >
+                  View Details
+                </button>
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie data={alumniByWorkExperienceData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
+                    {alumniByWorkExperienceData.map((entry, idx) => (
+                      <Cell key={`cell-alumni-exp-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Work Relevance to Course */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold">Work Relevance to Course</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-700">Alumni with work: <span className="font-bold">{users ? users.filter(u => u.role === 'alumni' && u.experience && u.experience.length > 0).length : 0}</span></span>
+                  <button
+                    onClick={() => setShowAlumniRelevanceModal(true)}
+                    className="ml-2 px-3 py-1 bg-primary text-white rounded text-xs hover:bg-primary/90 transition-colors"
+                    title="View detailed list"
+                  >
+                    View Details
+                  </button>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie data={alumniWorkRelevanceData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
+                    {alumniWorkRelevanceData.map((entry, idx) => (
+                      <Cell key={`cell-alumni-relevance-${idx}`} fill={pieColors[idx % pieColors.length]} />
                     ))}
                   </Pie>
                   <Tooltip />

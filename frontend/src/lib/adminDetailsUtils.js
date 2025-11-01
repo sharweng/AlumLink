@@ -357,6 +357,72 @@ export function getUserRoleData(users) {
   }));
 }
 
+// --- ALUMNI ANALYTICS ---
+export function getAlumniByWorkExperienceData(users) {
+  const alumni = users.filter(user => user.role === 'alumni');
+  const withExperience = alumni.filter(user => user.experience && user.experience.length > 0).length;
+  const withoutExperience = alumni.length - withExperience;
+  
+  return [
+    { status: 'With Work Experience', count: withExperience },
+    { status: 'Without Work Experience', count: withoutExperience },
+  ];
+}
+
+export function getAlumniWorkRelevanceData(users) {
+  const alumni = users.filter(user => user.role === 'alumni' && user.experience && user.experience.length > 0);
+  
+  // Helper function to check if work is related to course
+  const isWorkRelatedToCourse = (user) => {
+    if (!user.course || !user.experience || user.experience.length === 0) return false;
+    
+    const course = user.course.toLowerCase();
+    const experience = user.experience[0]; // Check most recent/first experience
+    const jobTitle = (experience.title || '').toLowerCase();
+    const company = (experience.company || '').toLowerCase();
+    
+    // Define course-related keywords
+    const courseKeywords = {
+      'bsit': ['developer', 'programmer', 'software', 'it', 'web', 'tech', 'data', 'system', 'network', 'database', 'engineer', 'analyst', 'qa', 'devops', 'frontend', 'backend', 'fullstack'],
+      'bscs': ['developer', 'programmer', 'software', 'computer', 'tech', 'data', 'ai', 'ml', 'algorithm', 'system', 'engineer', 'analyst', 'researcher'],
+      'bsis': ['analyst', 'system', 'business', 'data', 'it', 'information', 'database', 'erp', 'crm', 'consultant'],
+      'bsece': ['engineer', 'electrical', 'electronics', 'circuit', 'embedded', 'hardware', 'telecom', 'signal'],
+      'bsme': ['engineer', 'mechanical', 'manufacturing', 'design', 'cad', 'production', 'maintenance'],
+      'bsce': ['engineer', 'civil', 'construction', 'structural', 'infrastructure', 'building', 'project'],
+    };
+    
+    // Find matching keywords for the course
+    let keywords = [];
+    for (const [key, words] of Object.entries(courseKeywords)) {
+      if (course.includes(key)) {
+        keywords = words;
+        break;
+      }
+    }
+    
+    // If no specific keywords found, check for general IT/engineering terms
+    if (keywords.length === 0 && (course.includes('bs') || course.includes('engineering'))) {
+      keywords = ['engineer', 'developer', 'analyst', 'technician', 'specialist'];
+    }
+    
+    // Check if job title or company contains any of the keywords
+    const matchFound = keywords.some(keyword => 
+      jobTitle.includes(keyword) || company.includes(keyword)
+    );
+    
+    return matchFound;
+  };
+  
+  const related = alumni.filter(user => isWorkRelatedToCourse(user)).length;
+  const notRelated = alumni.length - related;
+  
+  return [
+    { status: 'Related to Course', count: related },
+    { status: 'Not Related to Course', count: notRelated },
+  ];
+}
+
+
 // --- FEEDBACK ANALYTICS ---
 export function getFeedbackStatusData(feedbacks) {
   const statusCounts = feedbacks.reduce((acc, fb) => {
