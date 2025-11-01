@@ -20,6 +20,21 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
   const [deletePassword, setDeletePassword] = useState("");
   const [importRole, setImportRole] = useState("student");
 
+  // Mutation for updating user role
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }) => {
+      const res = await axiosInstance.put(`/admin/users/${userId}/role`, { role });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["adminUsers"]);
+      toast.success("Role updated successfully");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to update role");
+    }
+  });
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file && (file.type === "text/csv" || 
@@ -132,13 +147,13 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
               // If it's an Excel serial number
               if (typeof value === 'number') {
                 // Excel stores dates as days since 1899-12-30 (not 1900-01-01 due to a bug)
-                const excelEpoch = new Date(1899, 11, 30);
+                const excelEpoch = new Date(Date.UTC(1899, 11, 30));
                 const date = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000);
                 
                 // Format as MM/DD/YYYY
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                const year = date.getFullYear();
+                const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+                const day = String(date.getUTCDate()).padStart(2, '0');
+                const year = date.getUTCFullYear();
                 return `${month}/${day}/${year}`;
               }
               
@@ -148,7 +163,7 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
             const userData = {
               fullname: nameCol !== -1 ? row[nameCol]?.toString().trim() || '' : '',
               tuptId: tuptIdCol !== -1 ? row[tuptIdCol]?.toString().trim() || '' : '',
-              email: emailCol !== -1 ? row[emailCol]?.toString().trim() || '' : '',
+              email: emailCol !== -1 ? row[emailCol]?.toString().trim().toLowerCase() || '' : '',
               course: courseCol !== -1 ? row[courseCol]?.toString().trim() || '' : '',
               experienceTitle: jobTitleCol !== -1 ? row[jobTitleCol]?.toString().trim() || '' : '',
               experienceCompany: companyCol !== -1 ? row[companyCol]?.toString().trim() || '' : '',
@@ -217,6 +232,15 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
       if (results.errors.length > 0) {
         toast.error(`${results.errors.length} error(s) occurred during import`);
         console.log("Import errors:", results.errors);
+      }
+      
+      // Show info if no users were created or updated
+      if (results.created.length === 0 && results.updated.length === 0) {
+        if (results.errors.length > 0) {
+          toast.error("No users were imported due to errors");
+        } else {
+          toast("No new or updated users. All data is already up to date.");
+        }
       }
       
       // Refresh users list
@@ -397,7 +421,7 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
 
 
 
-  // prepare sortedUsers: super-admins, admins, then users; each group newest-first
+  // prepare sortedUsers: super-admins, admins, then users; each group sorted by TUPT-ID
   const sortedUsers = users
     ? [...users].sort((a, b) => {
         const rank = (u) =>
@@ -409,7 +433,11 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
         const ra = rank(a);
         const rb = rank(b);
         if (ra !== rb) return ra - rb;
-        return new Date(b.createdAt) - new Date(a.createdAt);
+        
+        // Within same permission level, sort by TUPT-ID
+        const tuptA = a.tuptId || '';
+        const tuptB = b.tuptId || '';
+        return tuptA.localeCompare(tuptB);
       })
     : [];
 
@@ -513,7 +541,7 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-semibold mb-4 text-red-600">⚠️ Delete Users</h3>
+            <h3 className="text-xl font-semibold mb-4 text-red-600">Delete Users</h3>
             <div className="mb-6">
               <p className="text-gray-600 mb-2">
                 You are about to <strong className="text-red-600">permanently delete {selectedUsers.size} user(s)</strong> and all their data.
@@ -600,7 +628,6 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
                 >
                   <option value="student">Student</option>
                   <option value="alumni">Alumni</option>
-                  <option value="staff">Staff</option>
                 </select>
               </div>
 
@@ -814,11 +841,30 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
                     )}
                   </td>
                   <td className="px-6 py-4 w-1/6 text-center">
-                    <span className={`w-20 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'N/A'}
-                    </span>
+                    {(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') && user._id !== authUser?._id && !(user.permission === 'superAdmin' && authUser?.permission !== 'superAdmin') ? (
+                      <select
+                        value={user.role || 'student'}
+                        onChange={(e) => updateRoleMutation.mutate({ userId: user._id, role: e.target.value })}
+                        disabled={updateRoleMutation.isPending}
+                        className={`w-24 px-2 py-1 text-xs leading-5 font-semibold rounded-full border text-center ${
+                          user.role === 'alumni' ? 'bg-green-100 text-green-800 border-green-300' : 
+                          user.role === 'staff' ? 'bg-purple-100 text-purple-800 border-purple-300' : 
+                          'bg-blue-100 text-blue-800 border-blue-300'
+                        } cursor-pointer hover:opacity-80`}
+                      >
+                        <option value="student">Student</option>
+                        <option value="alumni">Alumni</option>
+                        <option value="staff">Staff</option>
+                      </select>
+                    ) : (
+                      <span className={`w-24 px-2 py-1 inline-flex justify-center text-xs leading-5 font-semibold rounded-full ${
+                        user.role === 'alumni' ? 'bg-green-100 text-green-800' : 
+                        user.role === 'staff' ? 'bg-purple-100 text-purple-800' : 
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Student'}
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 w-1/6 text-center">
                     {(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') && user._id !== authUser?._id && !(user.permission === 'superAdmin' && authUser?.permission !== 'superAdmin') ? (
@@ -861,9 +907,9 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
                           : 'Active'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm font-medium w-1/12 text-center">
-                    {user._id !== authUser._id && !(user.permission === 'superAdmin' && authUser?.permission !== 'superAdmin') && (
-                      <div className="flex flex-col gap-1 items-center">
+                  <td className="px-6 py-4 text-sm font-medium w-1/12 text-center h-24">
+                    {user._id !== authUser._id && !(user.permission === 'superAdmin' && authUser?.permission !== 'superAdmin') ? (
+                      <div className="flex flex-col gap-1 items-center justify-center h-full">
                         <button
                           onClick={() => toggleStatusMutation.mutate(user._id)}
                           disabled={toggleStatusMutation.isPending}
@@ -876,6 +922,10 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
                           {user.isActive ? 'Deactivate' : 'Activate'}
                         </button>
                         <BanUnbanButton user={user} />
+                      </div>
+                    ) : (
+                      <div className="h-full flex items-center justify-center">
+                        {/* Empty placeholder to maintain height */}
                       </div>
                     )}
                   </td>

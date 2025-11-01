@@ -360,57 +360,74 @@ export const importUsers = async (req, res) => {
                 // Example: marbella1119 or reyes0895
                 const password = lastName + last4Digits;
 
-                // Check if user exists by tuptId or email
+                // Check if user exists by tuptId or email (lowercase email for comparison)
                 let existingUser = await User.findOne({ 
-                    $or: [{ tuptId }, { email }] 
+                    $or: [{ tuptId }, { email: email.toLowerCase() }] 
                 });
 
                 if (existingUser) {
-                    // Update existing user
-                    existingUser.name = fullname;
-                    existingUser.email = email;
-                    existingUser.tuptId = tuptId;
-                    existingUser.batch = batch;
+                    // Track if experience changed (only count updates for experience changes)
+                    let experienceChanged = false;
+
+                    // Update user fields without tracking for update count
+                    if (existingUser.name !== fullname) {
+                        existingUser.name = fullname;
+                    }
                     
-                    if (course) {
+                    if (existingUser.email !== email.toLowerCase()) {
+                        existingUser.email = email.toLowerCase();
+                    }
+                    
+                    if (existingUser.tuptId !== tuptId) {
+                        existingUser.tuptId = tuptId;
+                    }
+                    
+                    if (existingUser.batch !== batch) {
+                        existingUser.batch = batch;
+                    }
+                    
+                    if (course && existingUser.course !== course) {
                         existingUser.course = course;
                     }
 
-                    if (role) {
+                    if (role && existingUser.role !== role) {
                         existingUser.role = role;
                     }
 
-                    // Update or add experience if provided
-                    if (experienceTitle || experienceCompany) {
-                        const experienceEntry = {};
-                        if (experienceTitle) experienceEntry.title = experienceTitle;
-                        if (experienceCompany) experienceEntry.company = experienceCompany;
-                        if (experienceStartDate) experienceEntry.startDate = new Date(experienceStartDate);
-                        if (experienceEndDate) experienceEntry.endDate = new Date(experienceEndDate);
+                    // Update or replace experience if provided
+                    if (experienceTitle && experienceCompany && experienceStartDate && experienceEndDate) {
+                        // If all experience fields are provided, replace the entire experience array
+                        const experienceEntry = {
+                            title: experienceTitle,
+                            company: experienceCompany,
+                            startDate: new Date(experienceStartDate),
+                            endDate: new Date(experienceEndDate)
+                        };
 
-                        // Check if experience already exists, if not add it
-                        if (!existingUser.experience) {
-                            existingUser.experience = [];
-                        }
-                        
-                        // Find existing experience with same title/company or add new one
-                        const existingExpIndex = existingUser.experience.findIndex(
-                            exp => exp.title === experienceTitle && exp.company === experienceCompany
-                        );
-                        
-                        if (existingExpIndex >= 0) {
-                            existingUser.experience[existingExpIndex] = experienceEntry;
-                        } else {
-                            existingUser.experience.push(experienceEntry);
+                        // Check if experience is different
+                        const currentExp = existingUser.experience && existingUser.experience[0];
+                        if (!currentExp || 
+                            currentExp.title !== experienceTitle ||
+                            currentExp.company !== experienceCompany ||
+                            currentExp.startDate?.getTime() !== new Date(experienceStartDate).getTime() ||
+                            currentExp.endDate?.getTime() !== new Date(experienceEndDate).getTime()) {
+                            // Replace existing experience with new one
+                            existingUser.experience = [experienceEntry];
+                            experienceChanged = true;
                         }
                     }
 
+                    // Always save changes, but only count as updated if experience changed
                     await existingUser.save();
-                    results.updated.push({ 
-                        username: existingUser.username, 
-                        email: existingUser.email, 
-                        name: existingUser.name 
-                    });
+                    
+                    if (experienceChanged) {
+                        results.updated.push({ 
+                            username: existingUser.username, 
+                            email: existingUser.email, 
+                            name: existingUser.name 
+                        });
+                    }
+                    // If no experience changes, don't count as updated
                 } else {
                     // Check if username already exists, if so, add a number
                     let finalUsername = username;
@@ -449,7 +466,7 @@ export const importUsers = async (req, res) => {
                     const newUser = new User({
                         name: fullname,
                         username: finalUsername,
-                        email: email,
+                        email: email.toLowerCase(),
                         password: hashedPassword,
                         tuptId: tuptId,
                         course: course || "Not Specified",
