@@ -72,6 +72,32 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
           const worksheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
           
+          if (jsonData.length < 2) {
+            reject(new Error("No data found in spreadsheet"));
+            return;
+          }
+          
+          // Get headers from first row
+          const headers = jsonData[0].map(h => h?.toString().trim().toLowerCase() || '');
+          
+          // Find column indices by header names
+          const findColumn = (possibleNames) => {
+            for (const name of possibleNames) {
+              const index = headers.findIndex(h => h.includes(name.toLowerCase()));
+              if (index !== -1) return index;
+            }
+            return -1;
+          };
+          
+          const nameCol = findColumn(['name', 'full name', 'fullname']);
+          const tuptIdCol = findColumn(['tupt-id', 'tupt id', 'tuptid', 'id number']);
+          const emailCol = findColumn(['tup email', 'email (tup)', 'tupemail']);
+          const courseCol = findColumn(['course']);
+          const jobTitleCol = findColumn(['position', 'job title', 'title']);
+          const companyCol = findColumn(['company', 'organization']);
+          const startDateCol = findColumn(['start work date', 'start date']);
+          const endDateCol = findColumn(['end work date', 'end date']);
+          
           const result = [];
           
           // Skip header row (index 0)
@@ -79,21 +105,47 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
             const row = jsonData[i];
             if (!row || row.length < 2) continue;
             
-            // Based on your Google Forms structure:
-            // A(0): Timestamp, B(1): Name, C(2): TUPT-ID, D(3): Personal Email
-            // E(4): TUP Email, F(5): Contact, G(6): Course, H(7): Employment Status
-            // I(8): Position/Job Title, J(9): Company, K(10): Start Date, 
-            // L(11): Working Present, M(12): End Date, N(13): Type of Work Setup
+            // Helper function to parse dates from Excel
+            const parseExcelDate = (value) => {
+              if (!value) return '';
+              
+              // If it's already a valid date string
+              if (typeof value === 'string') {
+                const trimmed = value.trim();
+                // Check if it's a valid date format (MM/DD/YYYY or similar)
+                const dateRegex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+                if (dateRegex.test(trimmed)) {
+                  return trimmed;
+                }
+                return trimmed;
+              }
+              
+              // If it's an Excel serial number
+              if (typeof value === 'number') {
+                // Excel stores dates as days since 1900-01-01
+                const excelEpoch = new Date(1900, 0, 1);
+                const daysOffset = value - 2; // Excel has a leap year bug, subtract 2
+                const date = new Date(excelEpoch.getTime() + daysOffset * 24 * 60 * 60 * 1000);
+                
+                // Format as MM/DD/YYYY
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const year = date.getFullYear();
+                return `${month}/${day}/${year}`;
+              }
+              
+              return '';
+            };
             
             const userData = {
-              fullname: row[1]?.toString().trim() || '',
-              tuptId: row[2]?.toString().trim() || '',
-              email: row[4]?.toString().trim() || '',
-              course: row[6]?.toString().trim() || '',
-              experienceTitle: row[8]?.toString().trim() || '',
-              experienceCompany: row[9]?.toString().trim() || '',
-              experienceStartDate: row[10]?.toString().trim() || '',
-              experienceEndDate: row[12]?.toString().trim() || ''
+              fullname: nameCol !== -1 ? row[nameCol]?.toString().trim() || '' : '',
+              tuptId: tuptIdCol !== -1 ? row[tuptIdCol]?.toString().trim() || '' : '',
+              email: emailCol !== -1 ? row[emailCol]?.toString().trim() || '' : '',
+              course: courseCol !== -1 ? row[courseCol]?.toString().trim() || '' : '',
+              experienceTitle: jobTitleCol !== -1 ? row[jobTitleCol]?.toString().trim() || '' : '',
+              experienceCompany: companyCol !== -1 ? row[companyCol]?.toString().trim() || '' : '',
+              experienceStartDate: startDateCol !== -1 ? parseExcelDate(row[startDateCol]) : '',
+              experienceEndDate: endDateCol !== -1 ? parseExcelDate(row[endDateCol]) : ''
             };
             
             // Only add if we have at least name, tuptId, and email
@@ -503,26 +555,21 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
             <h3 className="text-xl font-semibold mb-4">Import Users from CSV/XLSX</h3>
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-3">
-                Upload a CSV or XLSX file exported from Google Forms with the following columns:
+                Upload a CSV or XLSX file exported from Google Forms. The system will automatically detect columns by their headers:
               </p>
               <ul className="text-xs text-gray-500 space-y-1 mb-4">
-                <li><strong>Column A:</strong> Timestamp</li>
-                <li><strong>Column B:</strong> Name (Full Name) ✓</li>
-                <li><strong>Column C:</strong> TUPT-ID Number ✓</li>
-                <li><strong>Column D:</strong> Personal Email</li>
-                <li><strong>Column E:</strong> TUP Email ✓</li>
-                <li><strong>Column F:</strong> Contact Number</li>
-                <li><strong>Column G:</strong> Course ✓</li>
-                <li><strong>Column H:</strong> Employment Status</li>
-                <li><strong>Column I:</strong> Position/Job Title</li>
-                <li><strong>Column J:</strong> Company/Organization Name</li>
-                <li><strong>Column K:</strong> Start Work Date</li>
-                <li><strong>Column L:</strong> Working Present</li>
-                <li><strong>Column M:</strong> End Work Date</li>
+                <li><strong>Name / Full Name:</strong> Required ✓</li>
+                <li><strong>TUPT-ID / ID Number:</strong> Required ✓</li>
+                <li><strong>TUP Email:</strong> Required ✓</li>
+                <li><strong>Course:</strong> Optional</li>
+                <li><strong>Position / Job Title:</strong> Optional</li>
+                <li><strong>Company / Organization:</strong> Optional</li>
+                <li><strong>Start Work Date / Start Date:</strong> Optional</li>
+                <li><strong>End Work Date / End Date:</strong> Optional</li>
               </ul>
               <p className="text-xs text-gray-500 mb-3">
                 <strong>Note:</strong> Username will be auto-generated (first letters + last name). 
-                Password will be set to the last name.
+                Password will be set to the last name. Dates will be automatically parsed from Excel format.
               </p>
               <input
                 type="file"
