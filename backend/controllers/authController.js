@@ -283,3 +283,32 @@ export const getSocketToken = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 }
+
+export const verifyPassword = async (req, res) => {
+    try {
+        const { password } = req.body;
+        
+        if (!password) {
+            return res.status(400).json({ message: "Password is required" });
+        }
+
+        // Get the authenticated user's full data including password
+        const user = await User.findById(req.user._id);
+        
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Verify the password
+        const isMatch = await bcrypt.compare(password, user.password);
+        
+        if (!isMatch) {
+            return res.status(401).json({ message: "Invalid password" });
+        }
+
+        res.json({ message: "Password verified successfully" });
+    } catch (error) {
+        console.log("Error in verifyPassword:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};

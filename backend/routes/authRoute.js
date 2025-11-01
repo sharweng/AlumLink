@@ -1,5 +1,5 @@
 import express from "express";
-import { signup, login, logout, getCurrentUser, getSocketToken, verifySignupCode, requestPasswordReset, verifyResetCode, resetPassword } from "../controllers/authController.js";
+import { signup, login, logout, getCurrentUser, getSocketToken, verifySignupCode, requestPasswordReset, verifyResetCode, resetPassword, verifyPassword } from "../controllers/authController.js";
 import { protectRoute } from "../middleware/authMiddleware.js";
 
 const router = express.Router()
@@ -16,5 +16,6 @@ router.post("/reset-password", resetPassword)
 
 router.get("/me", protectRoute, getCurrentUser)
 router.get("/socket-token", protectRoute, getSocketToken)
+router.post("/verify-password", protectRoute, verifyPassword)
 
 export default router

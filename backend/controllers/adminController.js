@@ -447,3 +447,32 @@ export const importUsers = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+// Delete a user (superAdmin only)
+export const deleteUser = async (req, res) => {
+    try {
+        if (req.user.permission !== 'superAdmin') {
+            return res.status(403).json({ message: "Access denied. Super admins only." });
+        }
+
+        const { userId } = req.params;
+
+        // Prevent super admin from deleting themselves
+        if (userId === req.user._id.toString()) {
+            return res.status(400).json({ message: "You cannot delete yourself." });
+        }
+
+        const user = await User.findByIdAndDelete(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json({ 
+            message: `User ${user.name} deleted successfully`
+        });
+    } catch (error) {
+        console.log("Error in deleteUser adminController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};

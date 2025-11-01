@@ -10,7 +10,8 @@ import {
     unbanUser,
     getAllPostsAdmin,
     getAllJobsAdmin,
-    importUsers
+    importUsers,
+    deleteUser
 } from "../controllers/adminController.js";
 import { getModerationLogs } from "../controllers/moderationController.js";
 import { deleteModerationLog, deleteAllModerationLogs } from "../controllers/moderationController.js";
@@ -27,6 +28,7 @@ router.put("/users/:userId/permission", protectRoute, updateUserPermission);
 router.put("/users/:userId/toggle-status", protectRoute, toggleUserStatus);
 router.put("/users/:userId/ban", protectRoute, banUser);
 router.put("/users/:userId/unban", protectRoute, unbanUser);
+router.delete("/users/:userId", protectRoute, deleteUser);
 router.get('/moderation-logs', protectRoute, getModerationLogs);
 router.delete('/moderation-logs/:id', protectRoute, deleteModerationLog);
 router.delete('/moderation-logs', protectRoute, deleteAllModerationLogs);

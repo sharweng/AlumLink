@@ -11,6 +11,13 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState(new Set());
+  const [processingBulkAction, setProcessingBulkAction] = useState(false);
+  const [showBanModal, setShowBanModal] = useState(false);
+  const [showUnbanModal, setShowUnbanModal] = useState(false);
+  const [showToggleStatusModal, setShowToggleStatusModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -163,6 +170,166 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
     }
   };
 
+  const toggleSelectUser = (userId) => {
+    const newSelected = new Set(selectedUsers);
+    if (newSelected.has(userId)) {
+      newSelected.delete(userId);
+    } else {
+      newSelected.add(userId);
+    }
+    setSelectedUsers(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    const selectableUsers = filteredUsers.filter(
+      user => user._id !== authUser._id && !(user.permission === 'superAdmin' && authUser?.permission !== 'superAdmin')
+    );
+    
+    if (selectedUsers.size > 0) {
+      // If any users are selected, deselect all
+      setSelectedUsers(new Set());
+    } else {
+      // If none are selected, select all selectable users
+      const allIds = selectableUsers.map(user => user._id);
+      setSelectedUsers(new Set(allIds));
+    }
+  };
+
+  const handleBulkBan = async () => {
+    if (selectedUsers.size === 0) return;
+
+    setProcessingBulkAction(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const userId of selectedUsers) {
+      try {
+        await axiosInstance.put(`/admin/users/${userId}/ban`, { reason: "Bulk ban action" });
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to ban user ${userId}:`, error);
+        errorCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`Successfully banned ${successCount} user(s)`);
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to ban ${errorCount} user(s)`);
+    }
+
+    queryClient.invalidateQueries(["adminUsers"]);
+    setSelectedUsers(new Set());
+    setProcessingBulkAction(false);
+    setShowBanModal(false);
+  };
+
+  const handleBulkUnban = async () => {
+    if (selectedUsers.size === 0) return;
+
+    setProcessingBulkAction(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const userId of selectedUsers) {
+      try {
+        await axiosInstance.put(`/admin/users/${userId}/unban`);
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to unban user ${userId}:`, error);
+        errorCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`Successfully unbanned ${successCount} user(s)`);
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to unban ${errorCount} user(s)`);
+    }
+
+    queryClient.invalidateQueries(["adminUsers"]);
+    setSelectedUsers(new Set());
+    setProcessingBulkAction(false);
+    setShowUnbanModal(false);
+  };
+
+  const handleBulkToggleStatus = async () => {
+    if (selectedUsers.size === 0) return;
+
+    setProcessingBulkAction(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const userId of selectedUsers) {
+      try {
+        await axiosInstance.put(`/admin/users/${userId}/toggle-status`);
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to toggle status for user ${userId}:`, error);
+        errorCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`Successfully toggled status for ${successCount} user(s)`);
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to toggle status for ${errorCount} user(s)`);
+    }
+
+    queryClient.invalidateQueries(["adminUsers"]);
+    setSelectedUsers(new Set());
+    setProcessingBulkAction(false);
+    setShowToggleStatusModal(false);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedUsers.size === 0) return;
+    
+    if (!deletePassword) {
+      toast.error("Please enter your password to confirm deletion");
+      return;
+    }
+
+    setProcessingBulkAction(true);
+    
+    try {
+      // Verify password first
+      await axiosInstance.post('/auth/verify-password', { password: deletePassword });
+      
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const userId of selectedUsers) {
+        try {
+          await axiosInstance.delete(`/admin/users/${userId}`);
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to delete user ${userId}:`, error);
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Successfully deleted ${successCount} user(s)`);
+      }
+      if (errorCount > 0) {
+        toast.error(`Failed to delete ${errorCount} user(s)`);
+      }
+
+      queryClient.invalidateQueries(["adminUsers"]);
+      setSelectedUsers(new Set());
+      setShowDeleteModal(false);
+      setDeletePassword("");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Invalid password. Deletion cancelled.");
+    } finally {
+      setProcessingBulkAction(false);
+    }
+  };
+
 
 
   // prepare sortedUsers: super-admins, admins, then users; each group newest-first
@@ -181,8 +348,154 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
       })
     : [];
 
+  const filteredUsers = sortedUsers.filter(user => {
+    const q = userSearch?.toLowerCase() || "";
+    return (
+      user.name.toLowerCase().includes(q) ||
+      user.username.toLowerCase().includes(q) ||
+      user.email.toLowerCase().includes(q) ||
+      user.tuptId?.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <>
+      {/* Ban Confirmation Modal */}
+      {showBanModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-semibold mb-4">Ban Users</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to ban <strong>{selectedUsers.size}</strong> user(s)?
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowBanModal(false)}
+                disabled={processingBulkAction}
+                className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkBan}
+                disabled={processingBulkAction}
+                className="px-4 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-700 disabled:opacity-50"
+              >
+                {processingBulkAction ? "Banning..." : "Ban Users"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unban Confirmation Modal */}
+      {showUnbanModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-semibold mb-4">Unban Users</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to unban <strong>{selectedUsers.size}</strong> user(s)?
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowUnbanModal(false)}
+                disabled={processingBulkAction}
+                className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkUnban}
+                disabled={processingBulkAction}
+                className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+              >
+                {processingBulkAction ? "Unbanning..." : "Unban Users"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle Status Confirmation Modal */}
+      {showToggleStatusModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-semibold mb-4">Toggle User Status</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to toggle the status (activate/deactivate) for <strong>{selectedUsers.size}</strong> user(s)?
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowToggleStatusModal(false)}
+                disabled={processingBulkAction}
+                className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkToggleStatus}
+                disabled={processingBulkAction}
+                className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {processingBulkAction ? "Processing..." : "Toggle Status"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal with Password */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-semibold mb-4 text-red-600">⚠️ Delete Users</h3>
+            <div className="mb-6">
+              <p className="text-gray-600 mb-2">
+                You are about to <strong className="text-red-600">permanently delete {selectedUsers.size} user(s)</strong> and all their data.
+              </p>
+              <p className="text-sm text-red-600 font-semibold mb-4">
+                This action cannot be undone!
+              </p>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Enter your password to confirm:
+              </label>
+              <input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Your password"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                disabled={processingBulkAction}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && deletePassword) {
+                    handleBulkDelete();
+                  }
+                }}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeletePassword("");
+                }}
+                disabled={processingBulkAction}
+                className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={processingBulkAction || !deletePassword}
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {processingBulkAction ? "Deleting..." : "Delete Users"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Import Modal */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -251,6 +564,51 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
         <div className="px-6 py-4 border-b flex items-center justify-between">
           <h2 className="text-xl font-semibold">All Users</h2>
           <div className="flex items-center gap-2">
+            {selectedUsers.size > 0 && (
+              <>
+                <span className="text-sm text-gray-600 mr-2">
+                  {selectedUsers.size} selected
+                </span>
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded bg-yellow-100 hover:bg-yellow-200 border border-yellow-300 text-yellow-700 text-sm disabled:opacity-50"
+                  onClick={() => setShowBanModal(true)}
+                  disabled={processingBulkAction}
+                  title="Ban selected users"
+                >
+                  Ban
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded bg-green-100 hover:bg-green-200 border border-green-300 text-green-700 text-sm disabled:opacity-50"
+                  onClick={() => setShowUnbanModal(true)}
+                  disabled={processingBulkAction}
+                  title="Unban selected users"
+                >
+                  Unban
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded bg-blue-100 hover:bg-blue-200 border border-blue-300 text-blue-700 text-sm disabled:opacity-50"
+                  onClick={() => setShowToggleStatusModal(true)}
+                  disabled={processingBulkAction}
+                  title="Toggle active/inactive status"
+                >
+                  Toggle Status
+                </button>
+                {authUser?.permission === 'superAdmin' && (
+                  <button
+                    type="button"
+                    className="px-3 py-1 rounded bg-red-100 hover:bg-red-200 border border-red-300 text-red-700 text-sm font-semibold disabled:opacity-50"
+                    onClick={() => setShowDeleteModal(true)}
+                    disabled={processingBulkAction}
+                    title="Permanently delete selected users"
+                  >
+                    Delete
+                  </button>
+                )}
+              </>
+            )}
             <input
               type="search"
               placeholder="Search users"
@@ -281,6 +639,18 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-4 py-3 text-left w-12">
+                  <input
+                    type="checkbox"
+                    checked={
+                      filteredUsers.filter(u => u._id !== authUser._id && !(u.permission === 'superAdmin' && authUser?.permission !== 'superAdmin')).length > 0 &&
+                      selectedUsers.size === filteredUsers.filter(u => u._id !== authUser._id && !(u.permission === 'superAdmin' && authUser?.permission !== 'superAdmin')).length
+                    }
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 cursor-pointer"
+                    title="Select all"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
                   User
                 </th>
@@ -302,16 +672,18 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {sortedUsers.filter(user => {
-                const q = userSearch?.toLowerCase() || "";
-                return (
-                  user.name.toLowerCase().includes(q) ||
-                  user.username.toLowerCase().includes(q) ||
-                  user.email.toLowerCase().includes(q) ||
-                  user.tuptId?.toLowerCase().includes(q)
-                );
-              }).map((user) => (
+              {filteredUsers.map((user) => (
                 <tr key={user._id} className="hover:bg-gray-50">
+                  <td className="px-4 py-4 w-12">
+                    {user._id !== authUser._id && !(user.permission === 'superAdmin' && authUser?.permission !== 'superAdmin') && (
+                      <input
+                        type="checkbox"
+                        checked={selectedUsers.has(user._id)}
+                        onChange={() => toggleSelectUser(user._id)}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                    )}
+                  </td>
                   <td className="px-6 py-4 w-1/4">
                     <div className="flex items-center group" title={`${user.name} — ${user.email}`}>
                       <a href={`/profile/${user.username}`} className="block">
@@ -330,12 +702,6 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
                           title={`@${user.username}`}
                         >
                           @{user.username}
-                        </div>
-                        <div className="absolute left-0 top-full mt-2 hidden group-hover:block z-10">
-                          <div className="bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-normal" title={`${user.name} — ${user.email}`}>
-                            <div className="font-semibold text-sm">{user.name}</div>
-                            <div className="text-[11px] opacity-90">{user.email}</div>
-                          </div>
                         </div>
                       </div>
                     </div>
