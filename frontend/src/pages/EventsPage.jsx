@@ -31,7 +31,7 @@ const EventsPage = () => {
       try {
         const params = new URLSearchParams();
         if (selectedType !== 'All') params.append('type', selectedType);
-        if (selectedStatus) params.append('status', selectedStatus);
+        if (selectedStatus && selectedStatus !== 'all') params.append('status', selectedStatus);
         if (searchTerm) params.append('search', searchTerm);
         if (sortBy) params.append('sort', sortBy);
 
@@ -138,29 +138,33 @@ const EventsPage = () => {
             <div className="col-span-full text-center py-8">
               <Loader className="animate-spin h-12 w-12 text-primary mx-auto" />
             </div>
-          ) : events && events.length > 0 ? (
-            events.filter(e => !e.organizer?.banned).map((event) => (
-              <EventPost key={event._id} event={event} />
-            ))
-          ) : (
-            <div className="col-span-full bg-white rounded-lg shadow p-8 text-center">
-              <Calendar size={64} className="mx-auto text-gray-400 mb-4" />
-              <h2 className="text-2xl font-bold mb-2">No Events Found</h2>
-              <p className="text-gray-600 mb-6">
-                {searchTerm || selectedType !== 'All'
-                  ? 'Try adjusting your filters or search terms'
-                  : 'Be the first to create an event!'}
-              </p>
-              {!showCreateForm && (
-                <button
-                  onClick={() => setShowCreateForm(true)}
-                  className="btn btn-primary"
-                >
-                  Create Event
-                </button>
-              )}
-            </div>
-          )}
+          ) : (() => {
+            const filteredEvents = events?.filter(e => e.organizer && !e.organizer?.banned) || [];
+            
+            return filteredEvents.length > 0 ? (
+              filteredEvents.map((event) => (
+                <EventPost key={event._id} event={event} />
+              ))
+            ) : (
+              <div className="col-span-full bg-white rounded-lg shadow p-8 text-center">
+                <Calendar size={64} className="mx-auto text-gray-400 mb-4" />
+                <h2 className="text-2xl font-bold mb-2">No Events Found</h2>
+                <p className="text-gray-600 mb-6">
+                  {searchTerm || selectedType !== 'All'
+                    ? 'Try adjusting your filters or search terms'
+                    : 'Be the first to create an event!'}
+                </p>
+                {!showCreateForm && (
+                  <button
+                    onClick={() => setShowCreateForm(true)}
+                    className="btn btn-primary"
+                  >
+                    Create Event
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

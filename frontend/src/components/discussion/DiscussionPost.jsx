@@ -87,6 +87,11 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
   const [moderationReply, setModerationReply] = useState(null); // { commentId, replyId }
   const [banReplyReason, setBanReplyReason] = useState('');
 
+  // Handle missing author
+  if (!discussion.author) {
+    return null;
+  }
+
   const isOwner = authUser?._id === discussion.author._id;
   const isLiked = discussion.likes?.includes(authUser?._id);
 

@@ -53,8 +53,8 @@ const JobBoardPage = () => {
     }
   });
   
-  // Filter out job posts by banned authors
-  const jobPosts = jobPostsData?.jobPosts?.filter(j => !j.author?.banned) || [];
+  // Filter out job posts by banned authors or missing authors
+  const jobPosts = jobPostsData?.jobPosts?.filter(j => j.author && !j.author?.banned) || [];
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));

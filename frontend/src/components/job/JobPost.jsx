@@ -34,6 +34,11 @@ const JobPost = ({ jobPost, isDetailPage = false }) => {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   
+  // Handle missing author
+  if (!jobPost.author) {
+    return null;
+  }
+  
   const isOwner = authUser._id === jobPost.author._id;
   const hasApplied = jobPost.applicants?.some(applicant => {
     const applicantUserId = typeof applicant.user === 'object' ? applicant.user._id : applicant.user;

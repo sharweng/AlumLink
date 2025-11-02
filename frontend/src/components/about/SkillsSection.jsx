@@ -31,21 +31,28 @@ const SkillsSection = ({ userData, isOwnProfile, onSave }) => {
   return (
     <div className='bg-white shadow rounded-lg p-6'>
 			<h2 className='text-xl font-semibold mb-4'>Skills</h2>
-			<div className='flex flex-wrap'>
-				{skills.map((skill, index) => (
-					<span
-						key={index}
-						className='bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm mr-2 mb-2 flex items-center'
-					>
-						{skill}
-						{isEditing && (
-							<button onClick={() => handleDeleteSkill(skill)} className='ml-2 text-red-500'>
-								<X size={14} />
-							</button>
-						)}
-					</span>
-				))}
-			</div>
+			
+			{skills.length === 0 && !isEditing && (
+				<p className='text-gray-500 text-center py-4'>No skills added yet.</p>
+			)}
+			
+			{skills.length > 0 && (
+				<div className='flex flex-wrap'>
+					{skills.map((skill, index) => (
+						<span
+							key={index}
+							className='bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm mr-2 mb-2 flex items-center'
+						>
+							{skill}
+							{isEditing && (
+								<button onClick={() => handleDeleteSkill(skill)} className='ml-2 text-red-500'>
+									<X size={14} />
+								</button>
+							)}
+						</span>
+					))}
+				</div>
+			)}
 
 			{isEditing && (
 				<div className='mt-4 flex'>

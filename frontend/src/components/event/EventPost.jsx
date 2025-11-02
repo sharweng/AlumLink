@@ -31,6 +31,12 @@ const EventPost = ({ event }) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const authUser = queryClient.getQueryData(["authUser"]);
+  
+  // Handle missing organizer
+  if (!event.organizer) {
+    return null;
+  }
+  
   const isOrganizer = authUser?._id === event.organizer._id;
   const isAdmin = authUser?.permission === 'admin' || authUser?.permission === 'superAdmin';
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);

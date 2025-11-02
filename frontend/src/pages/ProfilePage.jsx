@@ -227,27 +227,13 @@ const ProfilePage = () => {
                       <AboutSection userData={ userDataFinal } isOwnProfile={ isOwnProfile } onSave={ handleSave } />
                     )}
                     {profileSubTab === 'experience' && (
-                      userDataFinal.experience && userDataFinal.experience.length > 0 ? (
-                        <ExperienceSection userData={ userDataFinal } isOwnProfile={ isOwnProfile } onSave={ handleSave } />
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
-                          <XCircle className="h-12 w-12 text-gray-400 mb-3" />
-                          <span className="text-xl font-semibold text-gray-500">No Experience Listed</span>
-                        </div>
-                      )
+                      <ExperienceSection userData={ userDataFinal } isOwnProfile={ isOwnProfile } onSave={ handleSave } />
                     )}
                     {profileSubTab === 'academic' && (
                       <BatchCourseSection userData={ userDataFinal } />
                     )}
                     {profileSubTab === 'skills' && (
-                      userDataFinal.skills && userDataFinal.skills.length > 0 ? (
-                        <SkillsSection userData={ userDataFinal } isOwnProfile={ isOwnProfile } onSave={ handleSave } />
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow">
-                          <XCircle className="h-12 w-12 text-gray-400 mb-3" />
-                          <span className="text-xl font-semibold text-gray-500">No Skills Listed</span>
-                        </div>
-                      )
+                      <SkillsSection userData={ userDataFinal } isOwnProfile={ isOwnProfile } onSave={ handleSave } />
                     )}
                     {profileSubTab === 'mentor' && isOwnProfile && (
                       <MentorSettingsSection userData={ userDataFinal } isOwnProfile={ isOwnProfile } />

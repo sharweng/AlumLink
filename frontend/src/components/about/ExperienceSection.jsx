@@ -70,7 +70,11 @@ const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
 	return (
 		<div className='bg-white shadow rounded-lg p-6 mb-6'>
 			<h2 className='text-xl font-semibold mb-4'>Experience</h2>
-			{experiences.map((exp, idx) => (
+			{experiences.length === 0 && !isEditing && (
+				<p className='text-gray-500 text-center py-4'>No experience added yet.</p>
+			)}
+			
+			{experiences.length > 0 && experiences.map((exp, idx) => (
 				<div key={exp._id || idx} className='mb-4 flex justify-between items-start'>
 					<div className='flex items-start'>
 						<Briefcase size={20} className='mr-2 mt-1' />

@@ -55,97 +55,103 @@ const DiscussionForumsPage = () => {
               className="btn btn-primary flex items-center gap-2"
             >
               <Plus size={20} />
-            New Discussion
-          </button>
-        </div>
-
-        {/* Create Discussion Form */}
-        {showCreateForm && (
-          <div className="mb-6">
-            <DiscussionCreation onClose={() => setShowCreateForm(false)} />
+              New Discussion
+            </button>
           </div>
-        )}
 
-        {/* Search and Filters */}
-        <div className="bg-white rounded-lg shadow p-4 mb-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Search discussions..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+          {/* Create Discussion Form */}
+          {showCreateForm && (
+            <div className="mb-6">
+              <DiscussionCreation onClose={() => setShowCreateForm(false)} />
             </div>
+          )}
 
-            {/* Category Filter */}
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          {/* Search and Filters */}
+          <div className="bg-white rounded-lg shadow p-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <input
+                  type="text"
+                  placeholder="Search discussions..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              {/* Category Filter */}
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary appearance-none"
+                >
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Sort */}
               <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary appearance-none"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
+                <option value="recent">Most Recent</option>
+                <option value="mostLiked">Most Liked</option>
+                <option value="oldest">Oldest</option>
               </select>
             </div>
+          </div>
 
-            {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="recent">Most Recent</option>
-              <option value="mostLiked">Most Liked</option>
-              <option value="oldest">Oldest</option>
-            </select>
+          {/* Discussions List */}
+          <div className="space-y-4">
+            {isLoading ? (
+              <div className="text-center py-8">
+                <Loader className="animate-spin h-12 w-12 text-primary mx-auto" />
+              </div>
+            ) : (() => {
+              const filteredDiscussions = discussions?.filter(d => {
+                // Filter out discussions with missing authors
+                if (!d.author) return false;
+                // hide banned discussions from regular users
+                if (d.banned || d.author?.banned) {
+                  return authUser?.permission === 'admin' || authUser?.permission === 'superAdmin' || authUser?._id === d.author?._id
+                }
+                return true
+              }) || [];
+              
+              return filteredDiscussions.length > 0 ? (
+                filteredDiscussions.map((discussion) => (
+                  <DiscussionPost key={discussion._id} discussion={discussion} />
+                ))
+              ) : (
+                <div className="bg-white rounded-lg shadow p-8 text-center">
+                  <MessageSquare size={64} className="mx-auto text-gray-400 mb-4" />
+                  <h2 className="text-2xl font-bold mb-2">No Discussions Found</h2>
+                  <p className="text-gray-600 mb-6">
+                    {searchTerm || selectedCategory !== 'All'
+                      ? 'Try adjusting your filters or search terms'
+                      : 'Be the first to start a discussion!'}
+                  </p>
+                  {!showCreateForm && (
+                    <button
+                      onClick={() => setShowCreateForm(true)}
+                      className="btn btn-primary"
+                    >
+                      Create Discussion
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
           </div>
-        </div>
-      </div>
-
-      {/* Discussions List */}
-      <div className="space-y-4">
-        {isLoading ? (
-          <div className="text-center py-8">
-            <Loader className="animate-spin h-12 w-12 text-primary mx-auto" />
-          </div>
-        ) : discussions && discussions.length > 0 ? (
-          discussions?.filter(d => {
-            // hide banned discussions from regular users
-            if (d.banned || d.author?.banned) {
-              return authUser?.permission === 'admin' || authUser?.permission === 'superAdmin' || authUser?._id === d.author?._id
-            }
-            return true
-          }).map((discussion) => (
-            <DiscussionPost key={discussion._id} discussion={discussion} />
-          ))
-        ) : (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <MessageSquare size={64} className="mx-auto text-gray-400 mb-4" />
-            <h2 className="text-2xl font-bold mb-2">No Discussions Found</h2>
-            <p className="text-gray-600 mb-6">
-              {searchTerm || selectedCategory !== 'All'
-                ? 'Try adjusting your filters or search terms'
-                : 'Be the first to start a discussion!'}
-            </p>
-            {!showCreateForm && (
-              <button
-                onClick={() => setShowCreateForm(true)}
-                className="btn btn-primary"
-              >
-                Create Discussion
-              </button>
-            )}
-          </div>
-        )}
         </div>
       </div>
     </div>
