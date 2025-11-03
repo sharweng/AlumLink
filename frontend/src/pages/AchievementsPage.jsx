@@ -45,7 +45,21 @@ const AchievementsPage = () => {
   const isLoading = loadingPosts || loadingDiscussions || loadingJobs || loadingEvents;
 
   const renderFullList = (users, title, icon, color = 'text-gray-700', scrollable = false) => {
-    if (!users || users.length === 0) return null;
+    if (!users || users.length === 0) {
+      return (
+        <div className='mb-3'>
+          <div className='flex items-center mb-2'>
+            <div className={`p-1.5 rounded-full mr-2 bg-gray-100`}>
+              {icon}
+            </div>
+            <h3 className='text-sm font-semibold text-gray-800'>{title}</h3>
+          </div>
+          <div className='bg-white rounded-md border border-gray-200 overflow-hidden shadow-sm p-4 text-center'>
+            <p className='text-sm text-gray-500'>No achievements yet</p>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className='mb-3'>
@@ -155,9 +169,18 @@ const AchievementsPage = () => {
                       <h2 className='text-lg font-bold text-gray-900'>Post Achievements</h2>
                     </div>
                     <div className='space-y-3'>
-                      {renderFullList(postsData?.topPosters?.slice(0,3), 'Top Posters', <TrendingUp className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
-                      {renderFullList(postsData?.topCommenters?.slice(0,3), 'Top Commenters', <MessageSquare className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
-                      {renderFullList(postsData?.topReactors?.slice(0,3), 'Top Reactors', <Heart className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
+                      {!postsData?.topPosters?.length && !postsData?.topCommenters?.length && !postsData?.topReactors?.length ? (
+                        <div className='text-center py-8'>
+                          <MessageSquare className='w-12 h-12 text-gray-300 mx-auto mb-2' />
+                          <p className='text-gray-500'>No post achievements yet</p>
+                        </div>
+                      ) : (
+                        <>
+                          {renderFullList(postsData?.topPosters?.slice(0,3), 'Top Posters', <TrendingUp className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
+                          {renderFullList(postsData?.topCommenters?.slice(0,3), 'Top Commenters', <MessageSquare className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
+                          {renderFullList(postsData?.topReactors?.slice(0,3), 'Top Reactors', <Heart className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -167,10 +190,19 @@ const AchievementsPage = () => {
                       <h2 className='text-lg font-bold text-gray-900'>Discussion Achievements</h2>
                     </div>
                     <div className='space-y-3'>
-                      {renderFullList(discussionsData?.topPosters?.slice(0,3), 'Top Discussion Starters', <TrendingUp className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
-                      {renderFullList(discussionsData?.topCommenters?.slice(0,3), 'Top Commenters', <MessageSquare className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
-                      {renderFullList(discussionsData?.topReactors?.slice(0,3), 'Top Reactors', <Heart className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
-                      {renderFullList(discussionsData?.mostDisliked?.slice(0,3), 'Most Disliked', <Heart className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
+                      {!discussionsData?.topPosters?.length && !discussionsData?.topCommenters?.length && !discussionsData?.topReactors?.length && !discussionsData?.mostDisliked?.length ? (
+                        <div className='text-center py-8'>
+                          <MessageSquare className='w-12 h-12 text-gray-300 mx-auto mb-2' />
+                          <p className='text-gray-500'>No discussion achievements yet</p>
+                        </div>
+                      ) : (
+                        <>
+                          {renderFullList(discussionsData?.topPosters?.slice(0,3), 'Top Discussion Starters', <TrendingUp className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
+                          {renderFullList(discussionsData?.topCommenters?.slice(0,3), 'Top Commenters', <MessageSquare className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
+                          {renderFullList(discussionsData?.topReactors?.slice(0,3), 'Top Reactors', <Heart className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
+                          {renderFullList(discussionsData?.mostDisliked?.slice(0,3), 'Most Disliked', <Heart className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -180,8 +212,17 @@ const AchievementsPage = () => {
                       <h2 className='text-lg font-bold text-gray-900'>Job Achievements</h2>
                     </div>
                     <div className='space-y-3'>
-                      {renderFullList(jobsData?.topJobPosters?.slice(0,3), 'Top Job Posters', <Briefcase className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
-                      {renderFullList(jobsData?.topApplicants?.slice(0,3), 'Top Applicants', <Users className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
+                      {!jobsData?.topJobPosters?.length && !jobsData?.topApplicants?.length ? (
+                        <div className='text-center py-8'>
+                          <Briefcase className='w-12 h-12 text-gray-300 mx-auto mb-2' />
+                          <p className='text-gray-500'>No job achievements yet</p>
+                        </div>
+                      ) : (
+                        <>
+                          {renderFullList(jobsData?.topJobPosters?.slice(0,3), 'Top Job Posters', <Briefcase className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
+                          {renderFullList(jobsData?.topApplicants?.slice(0,3), 'Top Applicants', <Users className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -191,8 +232,17 @@ const AchievementsPage = () => {
                       <h2 className='text-lg font-bold text-gray-900'>Event Achievements</h2>
                     </div>
                     <div className='space-y-3'>
-                      {renderFullList(eventsData?.topOrganizers?.slice(0,3), 'Top Organizers', <Calendar className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
-                      {renderFullList(eventsData?.topAttendees?.slice(0,3), 'Top Attendees', <Users className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
+                      {!eventsData?.topOrganizers?.length && !eventsData?.topAttendees?.length ? (
+                        <div className='text-center py-8'>
+                          <Calendar className='w-12 h-12 text-gray-300 mx-auto mb-2' />
+                          <p className='text-gray-500'>No event achievements yet</p>
+                        </div>
+                      ) : (
+                        <>
+                          {renderFullList(eventsData?.topOrganizers?.slice(0,3), 'Top Organizers', <Calendar className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
+                          {renderFullList(eventsData?.topAttendees?.slice(0,3), 'Top Attendees', <Users className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700')}
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -200,34 +250,74 @@ const AchievementsPage = () => {
                 // Multi-column tab views with per-column scroll
                 <>
                   {activeTab === 'posts' && (
-                    <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                      {renderFullList(postsData?.topPosters, 'Top Posters', <TrendingUp className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
-                      {renderFullList(postsData?.topCommenters, 'Top Commenters', <MessageSquare className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
-                      {renderFullList(postsData?.topReactors, 'Top Reactors', <Heart className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
-                    </div>
+                    <>
+                      {!postsData?.topPosters?.length && !postsData?.topCommenters?.length && !postsData?.topReactors?.length ? (
+                        <div className='col-span-full bg-white rounded-lg shadow-md p-12 text-center'>
+                          <MessageSquare className='w-16 h-16 text-gray-300 mx-auto mb-4' />
+                          <h3 className='text-xl font-semibold text-gray-700 mb-2'>No Post Achievements Yet</h3>
+                          <p className='text-gray-500'>Post achievements will appear here as users create and engage with posts.</p>
+                        </div>
+                      ) : (
+                        <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                          {renderFullList(postsData?.topPosters, 'Top Posters', <TrendingUp className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
+                          {renderFullList(postsData?.topCommenters, 'Top Commenters', <MessageSquare className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
+                          {renderFullList(postsData?.topReactors, 'Top Reactors', <Heart className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {activeTab === 'discussions' && (
-                    <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-                      {renderFullList(discussionsData?.topPosters, 'Top Discussion Starters', <TrendingUp className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
-                      {renderFullList(discussionsData?.topCommenters, 'Top Commenters', <MessageSquare className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
-                      {renderFullList(discussionsData?.topReactors, 'Top Reactors', <Heart className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
-                      {renderFullList(discussionsData?.mostDisliked, 'Most Disliked', <Heart className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
-                    </div>
+                    <>
+                      {!discussionsData?.topPosters?.length && !discussionsData?.topCommenters?.length && !discussionsData?.topReactors?.length && !discussionsData?.mostDisliked?.length ? (
+                        <div className='col-span-full bg-white rounded-lg shadow-md p-12 text-center'>
+                          <MessageSquare className='w-16 h-16 text-gray-300 mx-auto mb-4' />
+                          <h3 className='text-xl font-semibold text-gray-700 mb-2'>No Discussion Achievements Yet</h3>
+                          <p className='text-gray-500'>Discussion achievements will appear here as users participate in forums.</p>
+                        </div>
+                      ) : (
+                        <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
+                          {renderFullList(discussionsData?.topPosters, 'Top Discussion Starters', <TrendingUp className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
+                          {renderFullList(discussionsData?.topCommenters, 'Top Commenters', <MessageSquare className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
+                          {renderFullList(discussionsData?.topReactors, 'Top Reactors', <Heart className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
+                          {renderFullList(discussionsData?.mostDisliked, 'Most Disliked', <Heart className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {activeTab === 'jobs' && (
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                      {renderFullList(jobsData?.topJobPosters, 'Top Job Posters', <Briefcase className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
-                      {renderFullList(jobsData?.topApplicants, 'Top Applicants', <Users className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
-                    </div>
+                    <>
+                      {!jobsData?.topJobPosters?.length && !jobsData?.topApplicants?.length ? (
+                        <div className='col-span-full bg-white rounded-lg shadow-md p-12 text-center'>
+                          <Briefcase className='w-16 h-16 text-gray-300 mx-auto mb-4' />
+                          <h3 className='text-xl font-semibold text-gray-700 mb-2'>No Job Achievements Yet</h3>
+                          <p className='text-gray-500'>Job achievements will appear here as users post and apply for jobs.</p>
+                        </div>
+                      ) : (
+                        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                          {renderFullList(jobsData?.topJobPosters, 'Top Job Posters', <Briefcase className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
+                          {renderFullList(jobsData?.topApplicants, 'Top Applicants', <Users className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {activeTab === 'events' && (
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                      {renderFullList(eventsData?.topOrganizers, 'Top Organizers', <Calendar className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
-                      {renderFullList(eventsData?.topAttendees, 'Top Attendees', <Users className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
-                    </div>
+                    <>
+                      {!eventsData?.topOrganizers?.length && !eventsData?.topAttendees?.length ? (
+                        <div className='col-span-full bg-white rounded-lg shadow-md p-12 text-center'>
+                          <Calendar className='w-16 h-16 text-gray-300 mx-auto mb-4' />
+                          <h3 className='text-xl font-semibold text-gray-700 mb-2'>No Event Achievements Yet</h3>
+                          <p className='text-gray-500'>Event achievements will appear here as users organize and attend events.</p>
+                        </div>
+                      ) : (
+                        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                          {renderFullList(eventsData?.topOrganizers, 'Top Organizers', <Calendar className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
+                          {renderFullList(eventsData?.topAttendees, 'Top Attendees', <Users className='w-3.5 h-3.5 text-gray-700' />, 'text-gray-700', true)}
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               )}

@@ -624,53 +624,67 @@ const AdminDetails = ({ stats = {} }) => {
             <h2 className="text-xl font-bold">Users</h2>
             <span className="text-base text-gray-700">Total Users: <span className="font-bold">{users ? users.length : 0}</span></span>
           </div>
-          <div className="grid gap-3 mb-4 md:grid-cols-3 grid-cols-1">
-            {/* User by Status */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Users by Status</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={userStatusData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
-                    {userStatusData.map((entry, idx) => (
-                      <Cell key={`cell-user-status-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+          {users && users.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-12 text-center">
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">No Users Available</h3>
+                <p className="text-gray-500 max-w-md">There are currently no users in the system. User analytics and data will appear here once users are registered.</p>
+              </div>
             </div>
-            {/* User by Permission Level */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Users by Permission Level</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={userPermissionData} dataKey="count" nameKey="permission" cx="50%" cy="50%" outerRadius={70} label>
-                    {userPermissionData.map((entry, idx) => (
-                      <Cell key={`cell-user-perm-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+          ) : (
+            <div className="grid gap-3 mb-4 md:grid-cols-3 grid-cols-1">
+              {/* User by Status */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-semibold mb-2">Users by Status</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={userStatusData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
+                      {userStatusData.map((entry, idx) => (
+                        <Cell key={`cell-user-status-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* User by Permission Level */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-semibold mb-2">Users by Permission Level</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={userPermissionData} dataKey="count" nameKey="permission" cx="50%" cy="50%" outerRadius={70} label>
+                      {userPermissionData.map((entry, idx) => (
+                        <Cell key={`cell-user-perm-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* User by Role */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-semibold mb-2">Users by Role</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={userRoleData} dataKey="count" nameKey="role" cx="50%" cy="50%" outerRadius={70} label>
+                      {userRoleData.map((entry, idx) => (
+                        <Cell key={`cell-user-role-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-            {/* User by Role */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Users by Role</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={userRoleData} dataKey="count" nameKey="role" cx="50%" cy="50%" outerRadius={70} label>
-                    {userRoleData.map((entry, idx) => (
-                      <Cell key={`cell-user-role-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -681,7 +695,20 @@ const AdminDetails = ({ stats = {} }) => {
             <h2 className="text-xl font-bold">Alumni</h2>
             <span className="text-base text-gray-700">Total Alumni: <span className="font-bold">{users ? users.filter(u => u.role === 'alumni').length : 0}</span></span>
           </div>
-          <div className="grid gap-3 mb-4 md:grid-cols-2 grid-cols-1">
+          {users && users.filter(u => u.role === 'alumni').length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-12 text-center">
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">No Alumni Data Available</h3>
+                <p className="text-gray-500 max-w-md">There are currently no alumni users in the system. Alumni data and analytics will appear here once users with the alumni role are added.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-3 mb-4 md:grid-cols-2 grid-cols-1">
             {/* Alumni by Work Experience */}
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between mb-2">
@@ -734,6 +761,7 @@ const AdminDetails = ({ stats = {} }) => {
               </ResponsiveContainer>
             </div>
           </div>
+          )}
         </div>
       )}
 
@@ -744,23 +772,37 @@ const AdminDetails = ({ stats = {} }) => {
             <h2 className="text-xl font-bold">Feedback</h2>
             <span className="text-base text-gray-700">Total Feedback: <span className="font-bold">{feedbacks ? feedbacks.length : 0}</span></span>
           </div>
-          <div className="grid gap-3 mb-4 md:grid-cols-1 grid-cols-1">
-            {/* Feedback Seen/Unseen */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Feedback Seen vs Unseen</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={feedbackStatusData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
-                    {feedbackStatusData.map((entry, idx) => (
-                      <Cell key={`cell-feedback-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+          {feedbacks && feedbacks.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-12 text-center">
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">No Feedback Submitted</h3>
+                <p className="text-gray-500 max-w-md">There is currently no feedback from users. Feedback data and analytics will appear here once users submit their feedback.</p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="grid gap-3 mb-4 md:grid-cols-1 grid-cols-1">
+              {/* Feedback Seen/Unseen */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-semibold mb-2">Feedback Seen vs Unseen</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={feedbackStatusData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
+                      {feedbackStatusData.map((entry, idx) => (
+                        <Cell key={`cell-feedback-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -771,38 +813,52 @@ const AdminDetails = ({ stats = {} }) => {
             <h2 className="text-xl font-bold">Reports</h2>
             <span className="text-base text-gray-700">Total Reports: <span className="font-bold">{reports ? reports.length : 0}</span></span>
           </div>
-          <div className="grid gap-3 mb-4 md:grid-cols-2 grid-cols-1">
-            {/* Reports by Type */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Reports by Type</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={reportsByTypeData} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={70} label>
-                    {reportsByTypeData.map((entry, idx) => (
-                      <Cell key={`cell-reports-type-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+          {reports && reports.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-12 text-center">
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">No Reports Submitted</h3>
+                <p className="text-gray-500 max-w-md">There are currently no user reports. Report data and analytics will appear here once users submit reports about content or users.</p>
+              </div>
             </div>
-            {/* Reports by Seen/Unseen */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Reports Seen vs Unseen</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={reportsByStatusData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
-                    {reportsByStatusData.map((entry, idx) => (
-                      <Cell key={`cell-reports-status-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+          ) : (
+            <div className="grid gap-3 mb-4 md:grid-cols-2 grid-cols-1">
+              {/* Reports by Type */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-semibold mb-2">Reports by Type</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={reportsByTypeData} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={70} label>
+                      {reportsByTypeData.map((entry, idx) => (
+                        <Cell key={`cell-reports-type-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Reports by Seen/Unseen */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-semibold mb-2">Reports Seen vs Unseen</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={reportsByStatusData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
+                      {reportsByStatusData.map((entry, idx) => (
+                        <Cell key={`cell-reports-status-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -813,58 +869,72 @@ const AdminDetails = ({ stats = {} }) => {
             <h2 className="text-xl font-bold">Moderation Logs</h2>
             <span className="text-base text-gray-700">Total Logs: <span className="font-bold">{moderationLogs ? moderationLogs.length : 0}</span></span>
           </div>
-          <div className="grid gap-3 mb-4 md:grid-cols-3 grid-cols-1">
-            {/* Moderation Logs by Target */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Moderation Logs by Target</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={moderationTargetData} dataKey="count" nameKey="target" cx="50%" cy="50%" outerRadius={70} label>
-                    {moderationTargetData.map((entry, idx) => (
-                      <Cell key={`cell-mod-target-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            {/* Ban and Unban Actions */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Ban and Unban Actions</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={moderationActionData} dataKey="count" nameKey="action" cx="50%" cy="50%" outerRadius={70} label>
-                    {moderationActionData.map((entry, idx) => (
-                      <Cell key={`cell-mod-action-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            {/* Ban and Unbans Over Time */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold">Ban and Unban Actions / {moderationTimeMode === "month" ? "Month" : "Week"}</h3>
-                <div className="space-x-1">
-                  <button className={`px-2 py-1 rounded text-xs ${moderationTimeMode === "month" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setModerationTimeMode("month")}>Month</button>
-                  <button className={`px-2 py-1 rounded text-xs ${moderationTimeMode === "week" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setModerationTimeMode("week")}>Week</button>
+          {moderationLogs && moderationLogs.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-12 text-center">
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
                 </div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">No Moderation Logs</h3>
+                <p className="text-gray-500 max-w-md">There are currently no moderation actions recorded. Logs of ban and unban actions will appear here once moderation activities occur.</p>
               </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={moderationTimeData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="period" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="bans" fill="#f59e42" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="unbans" fill="#10b981" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
             </div>
-          </div>
+          ) : (
+            <div className="grid gap-3 mb-4 md:grid-cols-3 grid-cols-1">
+              {/* Moderation Logs by Target */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-semibold mb-2">Moderation Logs by Target</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={moderationTargetData} dataKey="count" nameKey="target" cx="50%" cy="50%" outerRadius={70} label>
+                      {moderationTargetData.map((entry, idx) => (
+                        <Cell key={`cell-mod-target-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Ban and Unban Actions */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-semibold mb-2">Ban and Unban Actions</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={moderationActionData} dataKey="count" nameKey="action" cx="50%" cy="50%" outerRadius={70} label>
+                      {moderationActionData.map((entry, idx) => (
+                        <Cell key={`cell-mod-action-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Ban and Unbans Over Time */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold">Ban and Unban Actions / {moderationTimeMode === "month" ? "Month" : "Week"}</h3>
+                  <div className="space-x-1">
+                    <button className={`px-2 py-1 rounded text-xs ${moderationTimeMode === "month" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setModerationTimeMode("month")}>Month</button>
+                    <button className={`px-2 py-1 rounded text-xs ${moderationTimeMode === "week" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setModerationTimeMode("week")}>Week</button>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={moderationTimeData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="period" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="bans" fill="#f59e42" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="unbans" fill="#10b981" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -875,43 +945,57 @@ const AdminDetails = ({ stats = {} }) => {
             <h2 className="text-xl font-bold">Posts</h2>
             <span className="text-base text-gray-700">Total Posts: <span className="font-bold">{posts ? posts.length : 0}</span></span>
           </div>
-          <div className="grid gap-3 mb-4 md:grid-cols-2 grid-cols-1">
-            {/* Active/Banned Pie */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Active vs Banned Posts</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={postStatusData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
-                    {postStatusData.map((entry, idx) => (
-                      <Cell key={`cell-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            {/* New Posts Over Time */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold">New Posts / {postTimeMode === "month" ? "Month" : "Week"}</h3>
-                <div className="space-x-1">
-                  <button className={`px-2 py-1 rounded text-xs ${postTimeMode === "month" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setPostTimeMode("month")}>Month</button>
-                  <button className={`px-2 py-1 rounded text-xs ${postTimeMode === "week" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setPostTimeMode("week")}>Week</button>
+          {posts && posts.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-12 text-center">
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                  </svg>
                 </div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">No Posts Available</h3>
+                <p className="text-gray-500 max-w-md">There are currently no posts in the system. Post analytics and data will appear here once users start creating posts.</p>
               </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={postTimeData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="period" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="posts" fill="#6366f1" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
             </div>
-            {/* Add more post graphs here for 2x2 layout if needed */}
-          </div>
+          ) : (
+            <div className="grid gap-3 mb-4 md:grid-cols-2 grid-cols-1">
+              {/* Active/Banned Pie */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-semibold mb-2">Active vs Banned Posts</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={postStatusData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
+                      {postStatusData.map((entry, idx) => (
+                        <Cell key={`cell-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* New Posts Over Time */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold">New Posts / {postTimeMode === "month" ? "Month" : "Week"}</h3>
+                  <div className="space-x-1">
+                    <button className={`px-2 py-1 rounded text-xs ${postTimeMode === "month" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setPostTimeMode("month")}>Month</button>
+                    <button className={`px-2 py-1 rounded text-xs ${postTimeMode === "week" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setPostTimeMode("week")}>Week</button>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={postTimeData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="period" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="posts" fill="#6366f1" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Add more post graphs here for 2x2 layout if needed */}
+            </div>
+          )}
         </div>
       )}
 
@@ -922,73 +1006,85 @@ const AdminDetails = ({ stats = {} }) => {
             <h2 className="text-xl font-bold">Job Posts</h2>
             <span className="text-base text-gray-700">Total Job Posts: <span className="font-bold">{jobs ? jobs.length : 0}</span></span>
           </div>
-  <div className="grid gap-3 mb-4 md:grid-cols-2 grid-cols-1">
-            {/* Job by Type Pie */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Job Posts by Type</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={jobTypeData} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={70} label>
-                    {jobTypeData.map((entry, idx) => (
-                      <Cell key={`cell-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            {/* Job by Worktype Pie */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Job Posts by Worktype</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={jobWorkTypeData} dataKey="count" nameKey="worktype" cx="50%" cy="50%" outerRadius={70} label>
-                    {jobWorkTypeData.map((entry, idx) => (
-                      <Cell key={`cell-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            {/* Job by Status Pie */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Active vs Banned Job Posts</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={jobStatusData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
-                    {jobStatusData.map((entry, idx) => (
-                      <Cell key={`cell-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold">New Job Posts / {jobTimeMode === "month" ? "Month" : "Week"}</h3>
-                  <div className="space-x-1">
-                  <button className={`px-2 py-1 rounded text-xs ${jobTimeMode === "month" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setJobTimeMode("month")}>Month</button>
-                  <button className={`px-2 py-1 rounded text-xs ${jobTimeMode === "week" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setJobTimeMode("week")}>Week</button>
-                  </div>
+          {jobs && jobs.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-12 text-center">
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">No Job Posts Available</h3>
+                <p className="text-gray-500 max-w-md">There are currently no job posts in the system. Job analytics and data will appear here once users start posting job opportunities.</p>
               </div>
-              <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={jobTimeData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="period" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="jobs" fill="#f59e42" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-              </ResponsiveContainer>
             </div>
-          </div>
-          
-          
+          ) : (
+            <div className="grid gap-3 mb-4 md:grid-cols-2 grid-cols-1">
+              {/* Job by Type Pie */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-semibold mb-2">Job Posts by Type</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={jobTypeData} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={70} label>
+                      {jobTypeData.map((entry, idx) => (
+                        <Cell key={`cell-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Job by Worktype Pie */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-semibold mb-2">Job Posts by Worktype</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={jobWorkTypeData} dataKey="count" nameKey="worktype" cx="50%" cy="50%" outerRadius={70} label>
+                      {jobWorkTypeData.map((entry, idx) => (
+                        <Cell key={`cell-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Job by Status Pie */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-semibold mb-2">Active vs Banned Job Posts</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={jobStatusData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
+                      {jobStatusData.map((entry, idx) => (
+                        <Cell key={`cell-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold">New Job Posts / {jobTimeMode === "month" ? "Month" : "Week"}</h3>
+                    <div className="space-x-1">
+                    <button className={`px-2 py-1 rounded text-xs ${jobTimeMode === "month" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setJobTimeMode("month")}>Month</button>
+                    <button className={`px-2 py-1 rounded text-xs ${jobTimeMode === "week" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setJobTimeMode("week")}>Week</button>
+                    </div>
+                </div>
+                <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={jobTimeData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="period" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="jobs" fill="#f59e42" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -999,57 +1095,71 @@ const AdminDetails = ({ stats = {} }) => {
             <h2 className="text-xl font-bold">Discussions</h2>
             <span className="text-base text-gray-700">Total Discussions: <span className="font-bold">{discussions ? discussions.length : 0}</span></span>
           </div>
-          <div className="grid gap-3 mb-4 md:grid-cols-3 grid-cols-1">
-            {/* By Category Pie */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Discussion Posts by Category</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={discussionCategoryData} dataKey="count" nameKey="category" cx="50%" cy="50%" outerRadius={70} label>
-                    {discussionCategoryData.map((entry, idx) => (
-                      <Cell key={`cell-disc-cat-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            {/* By Status Pie */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Active vs Banned Discussions</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={discussionStatusData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
-                    {discussionStatusData.map((entry, idx) => (
-                      <Cell key={`cell-disc-status-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            {/* New Discussions Over Time */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold">New Discussion Posts / {discussionTimeMode === "month" ? "Month" : "Week"}</h3>
-                <div className="space-x-1">
-                  <button className={`px-2 py-1 rounded text-xs ${discussionTimeMode === "month" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setDiscussionTimeMode("month")}>Month</button>
-                  <button className={`px-2 py-1 rounded text-xs ${discussionTimeMode === "week" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setDiscussionTimeMode("week")}>Week</button>
+          {discussions && discussions.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-12 text-center">
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                  </svg>
                 </div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">No Discussion Posts Available</h3>
+                <p className="text-gray-500 max-w-md">There are currently no discussion posts in the system. Discussion analytics and data will appear here once users start creating discussion topics.</p>
               </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={discussionTimeData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="period" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="discussions" fill="#3b82f6" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
             </div>
-          </div>
+          ) : (
+            <div className="grid gap-3 mb-4 md:grid-cols-3 grid-cols-1">
+              {/* By Category Pie */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-semibold mb-2">Discussion Posts by Category</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={discussionCategoryData} dataKey="count" nameKey="category" cx="50%" cy="50%" outerRadius={70} label>
+                      {discussionCategoryData.map((entry, idx) => (
+                        <Cell key={`cell-disc-cat-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* By Status Pie */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-semibold mb-2">Active vs Banned Discussions</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={discussionStatusData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
+                      {discussionStatusData.map((entry, idx) => (
+                        <Cell key={`cell-disc-status-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* New Discussions Over Time */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold">New Discussion Posts / {discussionTimeMode === "month" ? "Month" : "Week"}</h3>
+                  <div className="space-x-1">
+                    <button className={`px-2 py-1 rounded text-xs ${discussionTimeMode === "month" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setDiscussionTimeMode("month")}>Month</button>
+                    <button className={`px-2 py-1 rounded text-xs ${discussionTimeMode === "week" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setDiscussionTimeMode("week")}>Week</button>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={discussionTimeData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="period" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="discussions" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1060,91 +1170,107 @@ const AdminDetails = ({ stats = {} }) => {
             <h2 className="text-xl font-bold">Events</h2>
             <span className="text-base text-gray-700">Total Events: <span className="font-bold">{events ? events.length : 0}</span></span>
           </div>
-          {/* First row: 3 graphs */}
-          <div className="grid gap-3 mb-4 md:grid-cols-3 grid-cols-1">
-            {/* Event by Type Pie */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Event Posts by Type</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={eventTypeData} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={70} label>
-                    {eventTypeData.map((entry, idx) => (
-                      <Cell key={`cell-event-type-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+          {events && events.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-12 text-center">
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">No Event Posts Available</h3>
+                <p className="text-gray-500 max-w-md">There are currently no event posts in the system. Event analytics and data will appear here once users start creating events.</p>
+              </div>
             </div>
-            {/* Event by Physical/Virtual Pie */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Event by Physical/Virtual</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={eventPhysicalVirtualData} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={70} label>
-                    {eventPhysicalVirtualData.map((entry, idx) => (
-                      <Cell key={`cell-event-pv-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            {/* Event by Status Pie */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Event by Status</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={eventStatusData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
-                    {eventStatusData.map((entry, idx) => (
-                      <Cell key={`cell-event-status-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-          {/* Second row: 2 graphs */}
-          <div className="grid gap-3 mb-4 md:grid-cols-2 grid-cols-1">
-            {/* Event by Active/Banned Pie */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-2">Active vs Banned Events</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={eventBannedData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
-                    {eventBannedData.map((entry, idx) => (
-                      <Cell key={`cell-event-banned-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            {/* New Events Over Time */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold">New Event Posts / {eventTimeMode === "month" ? "Month" : "Week"}</h3>
-                <div className="space-x-1">
-                  <button className={`px-2 py-1 rounded text-xs ${eventTimeMode === "month" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setEventTimeMode("month")}>Month</button>
-                  <button className={`px-2 py-1 rounded text-xs ${eventTimeMode === "week" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setEventTimeMode("week")}>Week</button>
+          ) : (
+            <>
+              {/* First row: 3 graphs */}
+              <div className="grid gap-3 mb-4 md:grid-cols-3 grid-cols-1">
+                {/* Event by Type Pie */}
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="font-semibold mb-2">Event Posts by Type</h3>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie data={eventTypeData} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={70} label>
+                        {eventTypeData.map((entry, idx) => (
+                          <Cell key={`cell-event-type-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Event by Physical/Virtual Pie */}
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="font-semibold mb-2">Event by Physical/Virtual</h3>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie data={eventPhysicalVirtualData} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={70} label>
+                        {eventPhysicalVirtualData.map((entry, idx) => (
+                          <Cell key={`cell-event-pv-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Event by Status Pie */}
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="font-semibold mb-2">Event by Status</h3>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie data={eventStatusData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
+                        {eventStatusData.map((entry, idx) => (
+                          <Cell key={`cell-event-status-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={eventTimeData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="period" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="events" fill="#a78bfa" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+              {/* Second row: 2 graphs */}
+              <div className="grid gap-3 mb-4 md:grid-cols-2 grid-cols-1">
+                {/* Event by Active/Banned Pie */}
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="font-semibold mb-2">Active vs Banned Events</h3>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie data={eventBannedData} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={70} label>
+                        {eventBannedData.map((entry, idx) => (
+                          <Cell key={`cell-event-banned-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* New Events Over Time */}
+                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold">New Event Posts / {eventTimeMode === "month" ? "Month" : "Week"}</h3>
+                    <div className="space-x-1">
+                      <button className={`px-2 py-1 rounded text-xs ${eventTimeMode === "month" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setEventTimeMode("month")}>Month</button>
+                      <button className={`px-2 py-1 rounded text-xs ${eventTimeMode === "week" ? "bg-primary text-white" : "bg-gray-200"}`} onClick={() => setEventTimeMode("week")}>Week</button>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={eventTimeData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="period" />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Bar dataKey="events" fill="#a78bfa" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
