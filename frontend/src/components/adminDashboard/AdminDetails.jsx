@@ -8,6 +8,7 @@ import { axiosInstance } from "../../lib/axios";
 import { Loader, Download } from "lucide-react";
 import html2canvas from "html2canvas-pro";
 import jsPDF from "jspdf";
+import { Link } from "react-router-dom";
 import {
   getPostStatusData,
   getPostTimeData,
@@ -299,17 +300,29 @@ const AdminDetails = ({ stats = {} }) => {
     const isWorkRelatedToCourse = (user) => {
       if (!user.course || !user.experience || user.experience.length === 0) return false;
       
-      const experience = user.experience[0];
+      // Find the latest experience by start date
+      const latestExperience = user.experience.reduce((latest, exp) => {
+        if (!exp.startDate) return latest;
+        if (!latest || !latest.startDate) return exp;
+        
+        const expDate = new Date(exp.startDate);
+        const latestDate = new Date(latest.startDate);
+        
+        return expDate > latestDate ? exp : latest;
+      }, null);
+      
+      // If no valid experience found, return false
+      if (!latestExperience) return false;
       
       // If AI has already determined relevance, use that
-      if (experience.isRelatedToCourse !== undefined) {
-        return experience.isRelatedToCourse;
+      if (latestExperience.isRelatedToCourse !== undefined) {
+        return latestExperience.isRelatedToCourse;
       }
       
       // Otherwise, fall back to keyword matching
       const course = user.course.toLowerCase();
-      const jobTitle = (experience.title || '').toLowerCase();
-      const company = (experience.company || '').toLowerCase();
+      const jobTitle = (latestExperience.title || '').toLowerCase();
+      const company = (latestExperience.company || '').toLowerCase();
       
       const courseKeywords = {
         'bsit': ['developer', 'programmer', 'software', 'it', 'web', 'tech', 'data', 'system', 'network', 'database', 'engineer', 'analyst', 'qa', 'devops', 'frontend', 'backend', 'fullstack'],
@@ -397,7 +410,9 @@ const AdminDetails = ({ stats = {} }) => {
                       <div key={user._id} className="bg-green-50 border border-green-200 rounded p-3">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium">{user.name}</p>
+                            <Link to={`/profile/${user.username}`} className="font-medium text-blue-600">
+                              {user.name}
+                            </Link>
                             <p className="text-sm text-gray-600">Course: {user.course}</p>
                             <p className="text-sm text-gray-600">
                               Work: {user.experience?.[0]?.title || 'N/A'} at {user.experience?.[0]?.company || 'N/A'}
@@ -424,7 +439,9 @@ const AdminDetails = ({ stats = {} }) => {
                       <div key={user._id} className="bg-gray-50 border border-gray-200 rounded p-3">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium">{user.name}</p>
+                            <Link to={`/profile/${user.username}`} className="font-medium text-blue-600">
+                              {user.name}
+                            </Link>
                             <p className="text-sm text-gray-600">Course: {user.course}</p>
                             <p className="text-sm text-gray-600">No work experience added</p>
                           </div>
@@ -475,7 +492,9 @@ const AdminDetails = ({ stats = {} }) => {
                       <div key={user._id} className="bg-green-50 border border-green-200 rounded p-3">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium">{user.name}</p>
+                            <Link to={`/profile/${user.username}`} className="font-medium text-blue-600">
+                              {user.name}
+                            </Link>
                             <p className="text-sm text-gray-600">Course: {user.course}</p>
                             <p className="text-sm text-gray-600">
                               Work: {user.experience?.[0]?.title || 'N/A'} at {user.experience?.[0]?.company || 'N/A'}
@@ -502,7 +521,9 @@ const AdminDetails = ({ stats = {} }) => {
                       <div key={user._id} className="bg-orange-50 border border-orange-200 rounded p-3">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium">{user.name}</p>
+                            <Link to={`/profile/${user.username}`} className="font-medium text-blue-600">
+                              {user.name}
+                            </Link>
                             <p className="text-sm text-gray-600">Course: {user.course}</p>
                             <p className="text-sm text-gray-600">
                               Work: {user.experience?.[0]?.title || 'N/A'} at {user.experience?.[0]?.company || 'N/A'}

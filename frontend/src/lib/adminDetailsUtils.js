@@ -376,17 +376,29 @@ export function getAlumniWorkRelevanceData(users) {
   const isWorkRelatedToCourse = (user) => {
     if (!user.course || !user.experience || user.experience.length === 0) return false;
     
-    const experience = user.experience[0]; // Check most recent/first experience
+    // Find the latest experience by start date
+    const latestExperience = user.experience.reduce((latest, exp) => {
+      if (!exp.startDate) return latest;
+      if (!latest || !latest.startDate) return exp;
+      
+      const expDate = new Date(exp.startDate);
+      const latestDate = new Date(latest.startDate);
+      
+      return expDate > latestDate ? exp : latest;
+    }, null);
+    
+    // If no valid experience found, return false
+    if (!latestExperience) return false;
     
     // If AI has already determined relevance, use that
-    if (experience.isRelatedToCourse !== undefined) {
-      return experience.isRelatedToCourse;
+    if (latestExperience.isRelatedToCourse !== undefined) {
+      return latestExperience.isRelatedToCourse;
     }
     
     // Otherwise, fall back to keyword matching
     const course = user.course.toLowerCase();
-    const jobTitle = (experience.title || '').toLowerCase();
-    const company = (experience.company || '').toLowerCase();
+    const jobTitle = (latestExperience.title || '').toLowerCase();
+    const company = (latestExperience.company || '').toLowerCase();
     
     // Define course-related keywords
     const courseKeywords = {

@@ -111,6 +111,30 @@ export const updateProfile = async (req, res) => {
             updatedData.bannerImg = result.secure_url;
         }
 
+        // If experience is being updated and user is an alumni, check work relevance with AI
+        if (req.body.experience && req.user.role === 'alumni' && req.user.course) {
+            const { isExperienceRelatedToCourse } = await import('../lib/gemini.js');
+            
+            // Process each experience entry
+            for (const exp of req.body.experience) {
+                // Only check if not already determined
+                if (exp.isRelatedToCourse === undefined && exp.title && exp.company) {
+                    try {
+                        const isRelated = await isExperienceRelatedToCourse(
+                            exp.title,
+                            exp.company,
+                            req.user.course
+                        );
+                        exp.isRelatedToCourse = isRelated;
+                    } catch (error) {
+                        console.log("Error checking experience relevance:", error.message);
+                        // Leave isRelatedToCourse undefined if check fails
+                        exp.isRelatedToCourse = undefined;
+                    }
+                }
+            }
+        }
+
         const user = await User.findByIdAndUpdate(
             req.user._id, 
             { $set: updatedData }, 

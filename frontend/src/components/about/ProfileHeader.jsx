@@ -227,6 +227,15 @@ const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving, tabs, activeT
           backgroundImage: `url('${editedData.bannerImg || userData.bannerImg || "/banner.png"}')`,
         }}
       >
+        {/* Role Badge in top left */}
+        {userData.role && (
+          <div className='absolute top-4 left-4'>
+            <span className='px-3 py-1.5 bg-white/90 backdrop-blur-sm text-gray-800 rounded-full font-semibold text-sm shadow-md'>
+              {userData.role.charAt(0).toUpperCase() + userData.role.slice(1)}
+            </span>
+          </div>
+        )}
+        
         {isEditing && (
           <label className='absolute top-2 right-2 bg-white p-2 rounded-full shadow cursor-pointer'>
             <Camera size={20} />
