@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { axiosInstance } from "../../lib/axios";
-import { Trash2, Loader } from "lucide-react";
+import { Trash2, Loader, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import * as XLSX from 'xlsx';
+import toast from "react-hot-toast";
 
 const AdminModeration = ({ setShowModerationModal, setSelectedModeration }) => {
   const queryClient = useQueryClient();
@@ -26,22 +28,67 @@ const AdminModeration = ({ setShowModerationModal, setSelectedModeration }) => {
     onSuccess: () => queryClient.invalidateQueries(["adminModerationLogs"]),
   });
 
+  const handleDownloadModerationLogs = () => {
+    const filteredLogs = moderationLogs?.filter(log => {
+      if (!moderationSearch) return true;
+      const s = moderationSearch.toLowerCase();
+      return (log.action || '').toLowerCase().includes(s) || (log.reason || '').toLowerCase().includes(s) || (log.performedBy?.name || '').toLowerCase().includes(s) || (log.performedBy?.username || '').toLowerCase().includes(s);
+    }).filter(log => {
+      if (moderationFilter === 'all') return true;
+      return (log.action || '') === moderationFilter;
+    }) || [];
+
+    const dataToExport = filteredLogs.map(log => ({
+      "Action": log.action.toUpperCase(),
+      "Target Type": log.targetType,
+      "Target ID": log.targetId,
+      "Performed By": log.performedBy?.name || log.performedBy?.username || "Unknown",
+      "Reason": log.reason || "N/A",
+      "Date & Time": new Date(log.performedAt).toLocaleString()
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Moderation Logs");
+    XLSX.writeFile(wb, `AlumLink_Moderation_Logs_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast.success("Moderation logs downloaded successfully");
+  };
+
   return (
     <div className="bg-white rounded-lg shadow p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold">Moderation Logs</h3>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1 bg-gray-100 rounded text-sm" onClick={() => queryClient.invalidateQueries(["adminModerationLogs"])}>Refresh</button>
+          <input 
+            type="search" 
+            placeholder="Search moderation logs" 
+            value={moderationSearch} 
+            onChange={e => setModerationSearch(e.target.value)} 
+            className="border rounded px-3 py-2 w-64" 
+          />
+          <select 
+            value={moderationFilter} 
+            onChange={e => setModerationFilter(e.target.value)} 
+            className="border rounded px-3 py-2"
+          >
+            <option value="all">All Actions</option>
+            <option value="ban">Bans</option>
+            <option value="unban">Unbans</option>
+          </select>
+          <button 
+            className="px-2 py-2 bg-gray-100 rounded hover:bg-gray-200 border flex items-center" 
+            onClick={handleDownloadModerationLogs} 
+            title="Download moderation logs"
+          >
+            <Download size={18} />
+          </button>
+          <button 
+            className="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200 border" 
+            onClick={() => queryClient.invalidateQueries(["adminModerationLogs"])}
+          >
+            Refresh
+          </button>
         </div>
-      </div>
-
-      <div className="mb-3 flex items-center gap-4">
-        <input type="search" placeholder="Search moderation logs" value={moderationSearch} onChange={e => setModerationSearch(e.target.value)} className="border rounded px-3 py-1 flex-1 min-w-0" />
-        <select value={moderationFilter} onChange={e => setModerationFilter(e.target.value)} className="border rounded px-3 py-1 flex-shrink-0">
-          <option value="all">All Actions</option>
-          <option value="ban">Bans</option>
-          <option value="unban">Unbans</option>
-        </select>
       </div>
 
       {moderationLoading ? (

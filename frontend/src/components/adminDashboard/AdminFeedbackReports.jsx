@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { axiosInstance } from "../../lib/axios";
-import { Flag, MessageSquare, Eye } from "lucide-react";
+import { Flag, MessageSquare, Eye, Download } from "lucide-react";
+import * as XLSX from 'xlsx';
+import toast from "react-hot-toast";
 
 const AdminFeedbackReports = ({
   setShowFeedbackModal,
@@ -72,6 +74,58 @@ const AdminFeedbackReports = ({
     },
   });
 
+  const handleDownloadReports = () => {
+    const filteredReports = reports?.filter(r => {
+      if (!reportSearch) return true;
+      const s = reportSearch.toLowerCase();
+      return (r.type || '').toLowerCase().includes(s) || (r.details || '').toLowerCase().includes(s) || (r.target || '').toLowerCase().includes(s);
+    }).filter(r => {
+      if (reportFilter === 'all') return true;
+      if (reportFilter === 'seen') return r.seen;
+      if (reportFilter === 'unseen') return !r.seen;
+      return true;
+    }).filter(r => {
+      if (reportTypeFilter === 'all') return true;
+      return (r.type || '') === reportTypeFilter;
+    }) || [];
+
+    const dataToExport = filteredReports.map(r => ({
+      "Type": r.type.toUpperCase(),
+      "Details": r.details || "N/A",
+      "Date": new Date(r.createdAt).toLocaleString()
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reports");
+    XLSX.writeFile(wb, `AlumLink_Reports_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast.success("Reports downloaded successfully");
+  };
+
+  const handleDownloadFeedbacks = () => {
+    const filteredFeedbacks = feedbacks?.filter(f => {
+      if (!feedbackSearch) return true;
+      const s = feedbackSearch.toLowerCase();
+      return (f.message || '').toLowerCase().includes(s);
+    }).filter(f => {
+      if (feedbackFilter === 'all') return true;
+      if (feedbackFilter === 'seen') return f.seen;
+      if (feedbackFilter === 'unseen') return !f.seen;
+      return true;
+    }) || [];
+
+    const dataToExport = filteredFeedbacks.map(f => ({
+      "Message": f.message,
+      "Date": new Date(f.createdAt).toLocaleString()
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Feedbacks");
+    XLSX.writeFile(wb, `AlumLink_Feedbacks_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast.success("Feedbacks downloaded successfully");
+  };
+
   return (
     <div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -113,11 +167,17 @@ const AdminFeedbackReports = ({
             <div className="flex items-center gap-2">
               {reportsView === 'recent' ? (
                 <div className="flex items-center gap-3">
+                  <button className="px-2 py-1 bg-gray-100 rounded text-sm" onClick={handleDownloadReports} title="Download reports">
+                    <Download size={18} />
+                  </button>
                   <button className="px-3 py-1 bg-gray-100 rounded text-sm" onClick={() => queryClient.invalidateQueries(["adminReports"])}>Refresh</button>
                   <button className="text-sm text-primary underline" onClick={() => setReportsView('all')}>View All</button>
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
+                  <button className="px-2 py-1 bg-gray-100 rounded text-sm" onClick={handleDownloadReports} title="Download reports">
+                    <Download size={18} />
+                  </button>
                   <button className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm" onClick={() => markAllReportsSeenMutation.mutate()}>Mark All as Seen</button>
                   <button className="px-3 py-1 bg-gray-100 rounded text-sm" onClick={() => queryClient.invalidateQueries(["adminReports"])}>Refresh</button>
                   <button className="text-sm text-primary underline" onClick={() => setReportsView('recent')}>Back to Recent</button>
@@ -223,11 +283,17 @@ const AdminFeedbackReports = ({
             <div className="flex items-center gap-2">
               {feedbackView === 'recent' ? (
                 <div className="flex items-center gap-3">
+                  <button className="px-2 py-1 bg-gray-100 rounded text-sm" onClick={handleDownloadFeedbacks} title="Download feedbacks">
+                    <Download size={18} />
+                  </button>
                   <button className="px-3 py-1 bg-gray-100 rounded text-sm" onClick={() => queryClient.invalidateQueries(["adminFeedbacks"])}>Refresh</button>
                   <button className="text-sm text-primary underline" onClick={() => setFeedbackView('all')}>View All</button>
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
+                  <button className="px-2 py-1 bg-gray-100 rounded text-sm" onClick={handleDownloadFeedbacks} title="Download feedbacks">
+                    <Download size={18} />
+                  </button>
                   <button className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm" onClick={() => markAllFeedbacksSeenMutation.mutate()}>Mark All as Seen</button>
                   <button className="px-3 py-1 bg-gray-100 rounded text-sm" onClick={() => queryClient.invalidateQueries(["adminFeedbacks"])}>Refresh</button>
                   <button className="text-sm text-primary underline" onClick={() => setFeedbackView('recent')}>Back to Recent</button>

@@ -4,11 +4,12 @@ import { axiosInstance } from "../../lib/axios";
 import toast from "react-hot-toast";
 import BanUnbanButton from "../common/BanUnbanButton";
 import * as XLSX from 'xlsx';
-import { Loader } from "lucide-react";
+import { Loader, Download } from "lucide-react";
 
 const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMutation }) => {
   const queryClient = useQueryClient();
   const [userSearch, setUserSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
@@ -493,20 +494,14 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
 
 
 
-  // prepare sortedUsers: super-admins, admins, then users; each group sorted by TUPT-ID
+    // prepare sortedUsers: super-admins, admins, then users; each group sorted by TUPT-ID
   const sortedUsers = users
     ? [...users].sort((a, b) => {
-        const rank = (u) =>
-          u.permission === "superAdmin"
-            ? 0
-            : u.permission === "admin"
-            ? 1
-            : 2;
-        const ra = rank(a);
-        const rb = rank(b);
-        if (ra !== rb) return ra - rb;
-        
-        // Within same permission level, sort by TUPT-ID
+        const permOrderA = a.permission === 'superAdmin' ? 0 : a.permission === 'admin' ? 1 : 2;
+        const permOrderB = b.permission === 'superAdmin' ? 0 : b.permission === 'admin' ? 1 : 2;
+        if (permOrderA !== permOrderB) {
+          return permOrderA - permOrderB;
+        }
         const tuptA = a.tuptId || '';
         const tuptB = b.tuptId || '';
         return tuptA.localeCompare(tuptB);
@@ -515,13 +510,41 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
 
   const filteredUsers = sortedUsers.filter(user => {
     const q = userSearch?.toLowerCase() || "";
-    return (
+    const matchesSearch = (
       user.name.toLowerCase().includes(q) ||
       user.username.toLowerCase().includes(q) ||
       user.email.toLowerCase().includes(q) ||
       user.tuptId?.toLowerCase().includes(q)
     );
+    const matchesRole = roleFilter === "all" || 
+      (roleFilter === "staff" && user.role === "staff") ||
+      (roleFilter === "alumni" && user.role === "alumni") ||
+      (roleFilter === "student" && user.role === "student");
+    return matchesSearch && matchesRole;
   });
+
+  const handleDownloadUsers = () => {
+    const dataToExport = filteredUsers.map(user => ({
+      "TUPT ID": user.tuptId || "N/A",
+      "Name": user.name,
+      "Username": user.username,
+      "Email": user.email,
+      "Role": user.role || "N/A",
+      "Permission": user.permission,
+      "Status": user.isActive ? "Active" : "Inactive",
+      "Banned": user.banned ? "Yes" : "No",
+      "Headline": user.headline || "N/A",
+      "Course": user.course || "N/A",
+      "Year Graduated": user.yearGraduated || "N/A",
+      "Joined": new Date(user.createdAt).toLocaleDateString()
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Users");
+    XLSX.writeFile(wb, `AlumLink_Users_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast.success("Users data downloaded successfully");
+  };
 
   return (
     <>
@@ -876,11 +899,29 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
               placeholder="Search users"
               value={userSearch}
               onChange={e => setUserSearch(e.target.value)}
-              className="border rounded px-3 py-1 min-w-0 w-48"
+              className="border rounded px-3 py-2 min-w-0 w-48"
             />
+            <select
+              value={roleFilter}
+              onChange={e => setRoleFilter(e.target.value)}
+              className="border rounded px-3 py-2"
+            >
+              <option value="all">All Roles</option>
+              <option value="staff">Staff</option>
+              <option value="alumni">Alumni</option>
+              <option value="student">Student</option>
+            </select>
             <button
               type="button"
-              className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 border text-gray-700 flex items-center"
+              className="px-2 py-2 rounded bg-gray-100 hover:bg-gray-200 border text-gray-700 flex items-center"
+              onClick={handleDownloadUsers}
+              title="Download users data"
+            >
+              <Download size={18} />
+            </button>
+            <button
+              type="button"
+              className="px-3 py-2 rounded bg-gray-100 hover:bg-gray-200 border text-gray-700 flex items-center"
               onClick={() => queryClient.invalidateQueries(["adminUsers"])}
               title="Refresh users"
             >
@@ -889,7 +930,7 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
             {authUser?.permission === 'superAdmin' && (
               <button
                 type="button"
-                className="px-3 py-1 rounded bg-primary hover:bg-primary/90 text-white flex items-center"
+                className="px-3 py-2 rounded bg-primary hover:bg-primary/90 text-white flex items-center"
                 onClick={() => setShowImportModal(true)}
                 title="Import users from CSV/XLSX"
               >
