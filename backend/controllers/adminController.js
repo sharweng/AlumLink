@@ -2,6 +2,7 @@ import Post from "../models/Post.js";
 import JobPost from "../models/JobPost.js";
 import bcrypt from "bcryptjs";
 import { isExperienceRelatedToCourse } from "../lib/gemini.js";
+import { sendAccountCredentialsEmail } from "../emails/nodemailerHandlers.js";
 // Admin: Get all posts (including banned)
 export const getAllPostsAdmin = async (req, res) => {
     try {
@@ -537,6 +538,67 @@ export const deleteUser = async (req, res) => {
         });
     } catch (error) {
         console.log("Error in deleteUser adminController:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+// Send credentials email to selected users
+export const sendCredentialsEmails = async (req, res) => {
+    try {
+        // Check if requester is admin
+        if (!['admin', 'superAdmin'].includes(req.user.permission)) {
+            return res.status(403).json({ message: "Access denied. Admins only." });
+        }
+
+        const { userIds } = req.body;
+
+        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({ message: "User IDs are required" });
+        }
+
+        const users = await User.find({ _id: { $in: userIds } });
+
+        if (users.length === 0) {
+            return res.status(404).json({ message: "No users found" });
+        }
+
+        const loginUrl = `${process.env.CLIENT_URL}/login`;
+        let successCount = 0;
+        let errorCount = 0;
+        const errors = [];
+
+        for (const user of users) {
+            try {
+                // Generate password: last word of full name + last 4 digits of TUPT-ID (lowercase)
+                const nameParts = user.name.trim().split(' ');
+                const lastName = nameParts[nameParts.length - 1].toLowerCase();
+                const tuptIdLast4 = user.tuptId ? user.tuptId.slice(-4) : '0000';
+                const generatedPassword = `${lastName}${tuptIdLast4}`;
+
+                await sendAccountCredentialsEmail(
+                    user.email,
+                    user.name,
+                    user.username,
+                    user.email,
+                    generatedPassword,
+                    loginUrl
+                );
+                successCount++;
+            } catch (error) {
+                console.error(`Failed to send email to ${user.email}:`, error);
+                errorCount++;
+                errors.push({ userId: user._id, email: user.email, error: error.message });
+            }
+        }
+
+        res.status(200).json({
+            message: `Emails sent: ${successCount} successful, ${errorCount} failed`,
+            successCount,
+            errorCount,
+            errors: errorCount > 0 ? errors : undefined
+        });
+    } catch (error) {
+        console.log("Error in sendCredentialsEmails:", error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 };

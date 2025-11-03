@@ -1,5 +1,5 @@
 import { transporter } from "../lib/nodemailer.js";
-import { createVerificationEmailTemplate, createCommentNotificationEmailTemplate, createLinkAcceptedEmailTemplate, createWelcomeEmailTemplate } from "./emailTemplates.js";
+import { createVerificationEmailTemplate, createCommentNotificationEmailTemplate, createLinkAcceptedEmailTemplate, createWelcomeEmailTemplate, createAccountCredentialsEmailTemplate } from "./emailTemplates.js";
 
 export const sendVerificationEmail = async (email, code) => {
     if (process.env.NODE_ENV === 'production') {
@@ -116,6 +116,35 @@ export const sendLinkAcceptedEmail = async (senderEmail, senderName, recipientNa
         console.log("Link accepted email sent successfully")
     } catch (error) {
         throw new Error(`Failed to send link accepted email: ${error.message}`)
+    }
+}
+
+export const sendAccountCredentialsEmail = async (email, userName, username, tuptEmail, password, loginUrl) => {
+    if (process.env.NODE_ENV === 'production') {
+        // Use SendGrid in production
+        const { sendAccountCredentialsEmail: sendGridSendAccountCredentialsEmail } = await import('./emailHandlers.js');
+        return sendGridSendAccountCredentialsEmail(email, userName, username, tuptEmail, password, loginUrl);
+    }
+    // Default: use Nodemailer in development (Mailtrap)
+    try {
+        const mailOptions = {
+            from: process.env.NODEMAILER_EMAIL_FROM,
+            name: process.env.EMAIL_FROM_NAME,
+            to: email,
+            subject: 'Your AlumniLink Account Credentials',
+            html: createAccountCredentialsEmailTemplate(userName, username, tuptEmail, password, loginUrl),
+            category: "account_credentials"
+        };
+        await transporter.sendMail(mailOptions, function(error, info){
+            if (error) {
+                console.log('Error:', error);   
+            } else {
+                console.log('Email sent:', info.response);
+            }
+        });
+        console.log("Account credentials email sent successfully")
+    } catch (error) {
+        throw new Error(`Failed to send account credentials email: ${error.message}`)
     }
 }
 

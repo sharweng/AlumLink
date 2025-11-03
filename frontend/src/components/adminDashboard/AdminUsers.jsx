@@ -23,6 +23,8 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [importRole, setImportRole] = useState("student");
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [sendingEmails, setSendingEmails] = useState(false);
 
   // Mutation for updating user role
   const updateRoleMutation = useMutation({
@@ -464,6 +466,31 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
     }
   };
 
+  const handleSendCredentialsEmails = async () => {
+    if (selectedUsers.size === 0) return;
+
+    setSendingEmails(true);
+
+    try {
+      const userIds = Array.from(selectedUsers);
+      const response = await axiosInstance.post('/admin/users/send-credentials', { userIds });
+
+      toast.success(response.data.message || `Emails sent successfully to ${response.data.successCount} user(s)`);
+      
+      if (response.data.errorCount > 0) {
+        toast.error(`Failed to send ${response.data.errorCount} email(s). Check console for details.`);
+        console.error('Email sending errors:', response.data.errors);
+      }
+
+      setSelectedUsers(new Set());
+      setShowEmailModal(false);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to send emails");
+    } finally {
+      setSendingEmails(false);
+    }
+  };
+
 
 
   // prepare sortedUsers: super-admins, admins, then users; each group sorted by TUPT-ID
@@ -638,6 +665,46 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
         </div>
       )}
 
+      {/* Email Credentials Confirmation Modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-semibold mb-4">Send Login Credentials</h3>
+            <p className="text-gray-600 mb-4">
+              Send login credentials email to <strong>{selectedUsers.size}</strong> selected user(s)?
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-blue-800">
+                <strong>Email will include:</strong>
+              </p>
+              <ul className="text-sm text-blue-700 mt-2 space-y-1 list-disc list-inside">
+                <li>Username</li>
+                <li>TUP Email</li>
+                <li>Auto-generated password</li>
+                <li>Login link</li>
+              </ul>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowEmailModal(false)}
+                disabled={sendingEmails}
+                className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendCredentialsEmails}
+                disabled={sendingEmails}
+                className="px-4 py-2 rounded bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {sendingEmails && <Loader className="animate-spin" size={16} />}
+                {sendingEmails ? "Sending..." : "Send Emails"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Import Modal */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -781,6 +848,15 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
                   title="Toggle active/inactive status"
                 >
                   Toggle Status
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded bg-purple-100 hover:bg-purple-200 border border-purple-300 text-purple-700 text-sm disabled:opacity-50"
+                  onClick={() => setShowEmailModal(true)}
+                  disabled={processingBulkAction}
+                  title="Send login credentials to selected users"
+                >
+                  Email
                 </button>
                 {authUser?.permission === 'superAdmin' && (
                   <button

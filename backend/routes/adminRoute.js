@@ -11,7 +11,8 @@ import {
     getAllPostsAdmin,
     getAllJobsAdmin,
     importUsers,
-    deleteUser
+    deleteUser,
+    sendCredentialsEmails
 } from "../controllers/adminController.js";
 import { getModerationLogs } from "../controllers/moderationController.js";
 import { deleteModerationLog, deleteAllModerationLogs } from "../controllers/moderationController.js";
@@ -23,6 +24,7 @@ router.get("/all-posts", protectRoute, getAllPostsAdmin);
 router.get("/all-jobs", protectRoute, getAllJobsAdmin);
 router.get("/users", protectRoute, getAllUsers);
 router.post("/users/import", protectRoute, importUsers);
+router.post("/users/send-credentials", protectRoute, sendCredentialsEmails);
 router.put("/users/:userId/role", protectRoute, updateUserRole);
 router.put("/users/:userId/permission", protectRoute, updateUserPermission);
 router.put("/users/:userId/toggle-status", protectRoute, toggleUserStatus);
@@ -34,3 +36,4 @@ router.delete('/moderation-logs/:id', protectRoute, deleteModerationLog);
 router.delete('/moderation-logs', protectRoute, deleteAllModerationLogs);
 
 export default router;
+

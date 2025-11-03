@@ -1,5 +1,5 @@
 import sgMail, { sender } from "../lib/sendgridApi.js";
-import { createWelcomeEmailTemplate, createVerificationEmailTemplate, createLinkAcceptedEmailTemplate } from "./emailTemplates.js";
+import { createWelcomeEmailTemplate, createVerificationEmailTemplate, createLinkAcceptedEmailTemplate, createAccountCredentialsEmailTemplate } from "./emailTemplates.js";
 
 export const sendWelcomeEmail = async (email, userName, profileUrl) => {
     try {
@@ -55,5 +55,24 @@ export const sendLinkAcceptedEmail = async (senderEmail, senderName, recipientNa
         console.log("Link accepted email sent successfully:", response[0]?.statusCode);
     } catch (error) {
         throw new Error(`Failed to send link accepted email: ${error.message}`);
+    }
+}
+
+export const sendAccountCredentialsEmail = async (email, userName, username, tuptEmail, password, loginUrl) => {
+    try {
+        const msg = {
+            to: email,
+            from: {
+                email: sender.email,
+                name: sender.name
+            },
+            subject: "Your AlumniLink Account Credentials",
+            text: `Hello ${userName},\n\nYour AlumniLink account has been created!\n\nUsername: ${username}\nEmail: ${tuptEmail}\nPassword: ${password}\n\nLogin here: ${loginUrl}\n\nPlease change your password after your first login.\n\nBest regards,\nThe AlumniLink Team`,
+            html: createAccountCredentialsEmailTemplate(userName, username, tuptEmail, password, loginUrl)
+        };
+        const response = await sgMail.send(msg);
+        console.log("Account credentials email sent successfully:", response[0]?.statusCode);
+    } catch (error) {
+        throw new Error(`Failed to send account credentials email: ${error.message}`);
     }
 }
