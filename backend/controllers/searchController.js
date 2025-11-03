@@ -28,7 +28,8 @@ export const globalSearch = async (req, res) => {
                 { location: { $regex: searchQuery, $options: 'i' } },
                 { skills: { $regex: searchQuery, $options: 'i' } },
                 { course: { $regex: searchQuery, $options: 'i' } },
-                { about: { $regex: searchQuery, $options: 'i' } }
+                { about: { $regex: searchQuery, $options: 'i' } },
+                { role: { $regex: searchQuery, $options: 'i' } }
             ];
 
             // Search by batch year if query is a number
@@ -41,7 +42,7 @@ export const globalSearch = async (req, res) => {
               banned: { $ne: true },
               permission: { $ne: 'superAdmin' }
           })
-            .select("name username profilePicture headline location batch course skills banned")
+            .select("name username profilePicture headline location batch course skills role banned")
             .limit(10);
         }
 

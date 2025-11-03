@@ -44,9 +44,16 @@ const SearchResults = ({ results, isLoading, query, onClose }) => {
                 className="w-10 h-10 rounded-full object-cover mr-3"
               />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {user.name}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {user.name}
+                  </p>
+                  {user.role && (
+                    <span className="px-2 py-0.5 bg-primary bg-opacity-10 text-primary rounded-full font-medium text-xs">
+                      {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-gray-500 truncate">
                   {user.headline}
                 </p>
