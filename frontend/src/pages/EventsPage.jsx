@@ -139,7 +139,17 @@ const EventsPage = () => {
               <Loader className="animate-spin h-12 w-12 text-primary mx-auto" />
             </div>
           ) : (() => {
-            const filteredEvents = events?.filter(e => e.organizer && !e.organizer?.banned) || [];
+            const isAdmin = authUser?.permission === 'admin' || authUser?.permission === 'superAdmin';
+            // Filter out events by banned organizers, missing organizers, or banned events (for regular users)
+            const filteredEvents = events?.filter(e => {
+              // Must have an organizer
+              if (!e.organizer) return false;
+              // Filter out events with banned organizers
+              if (e.organizer?.banned) return false;
+              // For non-admin users, filter out banned events
+              if (!isAdmin && e.banned) return false;
+              return true;
+            }) || [];
             
             return filteredEvents.length > 0 ? (
               filteredEvents.map((event) => (

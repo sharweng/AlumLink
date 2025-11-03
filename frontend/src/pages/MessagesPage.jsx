@@ -409,7 +409,7 @@ const MessagesPage = () => {
                                                 )}
                                             </a>
                                             <div>
-                                                <a href={`/profile/${getOtherUser(selectedConversation).username}`} className="font-semibold hover:underline cursor-pointer truncate">
+                                                <a href={`/profile/${getOtherUser(selectedConversation).username}`} className="font-semibold cursor-pointer truncate">
                                                     {getOtherUser(selectedConversation).name}
                                                 </a>
                                                 <p className="text-xs text-gray-500">

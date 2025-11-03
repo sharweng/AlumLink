@@ -138,8 +138,8 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     // Filter comments: include only those visible to user (not banned OR owner/admin)
     const visibleComments = post.comments.filter(c => {
       if (!c.banned) return true
-      // if banned, only include if current user is admin or the comment owner
-      return authUser?.permission === 'admin' || authUser?._id === c.user._id
+      // if banned, only include if current user is admin/superAdmin or the comment owner
+      return (authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') || authUser?._id === c.user._id
     })
 
     const commentsCopy = [...visibleComments]
@@ -501,11 +501,13 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
   // Ban/Unban mutations for admin moderation
   const { mutate: banPostMutate, isPending:isBanningPost } = useMutation({
     mutationFn: async ({ reason } = {}) => {
-      await axiosInstance.put(`/posts/${post._id}/ban`, { reason })
+      const res = await axiosInstance.put(`/posts/${post._id}/ban`, { reason })
+      return res.data
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      queryClient.setQueryData(["post", post._id], { data: data.post })
       queryClient.invalidateQueries({ queryKey: ["posts"] })
-      queryClient.invalidateQueries({ queryKey: ["post", post._id] })
+      queryClient.invalidateQueries({ queryKey: ["userPosts"] })
       toast.success('Post banned')
     },
     onError: (error) => {
@@ -515,11 +517,13 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
 
   const { mutate: unbanPostMutate, isPending:isUnbanningPost } = useMutation({
     mutationFn: async () => {
-      await axiosInstance.put(`/posts/${post._id}/unban`)
+      const res = await axiosInstance.put(`/posts/${post._id}/unban`)
+      return res.data
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      queryClient.setQueryData(["post", post._id], { data: data.post })
       queryClient.invalidateQueries({ queryKey: ["posts"] })
-      queryClient.invalidateQueries({ queryKey: ["post", post._id] })
+      queryClient.invalidateQueries({ queryKey: ["userPosts"] })
       toast.success('Post unbanned')
     },
     onError: (error) => {
@@ -534,6 +538,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] })
       queryClient.invalidateQueries({ queryKey: ["post", post._id] })
+      queryClient.invalidateQueries({ queryKey: ["userPosts"] })
       toast.success('Comment banned')
     }
   })
@@ -545,6 +550,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] })
       queryClient.invalidateQueries({ queryKey: ["post", post._id] })
+      queryClient.invalidateQueries({ queryKey: ["userPosts"] })
       toast.success('Comment unbanned')
     }
   })
@@ -556,6 +562,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] })
       queryClient.invalidateQueries({ queryKey: ["post", post._id] })
+      queryClient.invalidateQueries({ queryKey: ["userPosts"] })
       toast.success('Reply banned')
     }
   })
@@ -567,6 +574,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] })
       queryClient.invalidateQueries({ queryKey: ["post", post._id] })
+      queryClient.invalidateQueries({ queryKey: ["userPosts"] })
       toast.success('Reply unbanned')
     }
   })
@@ -708,7 +716,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
             </Link>
             <div className="flex-1">
               <Link to={`/profile/${post?.author?.username}`}>
-                <h3 className='font-semibold hover:underline'>
+                <h3 className='font-semibold'>
                   {post.author.name}
                   <span className="text-gray-500 font-normal ml-1">@{post.author.username}</span>
                 </h3>
@@ -725,7 +733,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
         
           <div className='flex items-center gap-2'>
             {/* Show banned badge left of actions for admins/owners */}
-            {(post.banned && (authUser?.permission === 'admin' || isOwner)) && (
+            {(post.banned && (authUser?.permission === 'admin' || authUser?.permission === 'superAdmin' || isOwner)) && (
               <span className="mr-1 inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
             )}
 
@@ -1099,15 +1107,15 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
           {/* Comments List */}
           <div className="space-y-3">
             {getSortedComments().map((comment) => {
-              // If comment is banned and current user is neither comment owner nor admin, skip rendering
-              if (comment.banned && authUser?._id !== comment.user._id && authUser?.role !== 'admin') {
+              // If comment is banned and current user is neither comment owner nor admin/superAdmin, skip rendering
+              if (comment.banned && authUser?._id !== comment.user._id && !(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin')) {
                 return null
               }
               const isCommentOwner = comment.user._id === authUser._id
               const isEditingComment = editingCommentId === comment._id
               const isCommentExpanded = expandedComments.has(comment._id)
-              // Count only replies visible to the current user (exclude banned replies unless admin or reply owner)
-              const visibleReplies = (comment.replies || []).filter(r => !r.banned || authUser?._id === r.user._id || authUser?.permission === 'admin')
+              // Count only replies visible to the current user (exclude banned replies unless admin/superAdmin or reply owner)
+              const visibleReplies = (comment.replies || []).filter(r => !r.banned || authUser?._id === r.user._id || authUser?.permission === 'admin' || authUser?.permission === 'superAdmin')
               const repliesCount = visibleReplies.length
               
               return (
@@ -1123,13 +1131,13 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                     <div className="bg-gray-50 rounded-lg p-3 transition-colors duration-500">
                         <div className="flex items-center justify-between mb-1">
                           <Link to={`/profile/${comment.user.username}`}>
-                            <h4 className="font-medium text-gray-900 hover:underline">
+                            <h4 className="font-medium text-gray-900">
                               {comment.user.name}
                               <span className="text-gray-500 font-normal text-sm ml-1">@{comment.user.username}</span>
                             </h4>
                           </Link>
                           <div className="flex items-center gap-2">
-                            {comment.banned && (authUser?.permission === 'admin' || isCommentOwner) && (
+                            {comment.banned && ((authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') || isCommentOwner) && (
                               <span className="inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
                             )}
                             <span className="text-xs text-gray-500">
@@ -1149,7 +1157,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                   <>
                                     <div className='fixed inset-0 z-10' onClick={() => setOpenCommentMenu(null)} />
                                     <div className='absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
-                                      {authUser?.permission === 'admin' ? (
+                                      {(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') ? (
                                         comment.banned ? (
                                           <button
                                             onClick={(e) => { e.stopPropagation(); setModerationCommentId(comment._id); setShowUnbanCommentConfirm(true); setOpenCommentMenu(null); }}
@@ -1303,8 +1311,8 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                           {repliesCount > 0 && isCommentExpanded && (
                         <div className="mt-2 ml-4 space-y-2">
                           {comment.replies?.map((reply) => {
-                                  // If reply is banned and current user is neither reply owner nor admin, skip
-                                  if (reply.banned && authUser?._id !== reply.user._id && authUser?.role !== 'admin') return null
+                                  // If reply is banned and current user is neither reply owner nor admin/superAdmin, skip
+                                  if (reply.banned && authUser?._id !== reply.user._id && !(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin')) return null
                                   const isReplyOwner = reply.user._id === authUser._id
                                   const isEditingReply = editingReplyId === reply._id
                                   
@@ -1320,13 +1328,13 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                       <div className="flex-1 bg-gray-100 rounded-lg p-2 transition-colors duration-500">
                                   <div className="flex items-center justify-between mb-1">
                                     <Link to={`/profile/${reply.user.username}`}>
-                                      <h5 className="font-medium text-sm text-gray-900 hover:underline">
+                                      <h5 className="font-medium text-sm text-gray-900 ">
                                         {reply.user.name}
                                         <span className="text-gray-500 font-normal text-xs ml-1">@{reply.user.username}</span>
                                       </h5>
                                     </Link>
                                       <div className="flex items-center gap-2">
-                                      {reply.banned && (authUser?.permission === 'admin' || isReplyOwner) && (
+                                      {reply.banned && ((authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') || isReplyOwner) && (
                                         <span className="inline-block text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">BANNED</span>
                                       )}
                                       <span className="text-xs text-gray-500">
@@ -1346,7 +1354,7 @@ const Post = ({ post, isDetailView = false, commentIdToExpand = null }) => {
                                             <>
                                               <div className='fixed inset-0 z-10' onClick={() => setOpenReplyMenu(null)} />
                                               <div className='absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20'>
-                                                {authUser?.permission === 'admin' ? (
+                                                {(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin') ? (
                                                   reply.banned ? (
                                                     <button
                                                       onClick={(e) => { e.stopPropagation(); setModerationReply({ commentId: comment._id, replyId: reply._id }); setShowUnbanReplyConfirm(true); setOpenReplyMenu(null); }}

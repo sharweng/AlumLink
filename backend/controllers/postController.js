@@ -806,7 +806,7 @@ export const banReply = async (req, res) => {
     await post.save();
 
     const reason = req.body?.reason
-    await ModerationLog.create({ action: 'ban', targetType: 'reply', targetId: replyId, parentId: id, performedBy: req.user._id, reason })
+    await ModerationLog.create({ action: 'ban', targetType: 'reply', targetId: replyId, parentId: id, commentId: commentId, performedBy: req.user._id, reason })
 
         const populated = await Post.findById(id)
             .populate("author", "name username profilePicture headline")
@@ -841,7 +841,7 @@ export const unbanReply = async (req, res) => {
     await post.save();
 
     const reason = req.body?.reason
-    await ModerationLog.create({ action: 'unban', targetType: 'reply', targetId: replyId, parentId: id, performedBy: req.user._id, reason })
+    await ModerationLog.create({ action: 'unban', targetType: 'reply', targetId: replyId, parentId: id, commentId: commentId, performedBy: req.user._id, reason })
 
         const populated = await Post.findById(id)
             .populate("author", "name username profilePicture headline")

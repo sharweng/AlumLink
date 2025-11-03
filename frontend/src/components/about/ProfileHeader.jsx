@@ -179,27 +179,43 @@ const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving, tabs, activeT
   // Ban user handler
   const handleBanUser = async (userId) => {
     try {
-      await axiosInstance.put(`/admin/users/${userId}/ban`, { reason: banReason });
+      const response = await axiosInstance.put(`/admin/users/${userId}/ban`, { reason: banReason });
       toast.success("User banned successfully");
       setShowBanModal(false);
       setBanReason("");
-      // Refetch user data to update badge/UI
-      queryClient.invalidateQueries(["profile", userId]);
+      
+      // Immediately update cache with new user data
+      if (response.data.user) {
+        queryClient.setQueryData(["profile", userData.username], { data: response.data.user });
+        queryClient.setQueryData(["userProfile", userData.username], { data: response.data.user });
+      }
+      
+      // Refetch to ensure consistency
+      queryClient.invalidateQueries(["profile", userData.username]);
+      queryClient.invalidateQueries(["userProfile", userData.username]);
     } catch (error) {
-      toast.error(error.response?.data?.error || "Failed to ban user");
+      toast.error(error.response?.data?.message || "Failed to ban user");
     }
   };
 
   // Unban user handler
   const handleUnbanUser = async (userId) => {
     try {
-      await axiosInstance.put(`/admin/users/${userId}/unban`);
+      const response = await axiosInstance.put(`/admin/users/${userId}/unban`);
       toast.success("User unbanned successfully");
       setShowUnbanModal(false);
-      // Refetch user data to update badge/UI
-      queryClient.invalidateQueries(["profile", userId]);
+      
+      // Immediately update cache with new user data
+      if (response.data.user) {
+        queryClient.setQueryData(["profile", userData.username], { data: response.data.user });
+        queryClient.setQueryData(["userProfile", userData.username], { data: response.data.user });
+      }
+      
+      // Refetch to ensure consistency
+      queryClient.invalidateQueries(["profile", userData.username]);
+      queryClient.invalidateQueries(["userProfile", userData.username]);
     } catch (error) {
-      toast.error(error.response?.data?.error || "Failed to unban user");
+      toast.error(error.response?.data?.message || "Failed to unban user");
     }
   };
 
@@ -494,6 +510,37 @@ const ProfileHeader = ({ userData, isOwnProfile, onSave, isSaving, tabs, activeT
                 onClick={() => handleBanUser(userData._id)}
               >
                 Yes, Ban
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Unban Modal for admin */}
+      {showUnbanModal && isAdmin && !isOwnProfile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+              onClick={() => setShowUnbanModal(false)}
+              aria-label="Close"
+            >
+              <X size={22} />
+            </button>
+            <h2 className="text-xl font-bold mb-2">Unban User</h2>
+            <p className="mb-4 text-gray-700">Are you sure you want to unban this user? They will regain access to the platform.</p>
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                onClick={() => setShowUnbanModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 font-semibold"
+                onClick={() => handleUnbanUser(userData._id)}
+              >
+                Yes, Unban
               </button>
             </div>
           </div>

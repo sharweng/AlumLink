@@ -16,9 +16,7 @@ export const getAllJobPosts = async (req, res) => {
         if (skills) filter.skills = { $in: skills.split(',').map(skill => skill.trim()) };
 
         const jobPosts = await JobPost.find(filter)
-            .populate("author", "name username profilePicture headline")
-                .populate({ path: 'author', select: 'name avatar banned' })
-            .where('author.banned').ne(true)
+            .populate("author", "name username profilePicture headline banned")
             .sort({ createdAt: -1 })
             .limit(limit * 1)
             .skip((page - 1) * limit);
@@ -42,8 +40,7 @@ export const getJobPostById = async (req, res) => {
         const { id } = req.params;
         
         const jobPost = await JobPost.findById(id)
-            .populate("author", "name username profilePicture headline")
-                .populate({ path: 'author', select: 'name avatar banned' })
+            .populate("author", "name username profilePicture headline banned")
             .populate("applicants.user", "name username profilePicture headline");
 
         if (!jobPost) {

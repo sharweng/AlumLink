@@ -958,7 +958,7 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
                         />
                       </a>
                       <div className="ml-3 min-w-0 flex-1 relative">
-                        <a href={`/profile/${user.username}`} className="text-sm font-medium text-gray-900 truncate hover:underline">
+                        <a href={`/profile/${user.username}`} className="text-sm font-medium text-gray-900 truncate">
                           {user.name}
                         </a>
                         <div

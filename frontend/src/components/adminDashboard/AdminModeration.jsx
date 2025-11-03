@@ -91,10 +91,12 @@ const AdminModeration = ({ setShowModerationModal, setSelectedModeration }) => {
                               const url =
                                 log.targetType === 'post' ? `/post/${log.targetId}` :
                                 log.targetType === 'comment' ? `/post/${log.parentId}?comment=${log.targetId}` :
-                                log.targetType === 'reply' ? `/post/${log.parentId}?reply=${log.targetId}&comment=${log.parentId}` :
+                                log.targetType === 'reply' ? `/post/${log.parentId}?comment=${log.commentId}&reply=${log.targetId}` :
                                 log.targetType === 'job' ? `/job/${log.targetId}` :
                                 log.targetType === 'event' ? `/event/${log.targetId}` :
-                                log.targetType === 'discussion' ? `/discussion/${log.targetId}` : '#';
+                                log.targetType === 'discussion' ? `/discussion/${log.targetId}` :
+                                log.targetType === 'discussionComment' ? `/discussion/${log.parentId}?comment=${log.targetId}` :
+                                log.targetType === 'discussionReply' ? `/discussion/${log.parentId}?comment=${log.commentId}&reply=${log.targetId}` : '#';
                               navigate(url);
                             }
                           }}

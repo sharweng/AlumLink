@@ -197,11 +197,8 @@ export const getAllEvents = async (req, res) => {
         }
         
         let events = await Event.find(query)
-            .populate("organizer", "name username profilePicture headline")
+            .populate("organizer", "name username profilePicture headline banned")
             .populate("attendees.user", "name username profilePicture")
-                .where('organizer.banned').ne(true) // Exclude banned organizers
-                // When populating organizer, include banned field
-                .populate({ path: 'organizer', select: 'name avatar banned' })
             .sort(sortOption);
 
         // Update event statuses based on current time

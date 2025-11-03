@@ -645,7 +645,7 @@ export const banDiscussionComment = async (req, res) => {
         await discussion.save();
 
         const reason = req.body?.reason;
-        await ModerationLog.create({ action: 'ban', targetType: 'comment', targetId: commentId, parentId: id, performedBy: req.user._id, reason });
+        await ModerationLog.create({ action: 'ban', targetType: 'discussionComment', targetId: commentId, parentId: id, performedBy: req.user._id, reason });
 
         const populated = await Discussion.findById(id)
             .populate("author", "name username profilePicture headline")
@@ -674,7 +674,7 @@ export const unbanDiscussionComment = async (req, res) => {
         await discussion.save();
 
         const reason = req.body?.reason;
-        await ModerationLog.create({ action: 'unban', targetType: 'comment', targetId: commentId, parentId: id, performedBy: req.user._id, reason });
+        await ModerationLog.create({ action: 'unban', targetType: 'discussionComment', targetId: commentId, parentId: id, performedBy: req.user._id, reason });
 
         const populated = await Discussion.findById(id)
             .populate("author", "name username profilePicture headline")
@@ -706,7 +706,7 @@ export const banDiscussionReply = async (req, res) => {
         await discussion.save();
 
         const reason = req.body?.reason;
-        await ModerationLog.create({ action: 'ban', targetType: 'reply', targetId: replyId, parentId: id, performedBy: req.user._id, reason });
+        await ModerationLog.create({ action: 'ban', targetType: 'discussionReply', targetId: replyId, parentId: id, commentId: commentId, performedBy: req.user._id, reason });
 
         const populated = await Discussion.findById(id)
             .populate("author", "name username profilePicture headline")
@@ -738,7 +738,7 @@ export const unbanDiscussionReply = async (req, res) => {
         await discussion.save();
 
         const reason = req.body?.reason;
-        await ModerationLog.create({ action: 'unban', targetType: 'reply', targetId: replyId, parentId: id, performedBy: req.user._id, reason });
+        await ModerationLog.create({ action: 'unban', targetType: 'discussionReply', targetId: replyId, parentId: id, commentId: commentId, performedBy: req.user._id, reason });
 
         const populated = await Discussion.findById(id)
             .populate("author", "name username profilePicture headline")

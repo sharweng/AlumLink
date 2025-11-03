@@ -53,8 +53,17 @@ const JobBoardPage = () => {
     }
   });
   
-  // Filter out job posts by banned authors or missing authors
-  const jobPosts = jobPostsData?.jobPosts?.filter(j => j.author && !j.author?.banned) || [];
+  // Filter out job posts by banned authors, missing authors, or banned jobs (for regular users)
+  const isAdmin = authUser?.permission === 'admin' || authUser?.permission === 'superAdmin';
+  const jobPosts = jobPostsData?.jobPosts?.filter(j => {
+    // Must have an author
+    if (!j.author) return false;
+    // Filter out jobs with banned authors
+    if (j.author?.banned) return false;
+    // For non-admin users, filter out banned jobs
+    if (!isAdmin && j.banned) return false;
+    return true;
+  }) || [];
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));

@@ -121,13 +121,6 @@ const AchievementsPage = () => {
 
       <div className='lg:col-span-3'>
         <div className='mb-4'>
-          <Link
-            to='/'
-            className='inline-flex items-center text-primary hover:text-primary-focus mb-4'
-          >
-            <ArrowLeft className='w-4 h-4 mr-2' />
-            Back to Home
-          </Link>
           <div className='flex items-start justify-between'>
             <div>
               <h1 className='text-3xl font-bold flex items-center gap-2 text-gray-900'>

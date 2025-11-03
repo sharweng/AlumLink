@@ -835,7 +835,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
             </Link>
             <div className="flex-1">
               <Link to={`/profile/${discussion.author?.username}`}>
-                <h3 className="font-semibold hover:underline">
+                <h3 className="font-semibold ">
                   {discussion.author?.name}
                   <span className="text-gray-500 font-normal ml-1">@{discussion.author?.username}</span>
                 </h3>
@@ -1380,6 +1380,10 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
           {/* Comments List */}
           <div className="space-y-3">
             {getSortedComments().map((comment) => {
+              // If comment is banned and current user is neither comment owner nor admin/superAdmin, skip rendering
+              if (comment.banned && authUser?._id !== comment.user._id && !(authUser?.permission === 'admin' || authUser?.permission === 'superAdmin')) {
+                return null
+              }
               const isCommentOwner = comment.user?._id === authUser?._id;
               const isEditingThisComment = editingCommentId === comment._id;
 
@@ -1396,7 +1400,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                     <div className="bg-gray-50 rounded-lg p-3 transition-colors duration-500">
                         <div className="flex items-center justify-between mb-1">
                         <Link to={`/profile/${comment.user?.username}`}>
-                          <h4 className="font-medium text-gray-900 hover:underline">
+                          <h4 className="font-medium text-gray-900 ">
                             {comment.user?.name}
                             <span className="text-gray-500 font-normal text-sm ml-1">@{comment.user?.username}</span>
                           </h4>
@@ -1584,7 +1588,7 @@ const DiscussionPost = ({ discussion, isDetailView = false, commentIdToExpand = 
                               <div className="flex-1 bg-gray-100 rounded-lg p-2 transition-colors duration-500">
                                 <div className="flex items-center justify-between mb-1">
                                   <Link to={`/profile/${reply.user?.username}`}>
-                                    <h5 className="font-medium text-sm text-gray-900 hover:underline">
+                                    <h5 className="font-medium text-sm text-gray-900 ">
                                       {reply.user?.name}
                                       <span className="text-gray-500 font-normal text-xs ml-1">@{reply.user?.username}</span>
                                     </h5>

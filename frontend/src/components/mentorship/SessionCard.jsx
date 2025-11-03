@@ -204,7 +204,7 @@ const SessionCard = ({ session, mentorship, authUser }) => {
                                     }
                                     setShowVideoCall(true);
                                 }}
-                                className="text-sm text-blue-600 hover:underline font-medium"
+                                className="text-sm text-blue-600 font-medium"
                             >
                                 Join Video Call
                             </button>

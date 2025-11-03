@@ -423,7 +423,7 @@ const EventDetailPage = () => {
                 href={event.virtualLink} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-primary hover:underline break-all"
+                className="text-primary break-all"
               >
                 {event.virtualLink}
               </a>

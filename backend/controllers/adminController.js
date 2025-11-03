@@ -264,7 +264,10 @@ export const banUser = async (req, res) => {
         user.banned = true;
         user.bannedReason = reason || "";
         await user.save();
-        res.status(200).json({ message: "User banned successfully." });
+        
+        // Return updated user data
+        const updatedUser = await User.findById(userId).select('-password');
+        res.status(200).json({ message: "User banned successfully.", user: updatedUser });
     } catch (error) {
         console.log("Error in banUser adminController:", error.message);
         res.status(500).json({ message: "Internal server error" });
@@ -288,7 +291,10 @@ export const unbanUser = async (req, res) => {
         user.banned = false;
         user.bannedReason = "";
         await user.save();
-        res.status(200).json({ message: "User unbanned successfully." });
+        
+        // Return updated user data
+        const updatedUser = await User.findById(userId).select('-password');
+        res.status(200).json({ message: "User unbanned successfully.", user: updatedUser });
     } catch (error) {
         console.log("Error in unbanUser adminController:", error.message);
         res.status(500).json({ message: "Internal server error" });

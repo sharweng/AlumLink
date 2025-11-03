@@ -282,13 +282,17 @@ const JobPostPage = () => {
           {/* Header */}
           <div className='flex items-start justify-between mb-6'>
             <div className='flex items-start gap-3 flex-1'>
-              <img
-                src={jobPost.author.profilePicture || '/avatar.png'}
-                alt={jobPost.author.name}
-                className='w-12 h-12 rounded-full object-cover'
-              />
+              <Link to={`/profile/${jobPost.author.username}`}>
+                <img
+                  src={jobPost.author.profilePicture || '/avatar.png'}
+                  alt={jobPost.author.name}
+                  className='w-12 h-12 rounded-full object-cover hover:opacity-80 transition-opacity cursor-pointer'
+                />
+              </Link>
               <div>
-                <h3 className='font-semibold text-gray-900'>{jobPost.author.name}</h3>
+                <Link to={`/profile/${jobPost.author.username}`}>
+                  <h3 className='font-semibold text-gray-900 cursor-pointer'>{jobPost.author.name}</h3>
+                </Link>
                 <p className='text-sm text-gray-600'>{jobPost.author.headline}</p>
                 <p className='text-xs text-gray-500'>
                   {formatDistanceToNow(new Date(jobPost.createdAt), { addSuffix: true })}

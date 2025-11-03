@@ -239,7 +239,7 @@ const EventTicket = ({ event, ticket, user, onClose }) => {
                   href={event.virtualLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:underline break-all"
+                  className=" break-all"
                 >
                   Join Virtual Event
                 </a>
