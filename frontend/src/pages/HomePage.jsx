@@ -5,12 +5,15 @@ import Sidebar from '../components/Sidebar'
 import PostCreation from '../components/post/PostCreation'
 import Post from '../components/post/Post'
 import RecommendedUser from '../components/network/RecommendedUser'
+import FeedbackModal from '../components/common/FeedbackModal'
 // RecognitionWall removed from sidebar (moved to centralized Achievements page)
-import { Users } from "lucide-react"
+import { Users, MessageSquare } from "lucide-react"
+import { useState } from 'react'
 
 const HomePage = () => {
   const queryClient = useQueryClient()
   const authUser = queryClient.getQueryData(["authUser"])
+  const [showFeedback, setShowFeedback] = useState(false)
 
   const { data:recommendedUsers } = useQuery({
     queryKey: ["recommendedUsers"],
@@ -40,21 +43,9 @@ const HomePage = () => {
       </div>
       <div className='col-span-1 lg:col-span-2 order-first lg:order-none'>
         <PostCreation user={ authUser } />
-  { posts?.filter(post => {
-    // Filter out posts with banned authors
-    if (post.author?.banned) return false;
-    // Filter out banned posts for regular users (admins and owners can see their banned posts)
-    if (post.banned && authUser?.role !== 'admin' && authUser?._id !== post.author._id) return false;
-    return true;
-  }).map(post=> <Post key={ post._id } post={ post } />)}
+  { posts?.filter(post => !post.author?.banned).map(post=> <Post key={ post._id } post={ post } />)}
 
-  { posts?.filter(post => {
-    // Filter out posts with banned authors
-    if (post.author?.banned) return false;
-    // Filter out banned posts for regular users (admins and owners can see their banned posts)
-    if (post.banned && authUser?.role !== 'admin' && authUser?._id !== post.author._id) return false;
-    return true;
-  }).length === 0 && (
+  { posts?.filter(post => !post.author?.banned).length === 0 && (
           <div className='bg-white rounded-lg shadow p-8 text-center'>
             <div className='mb-6'>
               <Users size={64} className="mx-auto text-red-500" />
@@ -67,12 +58,34 @@ const HomePage = () => {
 
       { recommendedUsers?.filter(u => !u.banned).length > 0 && (
         <div className='col-span-1 lg:col-span-1 lg:block'>
-          <div className='bg-secondary rounded-lg shadow p-4'>
-            <h2 className='font-semibold mb-4'>People you may know</h2>
-            { recommendedUsers?.filter(user => !user.banned).map((user) => (
-              <RecommendedUser key={ user._id } user={ user } />
-            ))}
+          <div className='sticky top-[80px] space-y-4'>
+            <div className='bg-secondary rounded-lg shadow p-4'>
+              <h2 className='font-semibold mb-4'>People you may know</h2>
+              { recommendedUsers?.filter(user => !user.banned).map((user) => (
+                <RecommendedUser key={ user._id } user={ user } />
+              ))}
+            </div>
+            
+            {/* Feedback box under recommended users */}
+            <div className='bg-white rounded-lg shadow p-4 text-sm border border-red-100'>
+              <div className='flex items-start gap-3'>
+                <MessageSquare size={20} className='text-red-600' />
+                <div className='flex-1'>
+                  <div className='font-semibold text-red-700'>Help improve AlumLink</div>
+                  <div className='text-xs text-red-500'>Send general feedback or report issues</div>
+                </div>
+              </div>
+              <div className='mt-3 text-right'>
+                <button
+                  onClick={() => setShowFeedback(true)}
+                  className='px-3 py-1 text-sm rounded bg-red-50 text-red-700 hover:bg-red-100'
+                >
+                  Send Feedback
+                </button>
+              </div>
+            </div>
           </div>
+          <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} />
         </div>
       )}
     </div>

@@ -1,14 +1,11 @@
 import { Bell, Home, UserPlus, Briefcase, Calendar, Trophy, MessageSquare } from "lucide-react"
 import { Link } from "react-router-dom"
-import { useState } from 'react'
-import FeedbackModal from './common/FeedbackModal'
 
 const Sidebar = ({ user }) => {
-    const [showFeedback, setShowFeedback] = useState(false)
     if (!user) return null; // Handle loading state
   
     return (
-        <div className="sticky top-[80px] max-h-[calc(100vh-113px)] overflow-y-auto z-20 flex flex-col gap-4 pr-1 lg:flex lg:flex-col lg:gap-4 lg:pr-1 hidden">
+        <div className="sticky top-[80px] max-h-[calc(100vh-104px)] overflow-y-auto z-20 pr-1 hidden lg:flex lg:flex-col lg:gap-4">
             <div className='bg-secondary rounded-lg shadow'>
                 <div className='p-4 text-center'>
                     <div
@@ -79,25 +76,6 @@ const Sidebar = ({ user }) => {
                         Visit your profile
                     </Link>
                 </div>
-            </div>
-            {/* Feedback box now inside sticky sidebar for unified sticky behavior */}
-            <div className='bg-white rounded-lg shadow p-4 text-sm border border-red-100 mb-4'>
-                <div className='flex items-start gap-3'>
-                    <MessageSquare size={20} className='text-red-600' />
-                    <div className='flex-1'>
-                        <div className='font-semibold text-red-700'>Help improve AlumLink</div>
-                        <div className='text-xs text-red-500'>Send general feedback or report issues</div>
-                    </div>
-                </div>
-                <div className='mt-3 text-right'>
-                    <button
-                        onClick={() => setShowFeedback(true)}
-                        className='px-3 py-1 text-sm rounded bg-red-50 text-red-700 hover:bg-red-100'
-                    >
-                        Send Feedback
-                    </button>
-                </div>
-                <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} />
             </div>
         </div>
     )
