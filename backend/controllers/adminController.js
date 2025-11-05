@@ -320,19 +320,48 @@ export const importUsers = async (req, res) => {
             errors: []
         };
 
+        // For staff imports, find the highest TUPT-AS-XXXX number
+        let maxStaffNumber = 0;
+        if (users.some(u => u.role === 'staff')) {
+            const staffUsers = await User.find({ tuptId: /^TUPT-AS-/i }).select('tuptId');
+            staffUsers.forEach(user => {
+                const match = user.tuptId.match(/TUPT-AS-(\d+)/i);
+                if (match) {
+                    const num = parseInt(match[1]);
+                    if (num > maxStaffNumber) maxStaffNumber = num;
+                }
+            });
+        }
+
         for (const userData of users) {
             try {
                 let { fullname, tuptId, email, course, experienceTitle, experienceCompany, experienceStartDate, experienceEndDate, role } = userData;
 
-                // Validate required fields
-                if (!fullname || !tuptId || !email) {
-                    results.errors.push({ 
-                        fullname, 
-                        tuptId, 
-                        email, 
-                        error: "Missing required fields (fullname, tuptId, or email)" 
-                    });
-                    continue;
+                // Validate required fields based on role
+                if (role === 'staff') {
+                    // Staff only requires fullname and email
+                    if (!fullname || !email) {
+                        results.errors.push({ 
+                            fullname, 
+                            email, 
+                            error: "Missing required fields (fullname or email) for staff" 
+                        });
+                        continue;
+                    }
+                    // Auto-generate TUPT-ID for staff
+                    maxStaffNumber++;
+                    tuptId = `TUPT-AS-${String(maxStaffNumber).padStart(4, '0')}`;
+                } else {
+                    // Students and alumni require tuptId
+                    if (!fullname || !tuptId || !email) {
+                        results.errors.push({ 
+                            fullname, 
+                            tuptId, 
+                            email, 
+                            error: "Missing required fields (fullname, tuptId, or email)" 
+                        });
+                        continue;
+                    }
                 }
 
                 // Handle comma-separated names (Last, First Middle -> First Middle Last)
@@ -345,13 +374,17 @@ export const importUsers = async (req, res) => {
                 }
 
                 // Extract batch from TUPT-ID (e.g., TUPT-20-0563 -> 2020)
+                // For staff (TUPT-AS-XXXX), batch is the year the account was created
                 let batch = new Date().getFullYear(); // Default to current year
-                const tuptIdMatch = tuptId.match(/TUPT-(\d{2})-/i);
-                if (tuptIdMatch) {
-                    const yearPrefix = parseInt(tuptIdMatch[1]);
-                    // Assume 20XX for years 00-99
-                    batch = 2000 + yearPrefix;
+                if (role !== 'staff') {
+                    const tuptIdMatch = tuptId.match(/TUPT-(\d{2})-/i);
+                    if (tuptIdMatch) {
+                        const yearPrefix = parseInt(tuptIdMatch[1]);
+                        // Assume 20XX for years 00-99
+                        batch = 2000 + yearPrefix;
+                    }
                 }
+                // For staff, batch is already set to current year above
 
                 // Extract last 4 digits from TUPT-ID
                 const last4Match = tuptId.match(/(\d{4})$/);
@@ -473,8 +506,11 @@ export const importUsers = async (req, res) => {
                         } else if (role === 'alumni') {
                             headline = `Alumni, ${course}`;
                         } else if (role === 'staff') {
+                            // For staff, course field contains department
                             headline = `Staff, ${course}`;
                         }
+                    } else if (role === 'staff') {
+                        headline = "Staff";
                     }
 
                     const newUser = new User({
@@ -484,7 +520,7 @@ export const importUsers = async (req, res) => {
                         password: hashedPassword,
                         tuptId: tuptId,
                         course: course || "Not Specified",
-                        batch: batch,
+                        batch: batch, // Set to current year for staff, extracted year for students/alumni
                         headline: headline,
                         experience: experience.length > 0 ? experience : undefined,
                         role: role || "student"

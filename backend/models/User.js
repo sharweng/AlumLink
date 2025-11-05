@@ -51,7 +51,7 @@ const userSchema = new mongoose.Schema({
     ],
     batch: {
         type: Number,
-        required: true,
+        required: false,
     },
     course: {
         type: String,

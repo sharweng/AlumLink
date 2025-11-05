@@ -106,7 +106,7 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
           // Find column indices by header names
           const findColumn = (possibleNames) => {
             for (const name of possibleNames) {
-              const index = headers.findIndex(h => h.includes(name.toLowerCase()));
+              const index = headers.findIndex(h => h && h.includes(name.toLowerCase()));
               if (index !== -1) return index;
             }
             return -1;
@@ -179,8 +179,9 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
               role: '' // Will be set from modal selection
             };
             
-            // Only add if we have at least name, tuptId, and email
-            if (userData.fullname && userData.tuptId && userData.email) {
+            // Validation: Staff only needs name and email; Students/Alumni need name, tuptId, and email
+            // We'll check this during import after role is set
+            if (userData.fullname && userData.email) {
               result.push(userData);
             }
           }
@@ -235,14 +236,48 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
       // Add role to all users
       users = users.map(user => ({ ...user, role: importRole }));
 
+      // Validate based on role
+      const validUsers = [];
+      const invalidUsers = [];
+      
+      users.forEach(user => {
+        if (user.role === 'staff') {
+          // Staff only needs fullname and email
+          if (user.fullname && user.email) {
+            validUsers.push(user);
+          } else {
+            invalidUsers.push({ ...user, error: 'Missing required fields (fullname or email)' });
+          }
+        } else {
+          // Students and alumni need fullname, tuptId, and email
+          if (user.fullname && user.tuptId && user.email) {
+            validUsers.push(user);
+          } else {
+            invalidUsers.push({ ...user, error: 'Missing required fields (fullname, tuptId, or email)' });
+          }
+        }
+      });
+
+      if (validUsers.length === 0) {
+        toast.error("No valid user data found in file");
+        clearInterval(timerInterval);
+        setImporting(false);
+        return;
+      }
+
+      if (invalidUsers.length > 0) {
+        console.log("Invalid users skipped:", invalidUsers);
+        toast.warning(`Skipped ${invalidUsers.length} invalid row(s)`);
+      }
+
       // Set initial progress
-      setImportProgress({ current: 0, total: users.length, percentage: 0 });
+      setImportProgress({ current: 0, total: validUsers.length, percentage: 0 });
 
       // Process users in batches to show progress
       const batchSize = 5; // Process 5 users at a time
       const batches = [];
-      for (let i = 0; i < users.length; i += batchSize) {
-        batches.push(users.slice(i, i + batchSize));
+      for (let i = 0; i < validUsers.length; i += batchSize) {
+        batches.push(validUsers.slice(i, i + batchSize));
       }
 
       const allResults = {
@@ -262,9 +297,9 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
         allResults.errors.push(...results.errors);
         
         // Update progress
-        const processed = Math.min((i + 1) * batchSize, users.length);
-        const percentage = Math.round((processed / users.length) * 100);
-        setImportProgress({ current: processed, total: users.length, percentage });
+        const processed = Math.min((i + 1) * batchSize, validUsers.length);
+        const percentage = Math.round((processed / validUsers.length) * 100);
+        setImportProgress({ current: processed, total: validUsers.length, percentage });
       }
       
       clearInterval(timerInterval);
@@ -739,9 +774,9 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
               </p>
               <ul className="text-xs text-gray-500 space-y-1 mb-4">
                 <li><strong>Name / Full Name:</strong> Required ✓</li>
-                <li><strong>TUPT-ID / ID Number:</strong> Required ✓ (Format: TUPT-XX-XXXX)</li>
+                <li><strong>TUPT-ID / ID Number:</strong> Required for Students/Alumni ✓ (Format: TUPT-XX-XXXX) | Auto-generated for Staff</li>
                 <li><strong>TUP Email:</strong> Required ✓</li>
-                <li><strong>Course:</strong> Optional</li>
+                <li><strong>Course:</strong> Optional for Students/Alumni | Department for Staff (EAAD, CAAD, MAAD, BASD)</li>
                 <li><strong>Position / Job Title:</strong> Optional</li>
                 <li><strong>Company / Organization:</strong> Optional</li>
                 <li><strong>Start Work Date / Start Date:</strong> Optional</li>
@@ -750,7 +785,8 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
               <p className="text-xs text-gray-500 mb-4">
                 <strong>Note:</strong> Username will be auto-generated (first letters + last name). 
                 Password will be last name + last 4 digits of TUPT-ID (e.g., "marbella1119"). 
-                Batch will be extracted from TUPT-ID (e.g., TUPT-20-0563 → Batch 2020).
+                For Students/Alumni: Batch will be extracted from TUPT-ID (e.g., TUPT-20-0563 → Batch 2020).
+                For Staff: TUPT-ID format is TUPT-AS-XXXX (auto-incremented).
                 Names with commas will be repositioned (e.g., "Marbella, Sharwin John" → "Sharwin John Marbella").
               </p>
               
@@ -767,6 +803,7 @@ const AdminUsers = ({ users, authUser, updatePermissionMutation, toggleStatusMut
                 >
                   <option value="student">Student</option>
                   <option value="alumni">Alumni</option>
+                  <option value="staff">Staff</option>
                 </select>
               </div>
 
