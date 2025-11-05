@@ -8,9 +8,14 @@ import User from "../models/User.js";
 export const getFeedPosts = async (req, res) => {
     try {
         const userLinks = Array.isArray(req.user.links) ? req.user.links : [];
+        const isSuperAdmin = req.user.permission === 'superAdmin';
 
+        // Super admins can see all posts, regular users only see posts from their links
+        const query = isSuperAdmin 
+            ? {} 
+            : { author: { $in: [...userLinks, req.user._id] } };
 
-        const posts = await Post.find({ author:{$in: [...userLinks, req.user._id]} })
+        const posts = await Post.find(query)
             .populate("author", "name username profilePicture headline banned")
             .populate("comments.user", "name username profilePicture")
             .populate("comments.replies.user", "name username profilePicture")
