@@ -39,6 +39,18 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: "This is my bio",
     },
+    cvUrl: {
+        type: String,
+        default: "",
+    },
+    cvKey: {
+        type: String,
+        default: "",
+    },
+    cvFileName: {
+        type: String,
+        default: "",
+    },
     skills: [String],
     experience: [{
             title: String,

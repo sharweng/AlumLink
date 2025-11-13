@@ -19,9 +19,10 @@ const r2Client = new S3Client({
  * @param {string} fileData - Base64 encoded file data
  * @param {string} fileName - Original file name
  * @param {string} mimeType - File MIME type
+ * @param {string} folder - Folder path (default: 'discussion_files')
  * @returns {Promise<{url: string, key: string}>} - Public URL and storage key
  */
-export const uploadFileToR2 = async (fileData, fileName, mimeType) => {
+export const uploadFileToR2 = async (fileData, fileName, mimeType, folder = 'discussion_files') => {
     try {
         // Remove base64 prefix if present
         const base64Data = fileData.replace(/^data:.+;base64,/, "");
@@ -30,7 +31,7 @@ export const uploadFileToR2 = async (fileData, fileName, mimeType) => {
         // Generate unique filename
         const fileExtension = fileName.split(".").pop();
         const uniqueFileName = `${uuidv4()}.${fileExtension}`;
-        const key = `discussion_files/${uniqueFileName}`;
+        const key = `${folder}/${uniqueFileName}`;
 
         // Upload to R2 with public-read access
         const command = new PutObjectCommand({

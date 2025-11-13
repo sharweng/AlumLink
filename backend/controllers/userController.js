@@ -44,6 +44,7 @@ export const updateUserById = async (req, res) => {
 };
 import cloudinary from "../lib/cloudinary.js"
 import User from "../models/User.js"
+import { uploadFileToR2, deleteFileFromR2 } from "../lib/r2.js"
 
 export const getSuggestedLinks = async (req, res) => {
     try {
@@ -175,5 +176,86 @@ export const toggleMentorStatus = async (req, res) => {
     } catch (error) {
         console.log("Error in toggleMentorStatus userController:", error.message);
         res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export const uploadCV = async (req, res) => {
+    try {
+        const { fileData, fileName, mimeType } = req.body;
+        
+        // Validate file type (only PDF and DOCX allowed)
+        const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        if (!allowedTypes.includes(mimeType)) {
+            return res.status(400).json({ message: "Only PDF and DOCX files are allowed" });
+        }
+
+        // Check file size (max 5MB)
+        const base64Data = fileData.replace(/^data:.+;base64,/, "");
+        const buffer = Buffer.from(base64Data, "base64");
+        const fileSizeInMB = buffer.length / (1024 * 1024);
+        
+        if (fileSizeInMB > 5) {
+            return res.status(400).json({ message: "File size must be less than 5MB" });
+        }
+
+        const user = await User.findById(req.user._id);
+
+        // Delete old CV if exists
+        if (user.cvKey) {
+            try {
+                await deleteFileFromR2(user.cvKey);
+            } catch (error) {
+                console.log("Error deleting old CV from R2:", error.message);
+            }
+        }
+
+        // Upload new CV to R2
+        const fileExtension = fileName.split(".").pop();
+        const uniqueFileName = `cv_${req.user._id}_${Date.now()}.${fileExtension}`;
+        
+        const { url, key } = await uploadFileToR2(fileData, uniqueFileName, mimeType, 'cvs');
+
+        // Update user with CV info
+        user.cvUrl = url;
+        user.cvKey = key;
+        user.cvFileName = fileName;
+        await user.save();
+
+        res.json({
+            message: "CV uploaded successfully",
+            cvUrl: url,
+            cvFileName: fileName
+        });
+    } catch (error) {
+        console.log("Error in uploadCV userController:", error.message);
+        res.status(500).json({ message: "Failed to upload CV" });
+    }
+}
+
+export const deleteCV = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+
+        if (!user.cvKey) {
+            return res.status(404).json({ message: "No CV found" });
+        }
+
+        // Delete from R2
+        try {
+            await deleteFileFromR2(user.cvKey);
+        } catch (error) {
+            console.log("Error deleting CV from R2:", error.message);
+        }
+
+        // Update user
+        user.cvUrl = "";
+        user.cvKey = "";
+        user.cvFileName = "";
+        await user.save();
+
+        res.json({ message: "CV deleted successfully" });
+    } catch (error) {
+        console.log("Error in deleteCV userController:", error.message);
+        res.status(500).json({ message: "Failed to delete CV" });
     }
 }
