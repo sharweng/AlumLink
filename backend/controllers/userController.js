@@ -221,10 +221,12 @@ export const uploadCV = async (req, res) => {
         user.cvFileName = fileName;
         await user.save();
 
+        // Return upload success with CV URL - extraction will be done separately
         res.json({
             message: "CV uploaded successfully",
             cvUrl: url,
-            cvFileName: fileName
+            cvFileName: fileName,
+            mimeType: mimeType
         });
     } catch (error) {
         console.log("Error in uploadCV userController:", error.message);
@@ -257,5 +259,115 @@ export const deleteCV = async (req, res) => {
     } catch (error) {
         console.log("Error in deleteCV userController:", error.message);
         res.status(500).json({ message: "Failed to delete CV" });
+    }
+}
+
+export const extractCVData = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        
+        if (!user.cvUrl) {
+            return res.status(400).json({ message: "No CV uploaded. Please upload a CV first." });
+        }
+
+        // Download the CV file from R2
+        const https = await import('https');
+        const http = await import('http');
+        
+        const protocol = user.cvUrl.startsWith('https') ? https : http;
+        
+        // Download file as buffer
+        const fileBuffer = await new Promise((resolve, reject) => {
+            protocol.default.get(user.cvUrl, (response) => {
+                const chunks = [];
+                response.on('data', (chunk) => chunks.push(chunk));
+                response.on('end', () => resolve(Buffer.concat(chunks)));
+                response.on('error', reject);
+            }).on('error', reject);
+        });
+
+        // Extract text based on file type
+        let cvText = '';
+        const mimeType = user.cvFileName?.endsWith('.pdf') 
+            ? 'application/pdf' 
+            : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        
+        if (mimeType === 'application/pdf') {
+            // Use pdf-parse v2
+            const { PDFParse } = await import('pdf-parse');
+            const parser = new PDFParse({ url: user.cvUrl });
+            const result = await parser.getText();
+            cvText = result.text;
+        } else {
+            // DOCX
+            const mammoth = await import('mammoth');
+            const result = await mammoth.extractRawText({ buffer: fileBuffer });
+            cvText = result.value;
+        }
+
+        if (!cvText || cvText.trim().length === 0) {
+            return res.status(400).json({ message: "Could not extract text from CV file" });
+        }
+
+        // Import the extractCVData function from ollama
+        const { extractCVData: extractData } = await import('../lib/ollama.js');
+        
+        // Extract experience and skills using Mistral
+        const extractedData = await extractData(cvText);
+        
+        // Process experience dates - convert "Present" to null
+        if (extractedData.experience && Array.isArray(extractedData.experience)) {
+            extractedData.experience = extractedData.experience.map(exp => {
+                // Handle endDate
+                if (exp.endDate) {
+                    const endDateStr = String(exp.endDate).trim();
+                    if (endDateStr.toLowerCase() === 'present' || endDateStr.toLowerCase() === 'current') {
+                        exp.endDate = null; // Set to null for ongoing positions
+                    } else {
+                        try {
+                            exp.endDate = new Date(exp.endDate);
+                        } catch (e) {
+                            exp.endDate = null;
+                        }
+                    }
+                }
+                
+                // Handle startDate
+                if (exp.startDate) {
+                    try {
+                        exp.startDate = new Date(exp.startDate);
+                    } catch (e) {
+                        exp.startDate = null;
+                    }
+                }
+                
+                return exp;
+            });
+            
+            // Sort experiences by start date (most recent first)
+            extractedData.experience.sort((a, b) => {
+                if (!a.startDate) return 1;
+                if (!b.startDate) return -1;
+                return new Date(b.startDate) - new Date(a.startDate);
+            });
+        }
+        
+        // Replace existing experience and skills with extracted data
+        user.experience = extractedData.experience;
+        user.skills = extractedData.skills;
+        
+        await user.save();
+
+        res.json({
+            message: "CV data extracted and profile updated successfully",
+            experience: extractedData.experience,
+            skills: extractedData.skills
+        });
+    } catch (error) {
+        console.log("Error in extractCVData userController:", error.message);
+        res.status(500).json({ 
+            message: error.message || "Failed to extract CV data",
+            details: "Make sure Ollama is running with the Mistral model installed"
+        });
     }
 }

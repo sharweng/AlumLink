@@ -11,6 +11,8 @@ const AboutSection = ({ userData, isOwnProfile, onSave}) => {
   const [ isUploadingCV, setIsUploadingCV ] = useState(false)
   const [ showDeleteCVConfirm, setShowDeleteCVConfirm ] = useState(false)
   const [ isDeletingCV, setIsDeletingCV ] = useState(false)
+  const [ showExtractModal, setShowExtractModal ] = useState(false)
+  const [ isExtracting, setIsExtracting ] = useState(false)
   const queryClient = useQueryClient()
 
   const handleSave = () => {
@@ -35,8 +37,9 @@ const AboutSection = ({ userData, isOwnProfile, onSave}) => {
       return
     }
 
+    // Upload CV first
     setIsUploadingCV(true)
-
+    
     try {
       // Convert file to base64
       const reader = new FileReader()
@@ -49,12 +52,15 @@ const AboutSection = ({ userData, isOwnProfile, onSave}) => {
             mimeType: file.type
           })
 
-          toast.success("CV uploaded successfully")
+          toast.success("CV uploaded successfully!")
           
           // Invalidate queries to refresh data
           queryClient.invalidateQueries(["userProfile", userData.username])
           queryClient.invalidateQueries(["authUser"])
           queryClient.invalidateQueries(["profile", userData.username])
+          
+          // After successful upload, show extraction modal
+          setShowExtractModal(true)
         } catch (error) {
           toast.error(error.response?.data?.message || "Failed to upload CV")
         } finally {
@@ -68,6 +74,26 @@ const AboutSection = ({ userData, isOwnProfile, onSave}) => {
     } catch (error) {
       toast.error("Failed to upload CV")
       setIsUploadingCV(false)
+    }
+  }
+
+  const handleExtractData = async () => {
+    setShowExtractModal(false)
+    setIsExtracting(true)
+
+    try {
+      const response = await axiosInstance.post('/users/cv/extract')
+      
+      toast.success("CV data extracted successfully! Your profile has been updated.")
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries(["userProfile", userData.username])
+      queryClient.invalidateQueries(["authUser"])
+      queryClient.invalidateQueries(["profile", userData.username])
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to extract CV data")
+    } finally {
+      setIsExtracting(false)
     }
   }
 
@@ -92,6 +118,22 @@ const AboutSection = ({ userData, isOwnProfile, onSave}) => {
 
   return (
     <div className='bg-white shadow rounded-lg p-6 mb-6'>
+      {/* Show loading overlay during extraction */}
+      {isExtracting && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+          <div className='bg-white rounded-lg p-8 max-w-md w-full text-center'>
+            <Loader className='animate-spin h-12 w-12 text-primary mx-auto mb-4' />
+            <h3 className='text-lg font-semibold mb-2'>Extracting CV Data...</h3>
+            <p className='text-gray-600 mb-2'>
+              AI is reading your CV and extracting work experience and skills.
+            </p>
+            <p className='text-sm text-gray-500'>
+              This may take 30-60 seconds. Please wait...
+            </p>
+          </div>
+        </div>
+      )}
+
 			<h2 className='text-xl font-semibold mb-4'>About</h2>
 			{isOwnProfile ? (
 				isEditing ? (
@@ -206,6 +248,51 @@ const AboutSection = ({ userData, isOwnProfile, onSave}) => {
         loadingText="Deleting..."
         confirmButtonClass="bg-red-500 hover:bg-red-600"
       />
+
+      {/* Extract Data Modal */}
+      {showExtractModal && !isExtracting && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
+          <div className='bg-white rounded-lg p-6 max-w-md w-full'>
+            <h3 className='text-lg font-semibold mb-4'>CV Uploaded Successfully! 🎉</h3>
+            <p className='text-gray-600 mb-4'>
+              Your CV has been uploaded and saved to your profile.
+            </p>
+            
+            {/* Extraction option */}
+            <div className='mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg'>
+              <div className='flex items-start gap-3'>
+                <div className='flex-1'>
+                  <p className='font-medium text-gray-900 mb-1'>
+                    Extract data from CV using AI
+                  </p>
+                  <p className='text-sm text-gray-600 mb-3'>
+                    The AI will automatically read your CV file and extract work experience and skills. 
+                    This will <strong>replace</strong> your current experience and skills data.
+                  </p>
+                  <p className='text-xs text-gray-500'>
+                    Uses Ollama Mistral running locally on your machine.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className='flex gap-3 justify-end'>
+              <button
+                onClick={() => setShowExtractModal(false)}
+                className='px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors'
+              >
+                Skip
+              </button>
+              <button
+                onClick={handleExtractData}
+                className='px-4 py-2 bg-primary text-white rounded hover:bg-red-700 transition-colors flex items-center gap-2'
+              >
+                Extract Data with AI
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 		</div>
   )
 }

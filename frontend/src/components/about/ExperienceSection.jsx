@@ -77,7 +77,7 @@ const ExperienceSection = ({ userData, isOwnProfile, onSave }) => {
 			{experiences.length > 0 && experiences.map((exp, idx) => (
 				<div key={exp._id || idx} className='mb-4 flex justify-between items-start'>
 					<div className='flex items-start'>
-						<Briefcase size={20} className='mr-2 mt-1' />
+						<Briefcase size={20} className='mr-2 mt-1 flex-shrink-0' />
 						<div>
 							{editIdx === idx ? (
 								<>
