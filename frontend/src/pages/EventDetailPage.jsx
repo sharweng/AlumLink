@@ -28,6 +28,7 @@ import { Flag } from 'lucide-react';
 import { Share2 } from 'lucide-react';
 import { CheckCircle } from 'lucide-react';
 import ReportModal from '../components/common/ReportModal';
+import FeedbackModal from '../components/common/FeedbackModal';
 import { format, formatDistanceToNow } from 'date-fns';
 
 const EventDetailPage = () => {
@@ -44,6 +45,7 @@ const EventDetailPage = () => {
   const [showBanConfirm, setShowBanConfirm] = useState(false);
   const [showUnbanConfirm, setShowUnbanConfirm] = useState(false);
   const [banReason, setBanReason] = useState('');
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   const { data: event, isLoading } = useQuery({
     queryKey: ['event', id],
@@ -51,6 +53,16 @@ const EventDetailPage = () => {
       const res = await axiosInstance.get(`/events/${id}`);
       return res.data;
     },
+  });
+
+  // Fetch event-specific feedbacks only for organizer/admin
+  const { data: eventFeedbacks } = useQuery({
+    queryKey: ['eventFeedbacks', id],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/events/${id}/feedbacks`);
+      return res.data;
+    },
+    enabled: !!event && (authUser?._id === event.organizer._id || authUser?.permission === 'admin' || authUser?.permission === 'superAdmin')
   });
 
   const { mutate: rsvpEvent, isPending: isRsvping } = useMutation({
@@ -118,14 +130,15 @@ const EventDetailPage = () => {
   });
 
   const { mutate: cancelEvent, isPending: isCancelling } = useMutation({
-    mutationFn: async () => {
-      const response = await axiosInstance.put(`/events/${id}/cancel`);
+    mutationFn: async (reason) => {
+      const response = await axiosInstance.put(`/events/${id}/cancel`, { reason });
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event', id] });
       queryClient.invalidateQueries({ queryKey: ['events'] });
       setShowCancelEventConfirm(false);
+      setCancelReason("");
       toast.success('Event cancelled successfully');
     },
     onError: (error) => {
@@ -493,9 +506,21 @@ const EventDetailPage = () => {
 
           {/* Completed Event Badge */}
           {!isOrganizer && event.status === 'completed' && (
-            <div className="w-full py-3 px-6 rounded-lg bg-gray-200 text-gray-600 font-semibold flex items-center justify-center gap-2 cursor-not-allowed">
-              <CheckCircle2 size={20} />
-              Event Completed
+            <div className="w-full flex items-center justify-between gap-3">
+              <div className="py-3 px-6 rounded-lg bg-gray-200 text-gray-600 font-semibold flex items-center justify-start gap-2 flex-1">
+                <CheckCircle2 size={20} />
+                Event Completed
+              </div>
+              {userStatus === 'going' && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowFeedbackModal(true)}
+                    className="py-3 px-6 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-semibold transition-colors"
+                  >
+                    Leave Feedback
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -517,7 +542,7 @@ const EventDetailPage = () => {
           {/* Organizer Actions */}
           {isOrganizer && (
             <div className="flex gap-3">
-              {event.status === 'cancelled' ? (
+              {event.status === 'cancelled' || event.status === 'completed' ? (
                 <button
                   onClick={() => setShowDeleteEventConfirm(true)}
                   disabled={isDeleting}
@@ -540,22 +565,20 @@ const EventDetailPage = () => {
                       Edit Event
                     </button>
                   </Link>
-                  {event.status !== 'completed' && (
-                    <button
-                      onClick={() => setShowCancelEventConfirm(true)}
-                      disabled={isCancelling}
-                      className="flex-1 py-3 px-6 bg-orange-600 text-white hover:bg-orange-700 rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {isCancelling ? (
-                        <Loader className="animate-spin" size={20} />
-                      ) : (
-                        <>
-                          <XCircle size={20} />
-                          Cancel Event
-                        </>
-                      )}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setShowCancelEventConfirm(true)}
+                    disabled={isCancelling}
+                    className="flex-1 py-3 px-6 bg-orange-600 text-white hover:bg-orange-700 rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isCancelling ? (
+                      <Loader className="animate-spin" size={20} />
+                    ) : (
+                      <>
+                        <XCircle size={20} />
+                        Cancel Event
+                      </>
+                    )}
+                  </button>
                   <button
                     onClick={() => setShowDeleteEventConfirm(true)}
                     disabled={isDeleting}
@@ -601,6 +624,30 @@ const EventDetailPage = () => {
                   </div>
                 </Link>
               ))}
+          </div>
+        </div>
+      )}
+      {/* Event Feedback visible to organizer */}
+      {authUser && eventFeedbacks && eventFeedbacks.length > 0 && authUser?._id === event.organizer._id && (
+        <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
+          <h2 className="text-xl font-bold mb-4">Event Feedback</h2>
+          <div className="space-y-4">
+            {eventFeedbacks.map((fb) => (
+              <div key={fb._id} className="p-3 bg-gray-50 rounded">
+                <div className="flex items-start gap-3">
+                  <img src={fb.user?.profilePicture || '/avatar.png'} alt={fb.user?.name} className="w-10 h-10 rounded-full object-cover" />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold">{fb.user?.name || 'Anonymous'}</p>
+                        <p className="text-xs text-gray-500">{new Date(fb.createdAt).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">{fb.message}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -668,9 +715,8 @@ const EventDetailPage = () => {
       <ConfirmModal
         isOpen={showCancelEventConfirm}
         onClose={() => { setShowCancelEventConfirm(false); setCancelReason(""); }}
-        onConfirm={async () => {
-          setIsCancelling(true);
-          cancelEventMutation(cancelReason);
+        onConfirm={() => {
+          cancelEvent(cancelReason);
         }}
         title="Cancel Event"
         message="Please provide a reason for cancelling this event. This will be shown to all attendees."
@@ -731,6 +777,12 @@ const EventDetailPage = () => {
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
         defaultType='event'
+        targetId={event?._id}
+      />
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        targetType="event"
         targetId={event?._id}
       />
     </div>

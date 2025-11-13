@@ -3,7 +3,7 @@ import { X, Loader } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { axiosInstance } from '../../lib/axios';
 
-const FeedbackModal = ({ isOpen, onClose }) => {
+const FeedbackModal = ({ isOpen, onClose, targetType, targetId }) => {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -16,7 +16,15 @@ const FeedbackModal = ({ isOpen, onClose }) => {
     }
     setIsLoading(true);
     try {
-      await axiosInstance.post('/feedbacks', { message });
+      // If this feedback targets an event, post to event-specific endpoint so it doesn't go to admin feedbacks
+      if (targetType === 'event' && targetId) {
+        await axiosInstance.post(`/events/${targetId}/feedback`, { message });
+      } else {
+        const payload = { message };
+        if (targetType) payload.targetType = targetType;
+        if (targetId) payload.targetId = targetId;
+        await axiosInstance.post('/feedbacks', payload);
+      }
       toast.success('Thank you for your feedback');
       setMessage('');
       onClose();
@@ -44,7 +52,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
           onChange={(e) => setMessage(e.target.value)}
           rows={6}
           className='w-full border rounded p-2 mb-4'
-          placeholder='Share any general feedback about the app, bugs, or suggestions.'
+          placeholder={targetType === 'event' ? 'Share feedback about this event (what went well, issues, suggestions)...' : 'Share any general feedback about the app, bugs, or suggestions.'}
         />
         <div className='flex gap-3 justify-end'>
           <button

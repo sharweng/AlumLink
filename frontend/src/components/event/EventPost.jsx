@@ -404,8 +404,28 @@ const EventPost = ({ event, onEventChanged }) => {
           </div>
         )}
 
+        {/* If completed, only show delete button for organizer */}
+        {isOrganizer && event.status === 'completed' && (
+          <div className="flex gap-2 h-[34px]">
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={isDeleting}
+              className="flex-1 py-1.5 px-3 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 text-sm font-medium"
+            >
+              {isDeleting ? (
+                <Loader className="animate-spin" size={14} />
+              ) : (
+                <>
+                  <Trash2 size={14} />
+                  Delete
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
         {/* Organizer: Edit, Cancel, Delete buttons (cancel in the middle) */}
-        {isOrganizer && event.status !== 'cancelled' && (
+        {isOrganizer && event.status !== 'cancelled' && event.status !== 'completed' && (
           <div className="flex gap-2 h-[34px]">
             <Link to={`/event/${event._id}/edit`} className="flex-1">
               <button className="w-full py-1.5 px-3 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors flex items-center justify-center gap-1.5 text-sm font-medium">

@@ -4,6 +4,7 @@ import Notification from "../models/Notification.js";
 import Discussion from "../models/Discussion.js";
 import User from "../models/User.js";
 import ModerationLog from "../models/ModerationLog.js";
+import profanityFilter from "../lib/profanityFilter.js";
 
 export const getAllDiscussions = async (req, res) => {
     try {
@@ -307,9 +308,12 @@ export const createComment = async (req, res) => {
             return res.status(400).json({ message: "Comment content is required" });
         }
 
+        // Sanitize content for profanity
+        const cleanedContent = profanityFilter.clean(content.trim());
+
         const discussion = await Discussion.findByIdAndUpdate(
             discussionId,
-            { $push: { comments: { user: req.user._id, content } } },
+            { $push: { comments: { user: req.user._id, content: cleanedContent } } },
             { new: true }
         )
         .populate("author", "name email username profilePicture headline")
@@ -433,7 +437,9 @@ export const updateComment = async (req, res) => {
             return res.status(403).json({ message: "You can only edit your own comments" });
         }
 
-        comment.content = content.trim();
+        // Sanitize content for profanity
+        const cleanedContent = profanityFilter.clean(content.trim());
+        comment.content = cleanedContent;
         comment.editedAt = new Date();
         await discussion.save();
 
@@ -470,9 +476,12 @@ export const createReply = async (req, res) => {
             return res.status(404).json({ message: "Comment not found" });
         }
 
+        // Sanitize content for profanity
+        const cleanedContent = profanityFilter.clean(content.trim());
+
         comment.replies.push({
             user: req.user._id,
-            content: content.trim(),
+            content: cleanedContent,
         });
 
         await discussion.save();
@@ -785,7 +794,9 @@ export const updateReply = async (req, res) => {
             return res.status(403).json({ message: "You can only edit your own replies" });
         }
 
-        reply.content = content.trim();
+        // Sanitize content for profanity
+        const cleanedContent = profanityFilter.clean(content.trim());
+        reply.content = cleanedContent;
         reply.editedAt = new Date();
         await discussion.save();
 

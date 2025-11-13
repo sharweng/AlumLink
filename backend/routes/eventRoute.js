@@ -17,6 +17,7 @@ import {
     checkEventReminders,
     validateTicket
 } from "../controllers/eventController.js";
+import { createEventFeedback, listEventFeedbacks } from '../controllers/eventFeedbackController.js';
 
 const router = express.Router();
 
@@ -35,5 +36,8 @@ router.post("/:id/rsvp", protectRoute, rsvpToEvent);
 router.post("/:id/reminder", protectRoute, toggleEventReminder);
 router.post("/:id/validate-ticket", protectRoute, validateTicket);
 router.get("/:id/ticket", protectRoute, getUserTicket);
+// Event feedback (attendees can submit feedback; organizer/admin can list)
+router.post("/:id/feedback", protectRoute, createEventFeedback);
+router.get("/:id/feedbacks", protectRoute, listEventFeedbacks);
 
 export default router;
