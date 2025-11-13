@@ -22,6 +22,8 @@ import {
   Loader,
   ChevronLeft,
   ChevronRight,
+  BarChart3,
+  PieChart as PieChartIcon,
 } from 'lucide-react';
 import { MoreVertical } from 'lucide-react';
 import { Flag } from 'lucide-react';
@@ -30,6 +32,14 @@ import { CheckCircle } from 'lucide-react';
 import ReportModal from '../components/common/ReportModal';
 import FeedbackModal from '../components/common/FeedbackModal';
 import { format, formatDistanceToNow } from 'date-fns';
+import { 
+  getRsvpStatusData, 
+  getFeedbackRatioData, 
+  getGoingVsInterestedData, 
+  getCapacityUtilizationData,
+  getEngagementData 
+} from '../lib/eventAnalyticsUtils';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const EventDetailPage = () => {
   const { id } = useParams();
@@ -46,6 +56,7 @@ const EventDetailPage = () => {
   const [showUnbanConfirm, setShowUnbanConfirm] = useState(false);
   const [banReason, setBanReason] = useState('');
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const { data: event, isLoading } = useQuery({
     queryKey: ['event', id],
@@ -627,6 +638,189 @@ const EventDetailPage = () => {
           </div>
         </div>
       )}
+
+      {/* Event Analytics for Organizer */}
+      {isOrganizer && event.attendees && event.attendees.length > 0 && (
+        <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <BarChart3 size={24} className="text-primary" />
+              Event Analytics
+            </h2>
+            <button
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              className="text-sm text-primary hover:text-red-700 font-medium"
+            >
+              {showAnalytics ? 'Hide Charts' : 'Show Charts'}
+            </button>
+          </div>
+
+          {showAnalytics && (
+            <>
+              {/* Main Analytics Layout: Stats Column + Chart */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                {/* Left Column: Quick Stats Stack */}
+                <div className="flex flex-col gap-4">
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <p className="text-sm text-green-600 font-medium">Going</p>
+                    <p className="text-2xl font-bold text-green-700">{goingCount}</p>
+                  </div>
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm text-blue-600 font-medium">Interested</p>
+                    <p className="text-2xl font-bold text-blue-700">{interestedCount}</p>
+                  </div>
+                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <p className="text-sm text-purple-600 font-medium">Total RSVPs</p>
+                    <p className="text-2xl font-bold text-purple-700">{event.attendees.length}</p>
+                  </div>
+                  <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <p className="text-sm text-amber-600 font-medium">Feedbacks</p>
+                    <p className="text-2xl font-bold text-amber-700">{eventFeedbacks?.length || 0}</p>
+                  </div>
+                </div>
+
+                {/* Right Column: Going vs Interested Chart */}
+                <div className="md:col-span-2 p-4 border rounded-lg">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <PieChartIcon size={18} className="text-primary" />
+                    Going vs Interested
+                  </h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={getGoingVsInterestedData(event)}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ status, count }) => `${status}: ${count}`}
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="count"
+                        nameKey="status"
+                      >
+                        {getGoingVsInterestedData(event).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Charts Row: Feedback & Capacity */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Feedback Ratio */}
+                {event.status === 'completed' && goingCount > 0 && (
+                  <div className="p-4 border rounded-lg">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <PieChartIcon size={18} className="text-primary" />
+                      Feedback Ratio
+                    </h3>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={getFeedbackRatioData(event, eventFeedbacks)}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ category, count }) => `${category}: ${count}`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="count"
+                          nameKey="category"
+                        >
+                          {getFeedbackRatioData(event, eventFeedbacks).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="mt-2 text-center text-sm text-gray-600">
+                      {eventFeedbacks?.length || 0} out of {goingCount} attendees gave feedback
+                      ({((((eventFeedbacks?.length || 0) / goingCount) * 100).toFixed(1))}%)
+                    </div>
+                  </div>
+                )}
+
+                {/* Capacity Utilization */}
+                {event.capacity > 0 && (
+                  <div className="p-4 border rounded-lg">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <PieChartIcon size={18} className="text-primary" />
+                      Capacity Utilization
+                    </h3>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={getCapacityUtilizationData(event)}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ category, count }) => `${category}: ${count}`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="count"
+                          nameKey="category"
+                        >
+                          {getCapacityUtilizationData(event).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="mt-2 text-center text-sm text-gray-600">
+                      {goingCount} / {event.capacity} spots filled
+                      ({(((goingCount / event.capacity) * 100).toFixed(1))}%)
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Engagement Summary */}
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                <h3 className="text-lg font-semibold mb-3">Engagement Summary</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-600">Going Rate</p>
+                    <p className="text-xl font-bold text-green-600">
+                      {((goingCount / (event.attendees.length || 1)) * 100).toFixed(1)}%
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">Interested Rate</p>
+                    <p className="text-xl font-bold text-blue-600">
+                      {((interestedCount / (event.attendees.length || 1)) * 100).toFixed(1)}%
+                    </p>
+                  </div>
+                  {event.status === 'completed' && goingCount > 0 && (
+                    <div>
+                      <p className="text-gray-600">Feedback Rate</p>
+                      <p className="text-xl font-bold text-amber-600">
+                        {((((eventFeedbacks?.length || 0) / goingCount) * 100).toFixed(1))}%
+                      </p>
+                    </div>
+                  )}
+                  {event.capacity > 0 && (
+                    <div>
+                      <p className="text-gray-600">Capacity Used</p>
+                      <p className="text-xl font-bold text-purple-600">
+                        {(((goingCount / event.capacity) * 100).toFixed(1))}%
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Event Feedback visible to organizer */}
       {authUser && eventFeedbacks && eventFeedbacks.length > 0 && authUser?._id === event.organizer._id && (
         <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
