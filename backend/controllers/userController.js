@@ -318,27 +318,41 @@ export const extractCVData = async (req, res) => {
         // Process experience dates - convert "Present" to null
         if (extractedData.experience && Array.isArray(extractedData.experience)) {
             extractedData.experience = extractedData.experience.map(exp => {
+                // Helper function to parse dates with missing months
+                const parseDate = (dateStr) => {
+                    if (!dateStr) return null;
+                    
+                    const str = String(dateStr).trim();
+                    
+                    // Check for "Present" or "Current"
+                    if (str.toLowerCase() === 'present' || str.toLowerCase() === 'current') {
+                        return null;
+                    }
+                    
+                    // If it's just a year (4 digits), add January
+                    if (/^\d{4}$/.test(str)) {
+                        return new Date(`${str}-01-01`);
+                    }
+                    
+                    // Try parsing as-is
+                    const date = new Date(str);
+                    
+                    // Check if date is valid
+                    if (isNaN(date.getTime())) {
+                        return null;
+                    }
+                    
+                    return date;
+                };
+                
                 // Handle endDate
                 if (exp.endDate) {
-                    const endDateStr = String(exp.endDate).trim();
-                    if (endDateStr.toLowerCase() === 'present' || endDateStr.toLowerCase() === 'current') {
-                        exp.endDate = null; // Set to null for ongoing positions
-                    } else {
-                        try {
-                            exp.endDate = new Date(exp.endDate);
-                        } catch (e) {
-                            exp.endDate = null;
-                        }
-                    }
+                    exp.endDate = parseDate(exp.endDate);
                 }
                 
                 // Handle startDate
                 if (exp.startDate) {
-                    try {
-                        exp.startDate = new Date(exp.startDate);
-                    } catch (e) {
-                        exp.startDate = null;
-                    }
+                    exp.startDate = parseDate(exp.startDate);
                 }
                 
                 return exp;
