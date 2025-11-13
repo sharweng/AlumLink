@@ -1,3 +1,39 @@
+// Get events created by the current user (organizer)
+export const getEventsCreatedByMe = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const events = await Event.find({
+            organizer: userId
+        })
+            .populate("organizer", "name username profilePicture headline")
+            .populate("attendees.user", "name username profilePicture")
+            .sort({ eventDate: 1 });
+
+        // Update event statuses and filter out invalid events
+        const validEvents = [];
+        for (const event of events) {
+            if (!event.title || !event.eventDate || !event.eventTime) {
+                continue;
+            }
+            try {
+                const calculatedStatus = calculateEventStatus(event.eventDate, event.eventTime, event.eventDuration, event.status);
+                if (calculatedStatus !== event.status) {
+                    event.status = calculatedStatus;
+                    await event.save();
+                }
+                await checkAndSendReminders(event);
+                validEvents.push(event);
+            } catch (error) {
+                console.log(`Error updating status for event ${event._id}:`, error.message);
+                continue;
+            }
+        }
+        res.status(200).json(validEvents);
+    } catch (error) {
+        console.log("Error in getEventsCreatedByMe:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
 import Event from "../models/Event.js";
 import Notification from "../models/Notification.js";
 import DeletedReminder from "../models/DeletedReminder.js";
@@ -490,11 +526,16 @@ export const cancelEvent = async (req, res) => {
             return res.status(403).json({ message: "You are not authorized to cancel this event" });
         }
 
+
         // Update status to cancelled
         event.status = 'cancelled';
+        // Save cancellation reason if provided
+        if (req.body && req.body.reason) {
+            event.cancelReason = req.body.reason;
+        }
         await event.save();
 
-        // Send cancellation notifications to all attendees
+        // Send cancellation notifications to all attendees, include reason in metadata
         if (event.attendees && event.attendees.length > 0) {
             for (const attendee of event.attendees) {
                 if (attendee.user.toString() !== userId.toString()) {
@@ -502,6 +543,9 @@ export const cancelEvent = async (req, res) => {
                         recipient: attendee.user,
                         type: 'eventCancelled',
                         relatedEvent: eventId,
+                        metadata: {
+                            reason: event.cancelReason || '',
+                        },
                     });
                     await notification.save();
                 }

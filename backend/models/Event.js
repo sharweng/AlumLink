@@ -1,3 +1,5 @@
+
+
 import mongoose from "mongoose";
 
 const eventSchema = new mongoose.Schema({
@@ -21,9 +23,9 @@ const eventSchema = new mongoose.Schema({
         required: true,
     },
     eventDate: { type: String, required: true },
-  eventTime: { type: String, required: true },
-  eventDuration: { type: Number, default: 2 }, // Duration in hours (default 2 hours for backward compatibility)
-  location: { type: String, required: true },
+    eventTime: { type: String, required: true },
+    eventDuration: { type: Number, default: 2 },
+    location: { type: String, required: true },
     isVirtual: {
         type: Boolean,
         default: false,
@@ -36,7 +38,7 @@ const eventSchema = new mongoose.Schema({
     }],
     capacity: {
         type: Number,
-        default: 0, // 0 means unlimited
+        default: 0,
     },
     requiresTicket: {
         type: Boolean,
@@ -57,7 +59,7 @@ const eventSchema = new mongoose.Schema({
             default: 'going'
         },
         ticketId: {
-            type: String, // Unique ticket ID for those who RSVP
+            type: String,
         },
         rsvpDate: {
             type: Date,
@@ -86,6 +88,10 @@ const eventSchema = new mongoose.Schema({
         type: Date
     },
     banned: { type: Boolean, default: false },
+    cancelReason: {
+        type: String,
+        default: '',
+    },
 }, { timestamps: true });
 
 const Event = mongoose.model("Event", eventSchema);

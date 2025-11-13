@@ -12,6 +12,7 @@ import {
     rsvpToEvent,
     getUserTicket,
     getMyEvents,
+    getEventsCreatedByMe,
     toggleEventReminder,
     checkEventReminders,
     validateTicket
@@ -22,6 +23,7 @@ const router = express.Router();
 router.get("/", protectRoute, getAllEvents);
 router.get("/check-reminders", protectRoute, checkEventReminders);
 router.get("/my-events", protectRoute, getMyEvents);
+router.get("/created-by-me", protectRoute, getEventsCreatedByMe);
 router.get("/:id", protectRoute, getEventById);
 router.post("/create", protectRoute, createEvent);
 router.put("/:id", protectRoute, updateEvent);

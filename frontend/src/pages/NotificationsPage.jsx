@@ -408,12 +408,17 @@ const NotificationsPage = () => {
 							: "An event you're interested in has been updated"}
 					</span>
 				);
-			case "eventCancelled":
-				return (
-					<span>
-						An event you're attending has been cancelled
-					</span>
-				);
+					case "eventCancelled":
+						return (
+							<span>
+								An event you're attending has been cancelled
+								{notification.metadata?.reason && (
+									<span className="w-full block text-xs text-gray-600 mt-1 truncate" style={{maxWidth: '600px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+										Reason: {notification.metadata.reason}
+									</span>
+								)}
+							</span>
+						);
 			case "mentorshipRequest":
 				return (
 					<span>
@@ -784,12 +789,12 @@ const NotificationsPage = () => {
 							{filterNotifications(notifications.data).map((notification) => (
 								<li
 									key={notification._id}
-									className={`bg-white border rounded-lg p-4 my-4 transition-all hover:shadow-md ${
+									className={`w-full bg-white border rounded-lg p-4 my-4 transition-all hover:shadow-md ${
 										!notification.read ? "border-red-500" : "border-gray-200"
 									}`}
 								>
 									<div className='flex items-start justify-between'>
-										<div className='flex items-center space-x-4'>
+										<div className='flex items-center space-x-4 w-full'>
 											{notification.relatedUser ? (
 												<Link to={`/profile/${notification.relatedUser.username}`}>
 													<img
@@ -799,17 +804,17 @@ const NotificationsPage = () => {
 													/>
 												</Link>
 											) : (
-												<div className='w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center'>
+												<div className='w-12 h-12 flex items-center justify-center rounded-full bg-gray-200 min-w-12'>
 													<Calendar className='text-gray-500' size={24} />
 												</div>
 											)}
 
-											<div>
+											<div className='w-full'>
 												<div className='flex items-center gap-2'>
-													<div className='p-1 bg-gray-100 rounded-full'>
+													<div className='w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full'>
 														{renderNotificationIcon(notification.type)}
 													</div>
-													<p className='text-sm'>{renderNotificationContent(notification)}</p>
+													<p className='text-sm w-full'>{renderNotificationContent(notification)}</p>
 												</div>
 												<p className='text-xs text-gray-500 mt-1'>
 													{formatDistanceToNow(new Date(notification.createdAt), {

@@ -37,6 +37,7 @@ const EventDetailPage = () => {
   const authUser = queryClient.getQueryData(['authUser']);
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
   const [showCancelEventConfirm, setShowCancelEventConfirm] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const [showDeleteEventConfirm, setShowDeleteEventConfirm] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -498,53 +499,80 @@ const EventDetailPage = () => {
             </div>
           )}
 
-          {/* Cancelled Event Badge */}
-          {!isOrganizer && event.status === 'cancelled' && (
-            <div className="w-full py-3 px-6 rounded-lg bg-red-100 text-red-600 font-semibold flex items-center justify-center gap-2 cursor-not-allowed">
-              <XCircle size={20} />
-              Event Cancelled
+          {/* Cancelled Event Badge (moved reason below buttons) */}
+          
+          {/* Show cancel reason below action buttons for all users if cancelled */}
+          {event.status === 'cancelled' && event.cancelReason && (
+            <div className="w-full mt-3 mb-3 text-red-700 text-[1rem]">
+              <span className='font-bold'>Cancel Reason:</span> {event.cancelReason}
             </div>
           )}
+
+          {!isOrganizer && event.status === 'cancelled' && (
+                <div className="w-full py-3 px-6 rounded-lg bg-red-100 text-red-600 font-semibold flex items-center justify-center gap-2 cursor-not-allowed">
+                  <XCircle size={20} /> Event Cancelled
+                </div>
+              )}
 
           {/* Organizer Actions */}
           {isOrganizer && (
             <div className="flex gap-3">
-              <Link to={`/event/${event._id}/edit`} className="flex-1">
-                <button className="w-full py-3 px-6 bg-green-600 text-white hover:bg-green-700 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
-                  <Edit size={20} />
-                  Edit Event
-                </button>
-              </Link>
-              {event.status !== 'cancelled' && event.status !== 'completed' && (
+              {event.status === 'cancelled' ? (
                 <button
-                  onClick={() => setShowCancelEventConfirm(true)}
-                  disabled={isCancelling}
-                  className="flex-1 py-3 px-6 bg-orange-600 text-white hover:bg-orange-700 rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  onClick={() => setShowDeleteEventConfirm(true)}
+                  disabled={isDeleting}
+                  className="flex-1 py-3 px-6 bg-red-600 text-white hover:bg-red-700 rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {isCancelling ? (
+                  {isDeleting ? (
                     <Loader className="animate-spin" size={20} />
                   ) : (
                     <>
-                      <XCircle size={20} />
-                      Cancel Event
+                      <Trash2 size={20} />
+                      Delete Event
                     </>
                   )}
                 </button>
+              ) : (
+                <>
+                  <Link to={`/event/${event._id}/edit`} className="flex-1">
+                    <button className="w-full py-3 px-6 bg-green-600 text-white hover:bg-green-700 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
+                      <Edit size={20} />
+                      Edit Event
+                    </button>
+                  </Link>
+                  {event.status !== 'completed' && (
+                    <button
+                      onClick={() => setShowCancelEventConfirm(true)}
+                      disabled={isCancelling}
+                      className="flex-1 py-3 px-6 bg-orange-600 text-white hover:bg-orange-700 rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isCancelling ? (
+                        <Loader className="animate-spin" size={20} />
+                      ) : (
+                        <>
+                          <XCircle size={20} />
+                          Cancel Event
+                        </>
+                      )}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowDeleteEventConfirm(true)}
+                    disabled={isDeleting}
+                    className="flex-1 py-3 px-6 bg-red-600 text-white hover:bg-red-700 rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isDeleting ? (
+                      <Loader className="animate-spin" size={20} />
+                    ) : (
+                      <>
+                        <Trash2 size={20} />
+                        Delete Event
+                      </>
+                    )}
+                  </button>
+                </>
               )}
-              <button
-                onClick={() => setShowDeleteEventConfirm(true)}
-                disabled={isDeleting}
-                className="flex-1 py-3 px-6 bg-red-600 text-white hover:bg-red-700 rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isDeleting ? (
-                  <Loader className="animate-spin" size={20} />
-                ) : (
-                  <>
-                    <Trash2 size={20} />
-                    Delete Event
-                  </>
-                )}
-              </button>
+              
             </div>
           )}
         </div>
@@ -636,18 +664,26 @@ const EventDetailPage = () => {
         </div>
       )}
 
-      {/* Cancel Event Confirmation Modal */}
+      {/* Cancel Event Confirmation Modal with Reason */}
       <ConfirmModal
         isOpen={showCancelEventConfirm}
-        onClose={() => setShowCancelEventConfirm(false)}
-        onConfirm={() => cancelEvent()}
+        onClose={() => { setShowCancelEventConfirm(false); setCancelReason(""); }}
+        onConfirm={async () => {
+          setIsCancelling(true);
+          cancelEventMutation(cancelReason);
+        }}
         title="Cancel Event"
-        message="Are you sure you want to cancel this event? All attendees will be notified about the cancellation."
+        message="Please provide a reason for cancelling this event. This will be shown to all attendees."
         confirmText="Yes, Cancel Event"
         cancelText="Keep Event"
         isLoading={isCancelling}
         loadingText="Cancelling..."
         confirmButtonClass="bg-orange-600 hover:bg-orange-700"
+        showTextArea={true}
+        textAreaValue={cancelReason}
+        onTextAreaChange={setCancelReason}
+        textAreaPlaceholder="Reason for cancellation (required)"
+        disableConfirm={!cancelReason.trim() || cancelReason.trim().length < 3}
       />
 
       {/* Delete Event Confirmation Modal */}

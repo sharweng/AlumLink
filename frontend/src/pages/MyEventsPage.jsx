@@ -10,9 +10,10 @@ import Sidebar from '../components/Sidebar';
 const MyEventsPage = () => {
   const queryClient = useQueryClient();
   const authUser = queryClient.getQueryData(['authUser']);
-  const [activeTab, setActiveTab] = useState('going'); // 'going', 'interested', or 'all'
+  const [activeTab, setActiveTab] = useState('my'); // 'my', 'going', 'interested', or 'all'
   const [selectedTicket, setSelectedTicket] = useState(null); // For ticket modal
 
+  // RSVP'd events
   const { data: myEvents, isLoading } = useQuery({
     queryKey: ['myEvents'],
     queryFn: async () => {
@@ -26,20 +27,41 @@ const MyEventsPage = () => {
     },
   });
 
+  // Events created by the user
+  const { data: createdEvents, isLoading: isLoadingCreated } = useQuery({
+    queryKey: ['createdEvents'],
+    queryFn: async () => {
+      try {
+        const res = await axiosInstance.get('/events/created-by-me');
+        return res.data;
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Failed to fetch your created events');
+        throw error;
+      }
+    },
+  });
+
   // Filter events based on active tab
-  const filteredEvents = myEvents?.filter(event => {
-    const userAttendee = event.attendees.find(
-      attendee => attendee.user._id === authUser._id
+  let filteredEvents = [];
+  if (activeTab === 'my') {
+    filteredEvents = createdEvents || [];
+  } else if (activeTab === 'all') {
+    filteredEvents = [
+      ...(myEvents || []),
+      ...(createdEvents || [])
+    ].filter((event, idx, arr) =>
+      arr.findIndex(e => e._id === event._id) === idx // deduplicate by _id
     );
-    
-    if (activeTab === 'all') {
-      return true; // Show all events
-    }
-    
-    // For going and interested tabs, only show upcoming/ongoing events
-    const isActiveEvent = event.status === 'upcoming' || event.status === 'ongoing';
-    return userAttendee?.rsvpStatus === activeTab && isActiveEvent;
-  }) || [];
+  } else {
+    filteredEvents = (myEvents || []).filter(event => {
+      const userAttendee = event.attendees.find(
+        attendee => attendee.user._id === authUser._id
+      );
+      // For going and interested tabs, only show upcoming/ongoing events
+      const isActiveEvent = event.status === 'upcoming' || event.status === 'ongoing';
+      return userAttendee?.rsvpStatus === activeTab && isActiveEvent;
+    });
+  }
 
   const goingEvents = myEvents?.filter(event => {
     const userAttendee = event.attendees.find(
@@ -57,7 +79,8 @@ const MyEventsPage = () => {
     return userAttendee?.rsvpStatus === 'interested' && isActiveEvent;
   }) || [];
 
-  const allEventsCount = myEvents?.length || 0;
+  const myEventsCount = createdEvents?.length || 0;
+  const allEventsCount = ([...(myEvents || []), ...(createdEvents || [])].filter((event, idx, arr) => arr.findIndex(e => e._id === event._id) === idx)).length || 0;
 
   // Check if user has reminder enabled for an event
   const hasReminder = (event, userId) => {
@@ -93,6 +116,14 @@ const MyEventsPage = () => {
     }
   };
 
+  // Helper to refresh all event queries
+  const refreshEvents = () => {
+    queryClient.invalidateQueries({ queryKey: ['myEvents'] });
+    queryClient.invalidateQueries({ queryKey: ['createdEvents'] });
+  };
+
+  // Listen for custom events from EventPost (if any) or pass refreshEvents as prop
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       <div className="lg:col-span-1">
@@ -110,6 +141,16 @@ const MyEventsPage = () => {
           {/* Tabs */}
           <div className="bg-white rounded-lg shadow mb-4">
             <div className="flex border-b">
+              <button
+                onClick={() => setActiveTab('my')}
+                className={`flex-1 px-6 py-3 font-semibold transition-colors ${
+                  activeTab === 'my'
+                    ? 'text-primary border-b-2 border-primary bg-primary/5'
+                    : 'text-gray-600 hover:text-primary hover:bg-gray-50'
+                }`}
+              >
+                My Events ({myEventsCount})
+              </button>
               <button
                 onClick={() => setActiveTab('going')}
                 className={`flex-1 px-6 py-3 font-semibold transition-colors ${
@@ -160,7 +201,7 @@ const MyEventsPage = () => {
 
         {/* Events List */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          {isLoading ? (
+          {isLoading || isLoadingCreated ? (
             <div className="col-span-full text-center py-8">
               <Loader className="animate-spin h-12 w-12 text-primary mx-auto" />
             </div>
@@ -175,9 +216,9 @@ const MyEventsPage = () => {
 
               return (
                 <div key={event._id} className="relative">
-                  <EventPost event={event} />
+                  <EventPost event={event} onEventChanged={refreshEvents} />
                   
-                  {/* Action Buttons Overlay */}
+                  {/* Action Buttons Overlay: Only show unique actions (View Ticket, Reminder) */}
                   <div className="absolute top-4 right-4 z-10 flex gap-2">
                     {/* View Ticket Button - Only for going users with tickets */}
                     {isGoing && event.requiresTicket && userAttendee?.ticketId && (
@@ -236,10 +277,12 @@ const MyEventsPage = () => {
             <div className="col-span-full text-center py-12">
               <Calendar className="mx-auto h-16 w-16 text-gray-400 mb-4" />
               <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                No {activeTab === 'all' ? '' : activeTab} events
+                {activeTab === 'my' ? 'No events created by you' : `No ${activeTab === 'all' ? '' : activeTab} events`}
               </h3>
               <p className="text-gray-500">
-                {activeTab === 'going'
+                {activeTab === 'my'
+                  ? "You haven't created any events yet."
+                  : activeTab === 'going'
                   ? "You haven't RSVP'd to any upcoming events yet."
                   : activeTab === 'interested'
                   ? "You haven't marked any upcoming events as interested yet."

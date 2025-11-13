@@ -27,7 +27,7 @@ import ReportModal from '../common/ReportModal'
 import { MoreVertical } from 'lucide-react';
 import ShareModal from '../common/ShareModal';
 
-const EventPost = ({ event }) => {
+const EventPost = ({ event, onEventChanged }) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const authUser = queryClient.getQueryData(["authUser"]);
@@ -40,6 +40,9 @@ const EventPost = ({ event }) => {
   const isOrganizer = authUser?._id === event.organizer._id;
   const isAdmin = authUser?.permission === 'admin' || authUser?.permission === 'superAdmin';
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -79,6 +82,7 @@ const EventPost = ({ event }) => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       setShowDeleteConfirm(false);
       toast.success("Event deleted successfully");
+      if (onEventChanged) onEventChanged();
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || "Failed to delete event");
@@ -378,23 +382,11 @@ const EventPost = ({ event }) => {
           </div>
         )}
 
-        {/* Cancelled Event Badge */}
-        {!isOrganizer && event.status === 'cancelled' && (
-          <div className="w-full py-1.5 px-3 rounded-lg bg-red-100 text-red-600 text-sm font-medium flex items-center justify-center gap-1.5 cursor-not-allowed h-[34px]">
-            <XIcon size={14} />
-            Event Cancelled
-          </div>
-        )}
 
-        {/* Edit/Delete buttons for organizer */}
-        {isOrganizer && (
+
+        {/* If cancelled, only show delete button for organizer, no badge or reason for anyone */}
+        {isOrganizer && event.status === 'cancelled' && (
           <div className="flex gap-2 h-[34px]">
-            <Link to={`/event/${event._id}/edit`} className="flex-1">
-              <button className="w-full py-1.5 px-3 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors flex items-center justify-center gap-1.5 text-sm font-medium">
-                <Edit size={14} />
-                Edit
-              </button>
-            </Link>
             <button
               onClick={() => setShowDeleteConfirm(true)}
               disabled={isDeleting}
@@ -411,6 +403,71 @@ const EventPost = ({ event }) => {
             </button>
           </div>
         )}
+
+        {/* Organizer: Edit, Cancel, Delete buttons (cancel in the middle) */}
+        {isOrganizer && event.status !== 'cancelled' && (
+          <div className="flex gap-2 h-[34px]">
+            <Link to={`/event/${event._id}/edit`} className="flex-1">
+              <button className="w-full py-1.5 px-3 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors flex items-center justify-center gap-1.5 text-sm font-medium">
+                <Edit size={14} />
+                Edit
+              </button>
+            </Link>
+            <button
+              onClick={() => setShowCancelModal(true)}
+              className="flex-1 py-1.5 px-3 bg-yellow-500 text-white hover:bg-yellow-600 rounded-lg transition-colors flex items-center justify-center gap-1.5 text-sm font-medium"
+              disabled={isCancelling}
+            >
+              {isCancelling ? <Loader className="animate-spin" size={14} /> : <><XCircle size={14} /> Cancel Event</>}
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={isDeleting}
+              className="flex-1 py-1.5 px-3 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 text-sm font-medium"
+            >
+              {isDeleting ? (
+                <Loader className="animate-spin" size={14} />
+              ) : (
+                <>
+                  <Trash2 size={14} />
+                  Delete
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      {/* Cancel Event Modal */}
+      <ConfirmModal
+        isOpen={showCancelModal}
+        onClose={() => { setShowCancelModal(false); setCancelReason(""); }}
+        onConfirm={async () => {
+          setIsCancelling(true);
+          try {
+            await axiosInstance.put(`/events/${event._id}/cancel`, { reason: cancelReason });
+            toast.success('Event cancelled');
+            setShowCancelModal(false);
+            setCancelReason("");
+            if (onEventChanged) onEventChanged();
+          } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to cancel event');
+          }
+          setIsCancelling(false);
+        }}
+        title="Cancel Event"
+        message="Please provide a reason for cancelling this event. This will be shown to all attendees."
+        confirmText="Yes, Cancel Event"
+        cancelText="Back"
+        isLoading={isCancelling}
+        loadingText="Cancelling..."
+        confirmButtonClass="bg-yellow-500 hover:bg-yellow-600"
+        showTextArea={true}
+        textAreaValue={cancelReason}
+        onTextAreaChange={setCancelReason}
+        textAreaPlaceholder="Reason for cancellation (required)"
+        disableConfirm={!cancelReason.trim() || cancelReason.trim().length < 3}
+      />
+
+        {/* Removed duplicate Edit/Delete buttons for organizer to prevent double row */}
       </div>
 
       {/* Delete Event Confirmation Modal */}
