@@ -19,6 +19,7 @@ const SignUpForm = () => {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [tuptId, setTuptId] = useState("");
+  const [course, setCourse] = useState("");
   const [errors, setErrors] = useState({});
   const [step, setStep] = useState("signup");
   const [code, setCode] = useState("");
@@ -94,8 +95,8 @@ const SignUpForm = () => {
       // Name is now auto-generated and required after modal
       if (!username) newErrors.username = "Username is required";
       else if (/\s/.test(username)) newErrors.username = "Username cannot contain spaces";
-      if (!email) newErrors.email = "TUP Email is required";
-      else if (!/^\S+@tup\.edu\.ph$/.test(email)) newErrors.email = "Enter a valid TUP Email (@tup.edu.ph)";
+  if (!email) newErrors.email = "Email is required";
+  if (!course) newErrors.course = "Course is required";
       if (!password) newErrors.password = "Password is required";
       if (!confirmPassword) newErrors.confirmPassword = "Confirm password is required";
       if (!tuptId) newErrors.tuptId = "TUPT-ID is required";
@@ -121,7 +122,7 @@ const SignUpForm = () => {
           confirmPassword,
           tuptId,
           batch: tuptId ? `20${tuptId.slice(5,7)}` : "",
-          course: "BSIT",
+          course,
           resend: true // so backend doesn't actually create/send code
         });
         // If we get here, no error, so proceed to name modal
@@ -139,32 +140,48 @@ const SignUpForm = () => {
         }
         return;
       }
-      // Auto-generate name from email
-      const emailName = email.replace(/@tup\.edu\.ph$/, "");
-      let autoName = emailName.replace(/\./g, " ");
-      autoName = autoName.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-      setEditableName(autoName);
-      setShowNameModal(true);
+      // If TUP email, auto-generate name and show space-edit modal. Otherwise, show free-form name modal.
+      let autoName = "";
+      if (/^[^@]+@tup\.edu\.ph$/.test(email)) {
+        const emailName = email.replace(/@tup\.edu\.ph$/, "");
+        autoName = emailName.replace(/\./g, " ");
+        autoName = autoName.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+        setEditableName(autoName);
+        setShowNameModal("tup");
+      } else {
+        setEditableName("");
+        setShowNameModal("personal");
+      }
     };
 
-    // Only allow user to add/delete spaces in the name modal
+    // Only allow user to add/delete spaces in the TUP modal, allow any edit in personal modal
     const handleNameEdit = (e) => {
-      const oldVal = editableName;
-      const newVal = e.target.value;
-      // Only allow changes that are adding/removing spaces
-      if (newVal.replace(/ /g,"") !== oldVal.replace(/ /g,"")) return;
-      setEditableName(newVal);
+      if (showNameModal === "tup") {
+        const oldVal = editableName;
+        const newVal = e.target.value;
+        // Only allow changes that are adding/removing spaces
+        if (newVal.replace(/ /g,"") !== oldVal.replace(/ /g,"")) return;
+        setEditableName(newVal);
+      } else {
+        setEditableName(e.target.value);
+      }
     };
 
     const handleNameModalDone = async () => {
-      // Capitalize each word
-      const finalName = editableName.split(" ").filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+      let finalName = editableName;
+      if (showNameModal === "tup") {
+        // Capitalize each word, remove extra spaces
+        finalName = editableName.split(" ").filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+      } else {
+        // For personal, trim and collapse spaces, capitalize each word
+        finalName = editableName.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+      }
       setName(finalName);
       setShowNameModal(false);
       // Continue signup with generated/edited name
       const batch = tuptId ? `20${tuptId.slice(5,7)}` : "";
       try {
-        await signUpMutation({ name: finalName, username, email, password, confirmPassword, tuptId, batch, course: "BSIT" });
+        await signUpMutation({ name: finalName, username, email, password, confirmPassword, tuptId, batch, course });
       } catch (err) {
         if (err?.response?.data?.message?.includes("TUPT-ID already in use")) {
           setShowTuptIdError(true);
@@ -205,7 +222,7 @@ const SignUpForm = () => {
               <input 
                 type="email"
                 id="email"
-                placeholder="TUP Email (@tup.edu.ph)"
+                placeholder="Email address"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -236,6 +253,16 @@ const SignUpForm = () => {
                 minLength="6"
               />
               {errors.confirmPassword && <span className="text-red-500 text-xs mt-1">{errors.confirmPassword}</span>}
+            </div>
+            <div className="flex flex-col gap-1">
+              <input
+                type="text"
+                placeholder="Course (e.g. BSIT)"
+                value={course}
+                onChange={e => setCourse(e.target.value)}
+                className="input input-bordered w-full"
+              />
+              {errors.course && <span className="text-red-500 text-xs mt-1">{errors.course}</span>}
             </div>
             <div className="flex flex-col gap-1">
               <input 
@@ -294,8 +321,8 @@ const SignUpForm = () => {
               </div>
             </div>
           )}
-          {/* Name confirmation modal */}
-          {showNameModal && (
+          {/* Name modal: TUP = space edit, personal = free-form */}
+          {showNameModal === "tup" && (
             <div className="fixed z-10 inset-0 flex items-center justify-center min-h-screen px-4">
               <div className="fixed inset-0 bg-black opacity-30" />
               <div className="bg-white rounded-lg max-w-md mx-auto p-6 z-20 relative shadow-lg">
@@ -312,6 +339,27 @@ const SignUpForm = () => {
                     className="btn btn-primary"
                     onClick={handleNameModalDone}
                   >Done</button>
+                </div>
+              </div>
+            </div>
+          )}
+          {showNameModal === "personal" && (
+            <div className="fixed z-10 inset-0 flex items-center justify-center min-h-screen px-4">
+              <div className="fixed inset-0 bg-black opacity-30" />
+              <div className="bg-white rounded-lg max-w-md mx-auto p-6 z-20 relative shadow-lg">
+                <div className="text-lg font-bold mb-2">What is your name?</div>
+                <div className="mb-4">Please enter your full name as you want it to appear on your profile.</div>
+                <input
+                  className="input input-bordered w-full mb-4 text-center text-lg"
+                  value={editableName}
+                  onChange={handleNameEdit}
+                  autoFocus
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleNameModalDone}
+                  >Continue</button>
                 </div>
               </div>
             </div>

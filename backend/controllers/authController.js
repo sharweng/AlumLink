@@ -87,7 +87,7 @@ export const signup = async (req, res) => {
             return res.json({ message: "OK" });
         }
 
-        const { name, username, email, password, confirmPassword, batch, course, tuptId } = req.body;
+    const { name, username, email, password, confirmPassword, batch, course, tuptId } = req.body;
         if(!name || !username || !email || !password || !confirmPassword || !batch || !course || !tuptId) {
             return res.status(400).json({ message: "All fields are required" });
         }
