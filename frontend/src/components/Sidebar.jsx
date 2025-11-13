@@ -54,6 +54,14 @@ const Sidebar = ({ user }) => {
                             </li>
                             <li>
                                 <Link
+                                    to='/my-posted-jobs'
+                                    className='flex items-center py-2 px-4 rounded-md hover:bg-primary hover:text-white transition-colors'
+                                >
+                                    <Briefcase className='mr-2' size={20} /> My Jobs
+                                </Link>
+                            </li>
+                            <li>
+                                <Link
                                     to='/messages'
                                     className='flex items-center py-2 px-4 rounded-md hover:bg-primary hover:text-white transition-colors'
                                 >

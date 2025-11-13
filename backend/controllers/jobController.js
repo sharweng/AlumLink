@@ -41,7 +41,7 @@ export const getJobPostById = async (req, res) => {
         
         const jobPost = await JobPost.findById(id)
             .populate("author", "name username profilePicture headline banned")
-            .populate("applicants.user", "name username profilePicture headline");
+            .populate("applicants.user", "name username profilePicture headline cvUrl cvFileName");
 
         if (!jobPost) {
             return res.status(404).json({ message: "Job post not found" });
@@ -384,14 +384,19 @@ export const searchJobPosts = async (req, res) => {
 export const getMyJobPosts = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { page = 1, limit = 10 } = req.query;
+        const { page = 1, limit = 100 } = req.query; // Increased limit to get all posts
 
+        console.log("Getting jobs for user:", userId); // Debug log
+
+        // Remove isActive filter to get all jobs (active and inactive)
         const jobPosts = await JobPost.find({ author: userId })
             .populate("author", "name username profilePicture headline")
-            .populate("applicants.user", "name username profilePicture headline")
+            .populate("applicants.user", "name username profilePicture headline cvUrl cvFileName")
             .sort({ createdAt: -1 })
             .limit(limit * 1)
             .skip((page - 1) * limit);
+
+        console.log("Found jobs:", jobPosts.length); // Debug log
 
         const total = await JobPost.countDocuments({ author: userId });
 
@@ -403,6 +408,42 @@ export const getMyJobPosts = async (req, res) => {
         });
     } catch (error) {
         console.log("Error in getMyJobPosts:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const getMyApplications = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { page = 1, limit = 100 } = req.query;
+
+        console.log("Getting applications for user:", userId); // Debug log
+
+        // Find all jobs where the user has applied
+        const jobPosts = await JobPost.find({ 
+            "applicants.user": userId,
+            isActive: true 
+        })
+            .populate("author", "name username profilePicture headline")
+            .sort({ createdAt: -1 })
+            .limit(limit * 1)
+            .skip((page - 1) * limit);
+
+        console.log("Found applied jobs:", jobPosts.length); // Debug log
+
+        const total = await JobPost.countDocuments({ 
+            "applicants.user": userId,
+            isActive: true 
+        });
+
+        res.status(200).json({
+            jobPosts,
+            totalPages: Math.ceil(total / limit),
+            currentPage: page,
+            total
+        });
+    } catch (error) {
+        console.log("Error in getMyApplications:", error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 };
@@ -531,6 +572,98 @@ export const editCommentOnJobPost = async (req, res) => {
         res.status(200).json(populatedJobPost);
     } catch (error) {
         console.log("Error in editCommentOnJobPost:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const acceptApplicant = async (req, res) => {
+    try {
+        const { id, applicantId } = req.params;
+        const userId = req.user._id;
+
+        const jobPost = await JobPost.findById(id);
+
+        if (!jobPost) {
+            return res.status(404).json({ message: "Job post not found" });
+        }
+
+        // Only job author can accept applicants
+        if (jobPost.author.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "Only the job author can accept applicants" });
+        }
+
+        const applicant = jobPost.applicants.find(app => app.user.toString() === applicantId);
+
+        if (!applicant) {
+            return res.status(404).json({ message: "Applicant not found" });
+        }
+
+        applicant.status = 'accepted';
+        await jobPost.save();
+
+        // Create notification for the applicant
+        const notification = new Notification({
+            recipient: applicantId,
+            type: 'jobAccepted',
+            relatedUser: userId,
+            relatedJobPost: id,
+            message: `Your application for ${jobPost.title} has been accepted!`
+        });
+        await notification.save();
+
+        const populatedJobPost = await JobPost.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("applicants.user", "name username profilePicture headline cvUrl cvFileName");
+
+        res.status(200).json({ message: "Applicant accepted", jobPost: populatedJobPost });
+    } catch (error) {
+        console.log("Error in acceptApplicant:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const rejectApplicant = async (req, res) => {
+    try {
+        const { id, applicantId } = req.params;
+        const userId = req.user._id;
+
+        const jobPost = await JobPost.findById(id);
+
+        if (!jobPost) {
+            return res.status(404).json({ message: "Job post not found" });
+        }
+
+        // Only job author can reject applicants
+        if (jobPost.author.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "Only the job author can reject applicants" });
+        }
+
+        const applicant = jobPost.applicants.find(app => app.user.toString() === applicantId);
+
+        if (!applicant) {
+            return res.status(404).json({ message: "Applicant not found" });
+        }
+
+        applicant.status = 'rejected';
+        await jobPost.save();
+
+        // Create notification for the applicant
+        const notification = new Notification({
+            recipient: applicantId,
+            type: 'jobRejected',
+            relatedUser: userId,
+            relatedJobPost: id,
+            message: `Your application for ${jobPost.title} has been rejected.`
+        });
+        await notification.save();
+
+        const populatedJobPost = await JobPost.findById(id)
+            .populate("author", "name username profilePicture headline")
+            .populate("applicants.user", "name username profilePicture headline cvUrl cvFileName");
+
+        res.status(200).json({ message: "Applicant rejected", jobPost: populatedJobPost });
+    } catch (error) {
+        console.log("Error in rejectApplicant:", error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 };

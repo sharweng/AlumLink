@@ -22,6 +22,11 @@ import {
   Trash2,
   MoreVertical,
   X,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  CheckCircle as CheckIcon,
+  XCircle as RejectIcon,
 } from 'lucide-react';
 import { Flag } from 'lucide-react';
 import { XCircle as XCircleIcon, CheckCircle } from 'lucide-react';
@@ -44,6 +49,11 @@ const JobPostPage = () => {
   const [showBanConfirm, setShowBanConfirm] = useState(false);
   const [showUnbanConfirm, setShowUnbanConfirm] = useState(false);
   const [banReason, setBanReason] = useState("");
+  
+  // Collapsible sections state
+  const [showDescription, setShowDescription] = useState(false);
+  const [showSkills, setShowSkills] = useState(false);
+  const [showRequirements, setShowRequirements] = useState(false);
 
   const { data: jobPost, isLoading, error } = useQuery({
     queryKey: ['jobPost', jobId],
@@ -59,6 +69,13 @@ const JobPostPage = () => {
     const applicantUserId = typeof applicant.user === 'object' ? applicant.user._id : applicant.user;
     return applicantUserId === authUser._id;
   });
+
+  // Get the current user's application status
+  const myApplication = jobPost?.applicants?.find(applicant => {
+    const applicantUserId = typeof applicant.user === 'object' ? applicant.user._id : applicant.user;
+    return applicantUserId === authUser._id;
+  });
+  const applicationStatus = myApplication?.status;
 
   const isAdmin = authUser?.permission === 'admin' || authUser?.permission === 'superAdmin';
 
@@ -167,6 +184,36 @@ const JobPostPage = () => {
       toast.error(error.response?.data?.message || 'Failed to unban job post');
     }
   })
+
+  // Accept applicant mutation
+  const { mutate: acceptApplicant, isPending: isAccepting } = useMutation({
+    mutationFn: async (applicantId) => {
+      await axiosInstance.put(`/jobs/${jobPost._id}/applicants/${applicantId}/accept`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobPost', jobPost._id] });
+      queryClient.invalidateQueries({ queryKey: ['myPostedJobs'] });
+      toast.success('Applicant accepted');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to accept applicant');
+    }
+  });
+
+  // Reject applicant mutation
+  const { mutate: rejectApplicant, isPending: isRejecting } = useMutation({
+    mutationFn: async (applicantId) => {
+      await axiosInstance.put(`/jobs/${jobPost._id}/applicants/${applicantId}/reject`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobPost', jobPost._id] });
+      queryClient.invalidateQueries({ queryKey: ['myPostedJobs'] });
+      toast.success('Applicant rejected');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to reject applicant');
+    }
+  });
 
   const handleShare = () => {
     toast.success('Share functionality coming soon!');
@@ -401,8 +448,18 @@ const JobPostPage = () => {
           <div className='mb-4'>
             <div className='flex items-center gap-2 mb-3'>
               <h1 className='text-2xl font-bold text-gray-900'>{jobPost.title}</h1>
-              {hasApplied && (
+              {hasApplied && applicationStatus === 'accepted' && (
                 <span className='px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium'>
+                  ✓ Accepted
+                </span>
+              )}
+              {hasApplied && applicationStatus === 'rejected' && (
+                <span className='px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium'>
+                  ✗ Rejected
+                </span>
+              )}
+              {hasApplied && applicationStatus !== 'accepted' && applicationStatus !== 'rejected' && (
+                <span className='px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium'>
                   ✓ Applied
                 </span>
               )}
@@ -442,38 +499,68 @@ const JobPostPage = () => {
           </div>
 
           {/* Description */}
-          <div className='mb-6'>
-            <h2 className='text-lg font-semibold mb-3'>Job Description</h2>
-            <p className='text-gray-700 whitespace-pre-wrap'>{jobPost.description}</p>
+          <div className='mb-4 border rounded-lg overflow-hidden'>
+            <button
+              onClick={() => setShowDescription(!showDescription)}
+              className='w-full flex items-center justify-between px-4 py-2 bg-gray-50 hover:bg-gray-100 transition-colors text-left'
+            >
+              <h2 className='text-md font-semibold'>Job Description</h2>
+              {showDescription ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
+            {showDescription && (
+              <div className='px-4 py-3 bg-white text-sm'>
+                <p className='text-gray-700 whitespace-pre-wrap'>{jobPost.description}</p>
+              </div>
+            )}
           </div>
 
           {/* Skills */}
           {jobPost.skills && jobPost.skills.length > 0 && (
-            <div className='mb-6'>
-              <h2 className='text-lg font-semibold mb-3'>Required Skills</h2>
-              <div className='flex flex-wrap gap-2'>
-                {jobPost.skills.map((skill, index) => (
-                  <span
-                    key={index}
-                    className='px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm'
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
+            <div className='mb-4 border rounded-lg overflow-hidden'>
+              <button
+                onClick={() => setShowSkills(!showSkills)}
+                className='w-full flex items-center justify-between px-4 py-2 bg-gray-50 hover:bg-gray-100 transition-colors text-left'
+              >
+                <h2 className='text-md font-semibold'>Required Skills</h2>
+                {showSkills ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </button>
+              {showSkills && (
+                <div className='px-4 py-3 bg-white'>
+                  <div className='flex flex-wrap gap-2'>
+                    {jobPost.skills.map((skill, index) => (
+                      <span
+                        key={index}
+                        className='px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm'
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* Requirements */}
           {jobPost.requirements && (
-            <div className='mb-6'>
-              <h2 className='text-lg font-semibold mb-3'>Requirements</h2>
-              <p className='text-gray-700 whitespace-pre-wrap'>{jobPost.requirements}</p>
+            <div className='mb-4 border rounded-lg overflow-hidden'>
+              <button
+                onClick={() => setShowRequirements(!showRequirements)}
+                className='w-full flex items-center justify-between px-4 py-2 bg-gray-50 hover:bg-gray-100 transition-colors text-left'
+              >
+                <h2 className='text-md font-semibold'>Requirements</h2>
+                {showRequirements ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </button>
+              {showRequirements && (
+                <div className='px-4 py-3 bg-white text-sm'>
+                  <p className='text-gray-700 whitespace-pre-wrap'>{jobPost.requirements}</p>
+                </div>
+              )}
             </div>
           )}
 
           {/* Application Info */}
-          <div className='flex items-center justify-between p-4 bg-gray-50 rounded-lg border-t border-gray-200'>
+          <div className='flex items-center justify-between p-4 bg-gray-50 rounded-lg border-t border-gray-200 mb-6'>
             <div className='flex items-center gap-4 text-sm text-gray-600'>
               <div className='flex items-center gap-2'>
                 <Users size={18} />
@@ -508,6 +595,22 @@ const JobPostPage = () => {
                     <Briefcase size={16} />
                     Apply Now
                   </button>
+                ) : applicationStatus === 'accepted' ? (
+                  <button
+                    disabled
+                    className='flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg cursor-not-allowed'
+                  >
+                    <CheckIcon size={16} />
+                    Accepted
+                  </button>
+                ) : applicationStatus === 'rejected' ? (
+                  <button
+                    disabled
+                    className='flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg cursor-not-allowed'
+                  >
+                    <RejectIcon size={16} />
+                    Rejected
+                  </button>
                 ) : (
                   <button
                     onClick={() => setShowCancelConfirm(true)}
@@ -520,6 +623,92 @@ const JobPostPage = () => {
               </div>
             )}
           </div>
+
+          {/* Applicants List - Only visible to job owner */}
+          {isOwner && jobPost.applicants && jobPost.applicants.length > 0 && (
+            <div className='mt-6 border-t pt-6'>
+              <h2 className='text-xl font-bold mb-4 flex items-center gap-2'>
+                <Users size={24} className='text-primary' />
+                Applicants ({jobPost.applicants.length})
+              </h2>
+              <div className='space-y-3'>
+                {jobPost.applicants.map((applicant) => (
+                  <div
+                    key={applicant._id}
+                    className='flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow'
+                  >
+                    {/* Profile Picture */}
+                    <Link to={`/profile/${applicant.user.username}`}>
+                      <img
+                        src={applicant.user.profilePicture || '/avatar.png'}
+                        alt={applicant.user.name}
+                        className='w-16 h-16 rounded-full object-cover'
+                      />
+                    </Link>
+
+                    {/* Applicant Info */}
+                    <div className='flex-1'>
+                      <Link
+                        to={`/profile/${applicant.user.username}`}
+                        className='font-bold text-lg text-gray-900 hover:text-primary'
+                      >
+                        {applicant.user.name}
+                      </Link>
+                      <p className='text-sm text-gray-600'>{applicant.user.headline || 'No headline'}</p>
+                      <p className='text-xs text-gray-500 mt-1'>
+                        Applied {formatDistanceToNow(new Date(applicant.appliedAt), { addSuffix: true })}
+                      </p>
+                      
+                      {/* CV Status */}
+                      <div className='mt-2'>
+                        {applicant.user.cvUrl ? (
+                          <a
+                            href={applicant.user.cvUrl}
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700'
+                          >
+                            <Download size={14} />
+                            Download CV
+                          </a>
+                        ) : (
+                          <span className='text-sm text-gray-400 italic'>No CV uploaded</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className='flex gap-2'>
+                      <button
+                        onClick={() => acceptApplicant(applicant.user._id)}
+                        disabled={isAccepting || applicant.status === 'accepted'}
+                        className={`flex items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
+                          applicant.status === 'accepted'
+                            ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                            : 'bg-green-500 text-white hover:bg-green-600'
+                        }`}
+                      >
+                        <CheckIcon size={16} />
+                        {applicant.status === 'accepted' ? 'Accepted' : 'Accept'}
+                      </button>
+                      <button
+                        onClick={() => rejectApplicant(applicant.user._id)}
+                        disabled={isRejecting || applicant.status === 'rejected'}
+                        className={`flex items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
+                          applicant.status === 'rejected'
+                            ? 'bg-red-100 text-red-700 cursor-not-allowed'
+                            : 'bg-red-500 text-white hover:bg-red-600'
+                        }`}
+                      >
+                        <RejectIcon size={16} />
+                        {applicant.status === 'rejected' ? 'Rejected' : 'Reject'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Edit Modal */}

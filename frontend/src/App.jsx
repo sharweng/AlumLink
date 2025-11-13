@@ -14,6 +14,7 @@ import PostPage from "./pages/PostPage"
 import ProfilePage from "./pages/ProfilePage"
 import JobBoardPage from "./pages/JobBoardPage"
 import JobPostPage from "./pages/JobPostPage"
+import MyPostedJobsPage from "./pages/MyPostedJobsPage"
 import DiscussionForumsPage from "./pages/DiscussionForumsPage"
 import DiscussionPage from "./pages/DiscussionPage"
 import EventsPage from "./pages/EventsPage"
@@ -61,6 +62,7 @@ function App() {
         } />
         <Route path="/jobs" element={ authUser ? <JobBoardPage /> : <Navigate to={"/login"} /> } />
         <Route path="/job/:jobId" element={ authUser ? <JobPostPage /> : <Navigate to={"/login"} /> } />
+        <Route path="/my-posted-jobs" element={ authUser ? <MyPostedJobsPage /> : <Navigate to={"/login"} /> } />
         <Route path="/forums" element={ authUser ? <DiscussionForumsPage /> : <Navigate to={"/login"} /> } />
         <Route path="/discussion/:discussionId" element={ authUser ? <DiscussionPage /> : <Navigate to={"/login"} /> } />
         <Route path="/events" element={ authUser ? <EventsPage /> : <Navigate to={"/login"} /> } />

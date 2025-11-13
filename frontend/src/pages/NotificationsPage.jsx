@@ -168,6 +168,10 @@ const NotificationsPage = () => {
         return <X className='text-red-500' />
       case "jobUpdate":
         return <Briefcase className='text-orange-500' />
+      case "jobAccepted":
+        return <CheckCircle2 className='text-green-500' />
+      case "jobRejected":
+        return <XCircle className='text-red-500' />
       case "discussionLike":
         return <Heart className='text-red-500' />
       case "discussionComment":
@@ -310,6 +314,26 @@ const NotificationsPage = () => {
 							{notification.relatedJobPost.title}
 						</Link>{" "}
 						you applied to has been updated
+					</span>
+				);
+			case "jobAccepted":
+				return (
+					<span>
+						Your application for{" "}
+						<Link to={`/job/${notification.relatedJobPost._id}`} className='font-bold'>
+							{notification.relatedJobPost.title}
+						</Link>{" "}
+						has been accepted!
+					</span>
+				);
+			case "jobRejected":
+				return (
+					<span>
+						Your application for{" "}
+						<Link to={`/job/${notification.relatedJobPost._id}`} className='font-bold'>
+							{notification.relatedJobPost.title}
+						</Link>{" "}
+						has been rejected
 					</span>
 				);
 			case "discussionLike":
