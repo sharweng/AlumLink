@@ -3,9 +3,11 @@
 testNodeMailer.js
 *.md
 *.bak
-scripts
+scripts/setupR2Bucket.js
+scripts/verify-ollama.sh
 
 !README.md
+
 
 # Logs
 logs

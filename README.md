@@ -196,10 +196,17 @@ Ensure MongoDB is running. If using MongoDB Atlas, make sure your connection str
 
 #### Optional: Populate Sample Data
 ```bash
-npm run populate
+node scripts/populateData.js
 ```
 
-This will create sample users, posts, events, and other data for testing.
+This script will create sample data including:
+- **At least 5 users** (required for the script to work properly)
+- Sample posts
+- Sample job postings
+- Sample discussions
+- Sample events
+
+The script requires a minimum of 5 users to properly populate all related content and associations.
 
 #### Create Super Admin (Optional)
 ```bash
