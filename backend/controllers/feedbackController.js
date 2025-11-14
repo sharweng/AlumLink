@@ -1,5 +1,4 @@
 import Feedback from '../models/Feedback.js'
-import { sanitizeMessage } from '../lib/profanityFilter.js'
 
 export const createFeedback = async (req, res) => {
   try {
@@ -9,21 +8,10 @@ export const createFeedback = async (req, res) => {
       return res.status(400).json({ message: 'Message is required' })
     }
 
-    // sanitize message for profanity
-    const { clean, found } = sanitizeMessage(message.trim())
-
-    // optionally reject feedback containing profanity if configured
-    if (found && process.env.FEEDBACK_PROFANITY_MODE === 'reject') {
-      return res.status(400).json({ message: 'Inappropriate language detected in message' })
-    }
-
-    const finalMetadata = Object.assign({}, metadata || {})
-    if (found) finalMetadata.flagged = true
-
     const feedback = new Feedback({
-      message: clean,
+      message: message.trim(),
       user: req.user ? req.user._id : undefined,
-      metadata: finalMetadata
+      metadata: metadata || {}
     })
 
     await feedback.save()
