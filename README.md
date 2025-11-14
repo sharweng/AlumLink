@@ -173,12 +173,12 @@ ollama serve
 
 #### Pull Required Models
 
-**Mistral (Recommended):**
+**Mistral (Recommended for CV Extraction):**
 ```bash
 ollama pull mistral
 ```
 
-**Neural-Chat (Alternative):**
+**Neural-Chat (Recommended for Job Categorization):**
 ```bash
 ollama pull neural-chat
 ```
