@@ -5,6 +5,8 @@ testNodeMailer.js
 *.bak
 scripts
 
+!README.md
+
 # Logs
 logs
 *.log
